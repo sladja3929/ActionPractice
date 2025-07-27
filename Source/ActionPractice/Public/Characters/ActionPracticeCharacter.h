@@ -15,11 +15,6 @@ struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
-/**
- *	1. Base Component (camera)
- *	2. Input Action
- *	3. Animation
- */
 UCLASS(abstract)
 class AActionPracticeCharacter : public ACharacter
 {
@@ -34,23 +29,54 @@ class AActionPracticeCharacter : public ACharacter
 	UCameraComponent* FollowCamera;
 
 public:
+#pragma region "Public Variables"
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	FString WeaponBlueprintBasePath = TEXT("/Game/Items/BluePrint/");
+
+#pragma endregion
+	
+#pragma region "Public Functions"
+	
 	AActionPracticeCharacter();
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// ===== Return Function =====
+	// ===== Return Functions =====
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }	
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	// ===== Weapon Function =====
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand = true);
-    
-	UFUNCTION(BlueprintCallable, Category = "Combat")
+	// ===== Weapon Functions =====
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	TSubclassOf<AWeapon> LoadWeaponClassByName(const FString& WeaponName);
+	
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand = true, bool bIsTwoHanded = false);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void UnequipWeapon(bool bIsLeftHand = true);
+
+	// ===== Combo System Functions (Blueprint Callable for AnimNotify) =====
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void SaveComboInput();
+	
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void CheckComboInput();
+	
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void EnableComboInput();
+	
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void DisableComboInput();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ResetCombo();
+	
+#pragma endregion
+
 protected:
-	// --------------------------------------------------
+#pragma region "Protected Variables"
 	
 	// ====== Input Actions ======
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
@@ -80,6 +106,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	UInputAction* IA_Block;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	UInputAction* IA_WeaponSwitch;
+	
 	// ===== Animation Montages =====
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Montages")
 	class UAnimMontage* RollMontage;
@@ -94,39 +123,52 @@ protected:
 	class UAnimMontage* BlockEndMontage;
 
 	// ===== Movement Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Custom")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float WalkSpeed = 400.0f;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Custom")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float SprintSpeedMultiplier = 1.5f;
     
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Custom")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float CrouchSpeedMultiplier = 0.5f;
     
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Custom")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float BlockingSpeedMultiplier = 1.0f;
 
 	// ===== State Variables =====
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsSprinting = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsCrouching = false;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsBlocking = false;
     
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsAttacking = false;
     
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsRolling = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsLockOn = false;
-    
-	UPROPERTY(BlueprintReadOnly, Category = "State")
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
+	bool bIsSwitching = false;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Action State")
 	int32 ComboCounter = 0;
+
+	// ===== Combo System Variables =====
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bCanCombo = false;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bComboInputSaved = false;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
+	int32 MaxComboCount = 3;
     
 	// ===== Combat Properties =====
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
@@ -135,23 +177,24 @@ protected:
 	FTimerHandle ComboResetTimer;
 	FVector2D MovementInputVector;
 
-	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	AActor* LockedOnTarget = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat")
-	TSubclassOf<AWeapon> LeftWeaponClass;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat")
-	TSubclassOf<AWeapon> RightWeaponClass;
+	// ===== Weapon Properties =====
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AWeapon> WeaponClass = nullptr;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	AWeapon* LeftWeapon = nullptr;
     
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	AWeapon* RightWeapon = nullptr;
-	// -----------------------------------------------
 	
-	// ===== Locomotion Functions =====
+#pragma endregion
+
+#pragma region "Protected Functions"
+	
+	// ===== Locomotion Action Functions =====
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartSprint();
@@ -159,22 +202,20 @@ protected:
 	void ToggleCrouch();
 	void StartJump();
 	void StopJump();
+	virtual void Roll();
 	
-	// ===== Combat Functions =====
+	// ===== Combat Action Functions =====
 	virtual void Attack();
 	virtual void StartBlock();
-	virtual void StopBlock();
-	virtual void Roll();
+	virtual void StopBlock();	
 	void ToggleLockOn();
 	AActor* FindNearestTarget();
-	void UpdateLockOnCamera();	
+	void UpdateLockOnCamera();
+	void WeaponSwitch();
 	
 	// ===== Utility Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	bool CanPerformAction() const;
-    
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void ResetCombo();
     
 	// ===== Blueprint Events =====
 	UFUNCTION(BlueprintImplementableEvent, Category = "Combat")
@@ -192,6 +233,6 @@ protected:
 	// ===== Montage Callbacks =====
 	UFUNCTION()
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
-	
-};
 
+#pragma endregion
+};

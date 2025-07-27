@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Interfaces/IHttpResponse.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -53,21 +54,15 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	if (GetMesh() && GetMesh()->GetSkeletalMeshAsset())
-	{
-		TArray<FName> SocketNames = GetMesh()->GetAllSocketNames();
-		for (const FName& SocketName : SocketNames)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Available socket: %s"), *SocketName.ToString());
-		}
-	}
+
 	// 몽타주 종료 델리게이트 바인딩
 	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 	{
 		AnimInstance->OnMontageEnded.AddDynamic(this, &AActionPracticeCharacter::OnMontageEnded);
 	}
 
-	EquipWeapon(LeftWeaponClass, true);
+	EquipWeapon(LoadWeaponClassByName("BP_OneHandedSword"), false, false);
+	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
 }
 
 void AActionPracticeCharacter::Tick(float DeltaSeconds)
@@ -131,6 +126,11 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		{
 			EnhancedInputComponent->BindAction(IA_LockOn, ETriggerEvent::Started, this, &AActionPracticeCharacter::ToggleLockOn);
 		}
+
+		if(IA_WeaponSwitch)
+		{
+			EnhancedInputComponent->BindAction(IA_WeaponSwitch, ETriggerEvent::Started, this, &AActionPracticeCharacter::WeaponSwitch);
+		}
 	}
 	else
 	{
@@ -138,6 +138,7 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	}
 }
 
+#pragma region "Move Functions"
 void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 {
 	MovementInputVector = Value.Get<FVector2D>();
@@ -181,131 +182,6 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			AddMovementInput(RightDirection, MovementInputVector.X);
 		}		
 	}
-}
-
-void AActionPracticeCharacter::Look(const FInputActionValue& Value)
-{
-	if (Controller == nullptr) return;
-	if(bIsLockOn && LockedOnTarget) return;
-	
-	const FVector2D LookAxisVector = Value.Get<FVector2D>();
-	
-	AddControllerYawInput(LookAxisVector.X);
-	AddControllerPitchInput(LookAxisVector.Y);
-}
-
-void AActionPracticeCharacter::ToggleLockOn()
-{
-	if (bIsLockOn)
-	{
-		// 락온 해제
-		bIsLockOn = false;
-		LockedOnTarget = nullptr;
-        
-		// Spring Arm 설정 복원
-		if (CameraBoom)
-		{
-			//CameraBoom->bUsePawnControlRotation = true;
-		}
-	}
-	else
-	{
-		// 가장 가까운 적 찾기
-		AActor* NearestTarget = FindNearestTarget();
-		if (NearestTarget)
-		{
-			bIsLockOn = true;
-			LockedOnTarget = NearestTarget;
-            
-			// 현재 Spring Arm 설정 저장
-			if (CameraBoom)
-			{                
-				// 락온 시 카메라 설정 (필요시 조정 가능)
-				// CameraBoom->TargetArmLength = 500.0f; // 원하는 거리로 조정
-				// CameraBoom->SocketOffset = FVector(0.0f, 0.0f, 100.0f); // 원하는 높이로 조정
-			}
-		}
-	}
-}
-
-// 가장 가까운 타겟 찾기
-AActor* AActionPracticeCharacter::FindNearestTarget()
-{
-	TArray<AActor*> FoundTargets;
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Enemy"), FoundTargets);
-    
-	AActor* NearestTarget = nullptr;
-	float NearestDistance = FLT_MAX;
-    
-	for (AActor* PotentialTarget : FoundTargets)
-	{
-		float Distance = FVector::Dist(GetActorLocation(), PotentialTarget->GetActorLocation());
-		if (Distance < NearestDistance && Distance < 2000.0f) // 20미터 이내
-		{
-			NearestDistance = Distance;
-			NearestTarget = PotentialTarget;
-		}
-	}
-    
-	return NearestTarget;
-}
-
-void AActionPracticeCharacter::UpdateLockOnCamera()
-{
-	if (bIsLockOn && LockedOnTarget && Controller && CameraBoom)
-	{
-		// 타겟과 캐릭터 위치
-		const FVector TargetLocation = LockedOnTarget->GetActorLocation();
-		const FVector CharacterLocation = GetActorLocation();
-        
-		// 캐릭터에서 타겟으로의 방향
-		FVector DirectionToTarget = TargetLocation - CharacterLocation;
-		DirectionToTarget.Normalize();
-        
-		// 카메라가 타겟과 캐릭터를 모두 볼 수 있는 각도 계산
-		// 캐릭터 뒤에서 타겟을 바라보는 위치
-		FVector CameraDirection = -DirectionToTarget;
-        
-		// 현재 Spring Arm의 길이를 사용하여 카메라 위치 계산
-		FVector IdealCameraLocation = CharacterLocation + (CameraDirection * CameraBoom->TargetArmLength);
-		IdealCameraLocation.Z += CameraBoom->SocketOffset.Z;
-        
-		// 카메라가 타겟을 바라보도록 회전 설정
-		FRotator LookAtRotation = (TargetLocation - IdealCameraLocation).Rotation();
-        
-		// 컨트롤러 회전 설정
-		Controller->SetControlRotation(LookAtRotation);
-        
-		// Spring Arm이 캐릭터 회전을 따르지 않도록 설정
-		//CameraBoom->bInheritRoll = false;
-	}
-}
-
-void AActionPracticeCharacter::Attack()
-{
-	if (!CanPerformAction() || !AttackMontage) return;
-    
-	bIsAttacking = true;
-    
-	// 콤보 섹션 선택
-	FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
-    
-	// 몽타주 재생
-	PlayAnimMontage(AttackMontage, 1.0f, SectionName);
-    
-	// 블루프린트 이벤트
-	OnAttackStart(ComboCounter);
-    
-	// 콤보 카운터 증가
-	ComboCounter = (ComboCounter + 1) % 3;
-    
-	// 콤보 리셋 타이머
-	GetWorldTimerManager().SetTimer(ComboResetTimer, this, &AActionPracticeCharacter::ResetCombo, ComboWindowTime, false);
-}
-
-bool AActionPracticeCharacter::CanPerformAction() const
-{
-	return !bIsRolling && !GetCharacterMovement()->IsFalling();
 }
 
 void AActionPracticeCharacter::StartSprint()
@@ -460,7 +336,235 @@ void AActionPracticeCharacter::Roll()
     // 블루프린트 이벤트
     OnRollStart();
 }
+#pragma endregion
 
+#pragma region "Look Functions"
+void AActionPracticeCharacter::Look(const FInputActionValue& Value)
+{
+	if (Controller == nullptr) return;
+	if(bIsLockOn && LockedOnTarget) return;
+	
+	const FVector2D LookAxisVector = Value.Get<FVector2D>();
+	
+	AddControllerYawInput(LookAxisVector.X);
+	AddControllerPitchInput(LookAxisVector.Y);
+}
+
+void AActionPracticeCharacter::ToggleLockOn()
+{
+	if (bIsLockOn)
+	{
+		// 락온 해제
+		bIsLockOn = false;
+		LockedOnTarget = nullptr;
+        
+		// Spring Arm 설정 복원
+		if (CameraBoom)
+		{
+			//CameraBoom->bUsePawnControlRotation = true;
+		}
+	}
+	else
+	{
+		// 가장 가까운 적 찾기
+		AActor* NearestTarget = FindNearestTarget();
+		if (NearestTarget)
+		{
+			bIsLockOn = true;
+			LockedOnTarget = NearestTarget;
+            
+			// 현재 Spring Arm 설정 저장
+			if (CameraBoom)
+			{                
+				// 락온 시 카메라 설정 (필요시 조정 가능)
+				// CameraBoom->TargetArmLength = 500.0f; // 원하는 거리로 조정
+				// CameraBoom->SocketOffset = FVector(0.0f, 0.0f, 100.0f); // 원하는 높이로 조정
+			}
+		}
+	}
+}
+
+AActor* AActionPracticeCharacter::FindNearestTarget()
+{
+	TArray<AActor*> FoundTargets;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Enemy"), FoundTargets);
+    
+	AActor* NearestTarget = nullptr;
+	float NearestDistance = FLT_MAX;
+    
+	for (AActor* PotentialTarget : FoundTargets)
+	{
+		float Distance = FVector::Dist(GetActorLocation(), PotentialTarget->GetActorLocation());
+		if (Distance < NearestDistance && Distance < 2000.0f) // 20미터 이내
+		{
+			NearestDistance = Distance;
+			NearestTarget = PotentialTarget;
+		}
+	}
+    
+	return NearestTarget;
+}
+
+void AActionPracticeCharacter::UpdateLockOnCamera()
+{
+	if (bIsLockOn && LockedOnTarget && Controller && CameraBoom)
+	{
+		// 타겟과 캐릭터 위치
+		const FVector TargetLocation = LockedOnTarget->GetActorLocation();
+		const FVector CharacterLocation = GetActorLocation();
+        
+		// 캐릭터에서 타겟으로의 방향
+		FVector DirectionToTarget = TargetLocation - CharacterLocation;
+		DirectionToTarget.Normalize();
+        
+		// 카메라가 타겟과 캐릭터를 모두 볼 수 있는 각도 계산
+		// 캐릭터 뒤에서 타겟을 바라보는 위치
+		FVector CameraDirection = -DirectionToTarget;
+        
+		// 현재 Spring Arm의 길이를 사용하여 카메라 위치 계산
+		FVector IdealCameraLocation = CharacterLocation + (CameraDirection * CameraBoom->TargetArmLength);
+		IdealCameraLocation.Z += CameraBoom->SocketOffset.Z;
+        
+		// 카메라가 타겟을 바라보도록 회전 설정
+		FRotator LookAtRotation = (TargetLocation - IdealCameraLocation).Rotation();
+        
+		// 컨트롤러 회전 설정
+		Controller->SetControlRotation(LookAtRotation);
+        
+		// Spring Arm이 캐릭터 회전을 따르지 않도록 설정
+		//CameraBoom->bInheritRoll = false;
+	}
+}
+#pragma endregion
+
+#pragma region "Attack Functions"
+/* 몽타주에 노티파이 넣는 순서 (수행 매커니즘)
+ * 1. 몽타주 실행
+ *		bIsAttacking = true
+ * 2. enablecomboInput = 입력으로 다음공격, 구르기 저장가능 지점 (구르기 저장중이어도 다음공격 우선)
+ *		bCanComboSave = true (bCanRollSave = false로) / bCanRollSave = true (bCanComboSave = true면 X)
+ * 3. AttackRecoveryEnd / CheckComboInput = 공격 선딜이 끝나는 지점, 저장했으면 자동으로 다음공격 수행 (끝나고 이동, 구르기 가능)
+ *		bIsAttacking = false
+ * 4. ResetCombo = 공격 콤보 끝남 (2-3 사이 공격하면 다음 콤보)
+ *
+ */
+void AActionPracticeCharacter::Attack()
+{
+	// 공격이 불가능한 상태라면 입력 저장만 시도
+	if (!CanPerformAction() || !AttackMontage)
+	{
+		// 이미 공격 중이고 콤보 입력이 가능한 상태라면 입력 저장
+		if (bIsAttacking && bCanCombo)
+		{
+			SaveComboInput();
+		}
+		return;
+	}
+
+	// 첫 번째 공격 시작
+	if (!bIsAttacking)
+	{
+		bIsAttacking = true;
+		ComboCounter = 0;
+		bComboInputSaved = false;
+		
+		// 첫 번째 공격 섹션 재생
+		FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
+		PlayAnimMontage(AttackMontage, 1.0f, SectionName);
+		
+		// 블루프린트 이벤트
+		OnAttackStart(ComboCounter);
+		
+		UE_LOG(LogTemp, Warning, TEXT("First Attack Started: %s"), *SectionName.ToString());
+	}
+	// 이미 공격 중이고 콤보 입력이 가능한 상태 -> 공격 중이고 다음 콤보로 넘어갈 수 있을 때 (
+	else if (bCanCombo)
+	{
+		SaveComboInput();
+	}
+}
+
+void AActionPracticeCharacter::SaveComboInput() 
+{
+	if (bCanCombo && ComboCounter < MaxComboCount - 1)
+	{
+		bComboInputSaved = true;
+		UE_LOG(LogTemp, Warning, TEXT("Combo Input Saved! Next combo will be: Attack%d"), ComboCounter + 2);
+	}
+}
+
+void AActionPracticeCharacter::CheckComboInput()
+{
+	if (bComboInputSaved && ComboCounter < MaxComboCount - 1)
+	{
+		// 다음 콤보 실행
+		ComboCounter++;
+		bComboInputSaved = false;
+		
+		// 다음 공격 섹션으로 점프
+		FName NextSectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
+		
+		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance->Montage_JumpToSection(NextSectionName, AttackMontage);
+		}
+		
+		// 블루프린트 이벤트
+		OnAttackStart(ComboCounter);
+		
+		UE_LOG(LogTemp, Warning, TEXT("Combo Continued: %s"), *NextSectionName.ToString());
+		
+		// 콤보 리셋 타이머 갱신
+		GetWorldTimerManager().SetTimer(ComboResetTimer, this, &AActionPracticeCharacter::ResetCombo, ComboWindowTime, false);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No combo input saved or max combo reached"));
+	}
+}
+
+void AActionPracticeCharacter::EnableComboInput()
+{
+	bCanCombo = true;
+	UE_LOG(LogTemp, Warning, TEXT("Combo Input Enabled"));
+}
+
+void AActionPracticeCharacter::DisableComboInput() //노티파이랑 삭제
+{
+	bCanCombo = false;
+	UE_LOG(LogTemp, Warning, TEXT("Combo Input Disabled"));
+}
+
+void AActionPracticeCharacter::ResetCombo()
+{
+	ComboCounter = 0;
+	bComboInputSaved = false;
+	bCanCombo = false;
+	
+	UE_LOG(LogTemp, Warning, TEXT("Combo Reset"));
+}
+
+void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == AttackMontage)
+	{
+		bIsAttacking = false;
+		bCanCombo = false;
+		
+		// 인터럽트된 경우 또는 정상 종료 시 콤보 리셋
+		ResetCombo();
+		
+		UE_LOG(LogTemp, Warning, TEXT("Attack Montage Ended. Interrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
+	}
+	else if (Montage == RollMontage)
+	{
+		bIsRolling = false;
+		OnRollEnd();
+	}
+}
+#pragma endregion
+
+#pragma region "Block Functions"
 // StartBlock 함수 구현
 void AActionPracticeCharacter::StartBlock()
 {
@@ -517,38 +621,18 @@ void AActionPracticeCharacter::StopBlock()
         PlayAnimMontage(BlockEndMontage);
     }
 }
+#pragma endregion
 
-// ResetCombo 함수 구현
-void AActionPracticeCharacter::ResetCombo()
+#pragma region "Weapon Functions"
+void AActionPracticeCharacter::WeaponSwitch()
 {
-    ComboCounter = 0;
 }
 
-// OnMontageEnded 함수 구현 (생성자에서 바인딩 필요)
-void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-    if (Montage == AttackMontage)
-    {
-        bIsAttacking = false;
-        
-        // 인터럽트된 경우 콤보 리셋
-        if (bInterrupted)
-        {
-            ResetCombo();
-        }
-    }
-    else if (Montage == RollMontage)
-    {
-        bIsRolling = false;
-        OnRollEnd();
-    }
-}
-
-void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand)
+void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand, bool bIsTwoHanded)
 {
 	if (!NewWeaponClass) return;
-    
-	// 기존 무기 제거
+
+	if(bIsTwoHanded) UnequipWeapon(!bIsLeftHand);
 	UnequipWeapon(bIsLeftHand);
     
 	// 새 무기 스폰
@@ -557,21 +641,44 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 	SpawnParams.Instigator = GetInstigator();
 	
 	AWeapon* NewWeapon = GetWorld()->SpawnActor<AWeapon>(NewWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    
+    WeaponEnums type = NewWeapon->GetWeaponType();
+	
 	if (NewWeapon)
 	{
-		FName SocketName = TEXT("hand_r_sword");//bIsLeftHand ? TEXT("hand_l_shield") : TEXT("hand_r_sword");
+		FString SocketString = bIsLeftHand ? "hand_l" : "hand_r";
+
+		switch (type)
+		{
+		case WeaponEnums::StraightSword:
+			SocketString += "_sword";
+			break;
+
+		case WeaponEnums::GreatSword:
+			SocketString += "_greatsword";
+			break;
+
+		case WeaponEnums::Shield:
+			SocketString += "_shield";
+			break;
+		}
+		
+		FName SocketName = FName(*SocketString);
+		UE_LOG(LogTemp, Warning, TEXT("asdasdasda%s"), *SocketString);
 		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
-        
-		if (bIsLeftHand)
+
+		if(bIsTwoHanded)
 		{
 			LeftWeapon = NewWeapon;
-			LeftWeaponClass = NewWeaponClass;
+			RightWeapon = NewWeapon;
 		}
+		else if (bIsLeftHand)
+		{
+			LeftWeapon = NewWeapon;
+		}
+		
 		else
 		{
 			RightWeapon = NewWeapon;
-			RightWeaponClass = NewWeaponClass;
 		}
 	}
 }
@@ -585,4 +692,28 @@ void AActionPracticeCharacter::UnequipWeapon(bool bIsLeftHand)
 		(*WeaponToRemove)->Destroy();
 		*WeaponToRemove = nullptr;
 	}
+}
+
+TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FString& WeaponName)
+{
+	FString BlueprintPath = FString::Printf(TEXT("%s%s.%s_C"), 
+										   *WeaponBlueprintBasePath, 
+										   *WeaponName, 
+										   *WeaponName);
+	
+	UClass* LoadedClass = LoadClass<AWeapon>(nullptr, *BlueprintPath);
+	
+	if (LoadedClass && LoadedClass->IsChildOf(AWeapon::StaticClass()))
+	{
+		return TSubclassOf<AWeapon>(LoadedClass);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Failed to load weapon class from path: %s"), *BlueprintPath);
+	return nullptr;
+}
+#pragma endregion
+
+bool AActionPracticeCharacter::CanPerformAction() const
+{
+	return !bIsRolling && !GetCharacterMovement()->IsFalling();
 }
