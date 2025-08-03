@@ -57,10 +57,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void UnequipWeapon(bool bIsLeftHand = true);
 
-	// ===== Combo System Functions (Blueprint Callable for AnimNotify) =====
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void SaveComboInput();
-	
+	// ===== Combo System Functions (Blueprint Callable for AnimNotify) =====	
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CheckComboInput();
 	
@@ -68,7 +65,7 @@ public:
 	void EnableComboInput();
 	
 	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void DisableComboInput();
+	void AttackRecoveryEnd();
 
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void ResetCombo();
@@ -156,30 +153,27 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsSwitching = false;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Action State")
-	int32 ComboCounter = 0;
 
 	// ===== Combo System Variables =====
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bCanCombo = false;
+	bool bCanComboSave = false;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bComboInputSaved = false;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
 	int32 MaxComboCount = 3;
-    
-	// ===== Combat Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-	float ComboWindowTime = 0.7f;
-	
-	FTimerHandle ComboResetTimer;
-	FVector2D MovementInputVector;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	int32 ComboCounter = 0;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	AActor* LockedOnTarget = nullptr;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bCanABPInterruptMontage = false;
+	
+	FVector2D MovementInputVector;
 	// ===== Weapon Properties =====
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeapon> WeaponClass = nullptr;
@@ -206,6 +200,8 @@ protected:
 	
 	// ===== Combat Action Functions =====
 	virtual void Attack();
+	void SaveComboInput();
+	void PlayAttackMontage();
 	virtual void StartBlock();
 	virtual void StopBlock();	
 	void ToggleLockOn();

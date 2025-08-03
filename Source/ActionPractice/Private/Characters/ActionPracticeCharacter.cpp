@@ -450,35 +450,21 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
  */
 void AActionPracticeCharacter::Attack()
 {
-	// 공격이 불가능한 상태라면 입력 저장만 시도
-	if (!CanPerformAction() || !AttackMontage)
+	if (!bIsAttacking) //공격 가능 구간일때
 	{
-		// 이미 공격 중이고 콤보 입력이 가능한 상태라면 입력 저장
-		if (bIsAttacking && bCanCombo)
+		if (!bCanComboSave) //첫 공격
 		{
-			SaveComboInput();
+			ComboCounter = 0;
+			PlayAttackMontage();
 		}
-		return;
-	}
 
-	// 첫 번째 공격 시작
-	if (!bIsAttacking)
-	{
-		bIsAttacking = true;
-		ComboCounter = 0;
-		bComboInputSaved = false;
-		
-		// 첫 번째 공격 섹션 재생
-		FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
-		PlayAnimMontage(AttackMontage, 1.0f, SectionName);
-		
-		// 블루프린트 이벤트
-		OnAttackStart(ComboCounter);
-		
-		UE_LOG(LogTemp, Warning, TEXT("First Attack Started: %s"), *SectionName.ToString());
+		else if (ComboCounter < MaxComboCount) //선딜 이후 공격
+		{
+			PlayAttackMontage();
+		}
 	}
-	// 이미 공격 중이고 콤보 입력이 가능한 상태 -> 공격 중이고 다음 콤보로 넘어갈 수 있을 때 (
-	else if (bCanCombo)
+	
+	else //공격 선딜일때 저장
 	{
 		SaveComboInput();
 	}
@@ -486,37 +472,45 @@ void AActionPracticeCharacter::Attack()
 
 void AActionPracticeCharacter::SaveComboInput() 
 {
-	if (bCanCombo && ComboCounter < MaxComboCount - 1)
+	if (bCanComboSave && ComboCounter < MaxComboCount && !bComboInputSaved)
 	{
 		bComboInputSaved = true;
 		UE_LOG(LogTemp, Warning, TEXT("Combo Input Saved! Next combo will be: Attack%d"), ComboCounter + 2);
 	}
 }
 
+void AActionPracticeCharacter::PlayAttackMontage()
+{
+	bIsAttacking = true;
+	bComboInputSaved = false;
+	bCanABPInterruptMontage = false;
+	ComboCounter++;
+
+	FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter));
+	
+	if (ComboCounter == 1)
+	{
+		PlayAnimMontage(AttackMontage, 1.0f, SectionName);
+	}
+
+	else if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
+	}
+
+	// 블루프린트 이벤트
+	OnAttackStart(ComboCounter);
+		
+	UE_LOG(LogTemp, Warning, TEXT("Combo Continued: %s"), *SectionName.ToString());
+}
+
 void AActionPracticeCharacter::CheckComboInput()
 {
-	if (bComboInputSaved && ComboCounter < MaxComboCount - 1)
+	if (bComboInputSaved && ComboCounter < MaxComboCount)
 	{
-		// 다음 콤보 실행
-		ComboCounter++;
-		bComboInputSaved = false;
-		
-		// 다음 공격 섹션으로 점프
-		FName NextSectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
-		
-		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-		{
-			AnimInstance->Montage_JumpToSection(NextSectionName, AttackMontage);
-		}
-		
-		// 블루프린트 이벤트
-		OnAttackStart(ComboCounter);
-		
-		UE_LOG(LogTemp, Warning, TEXT("Combo Continued: %s"), *NextSectionName.ToString());
-		
-		// 콤보 리셋 타이머 갱신
-		GetWorldTimerManager().SetTimer(ComboResetTimer, this, &AActionPracticeCharacter::ResetCombo, ComboWindowTime, false);
+		PlayAttackMontage();
 	}
+	
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No combo input saved or max combo reached"));
@@ -525,42 +519,23 @@ void AActionPracticeCharacter::CheckComboInput()
 
 void AActionPracticeCharacter::EnableComboInput()
 {
-	bCanCombo = true;
+	bCanComboSave = true;
 	UE_LOG(LogTemp, Warning, TEXT("Combo Input Enabled"));
 }
 
-void AActionPracticeCharacter::DisableComboInput() //노티파이랑 삭제
+void AActionPracticeCharacter::AttackRecoveryEnd()
 {
-	bCanCombo = false;
-	UE_LOG(LogTemp, Warning, TEXT("Combo Input Disabled"));
+	bIsAttacking = false;
+	bCanComboSave = true;
 }
 
 void AActionPracticeCharacter::ResetCombo()
 {
 	ComboCounter = 0;
 	bComboInputSaved = false;
-	bCanCombo = false;
+	bCanComboSave = false;
 	
 	UE_LOG(LogTemp, Warning, TEXT("Combo Reset"));
-}
-
-void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	if (Montage == AttackMontage)
-	{
-		bIsAttacking = false;
-		bCanCombo = false;
-		
-		// 인터럽트된 경우 또는 정상 종료 시 콤보 리셋
-		ResetCombo();
-		
-		UE_LOG(LogTemp, Warning, TEXT("Attack Montage Ended. Interrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
-	}
-	else if (Montage == RollMontage)
-	{
-		bIsRolling = false;
-		OnRollEnd();
-	}
 }
 #pragma endregion
 
@@ -712,6 +687,25 @@ TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FStri
 	return nullptr;
 }
 #pragma endregion
+
+void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == AttackMontage)
+	{
+		bIsAttacking = false;
+		bCanComboSave = false;
+		
+		// 인터럽트된 경우 또는 정상 종료 시 콤보 리셋
+		ResetCombo();
+		
+		UE_LOG(LogTemp, Warning, TEXT("Attack Montage Ended. Interrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
+	}
+	else if (Montage == RollMontage)
+	{
+		bIsRolling = false;
+		OnRollEnd();
+	}
+}
 
 bool AActionPracticeCharacter::CanPerformAction() const
 {

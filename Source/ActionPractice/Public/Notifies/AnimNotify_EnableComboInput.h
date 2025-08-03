@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisplayName = "Enable Combo Input"))
 class ACTIONPRACTICE_API UAnimNotify_EnableComboInput : public UAnimNotify
 {
 	GENERATED_BODY()
