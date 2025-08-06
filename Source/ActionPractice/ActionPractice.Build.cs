@@ -9,6 +9,9 @@ public class ActionPractice : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] {
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks",
 			"Core",
 			"CoreUObject",
 			"Engine",
