@@ -12,6 +12,10 @@
 #include "InputActionValue.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Kismet/GameplayStatics.h"
+#include "AbilitySystemComponent.h"
+#include "GAS/ActionPracticeAttributeSet.h"
+#include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
+#include "GAS/Abilities/AttackAbility.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -47,6 +51,14 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	// Create Ability System Component
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// Create Attribute Set
+	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -55,11 +67,8 @@ void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 몽타주 종료 델리게이트 바인딩
-	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-	{
-		AnimInstance->OnMontageEnded.AddDynamic(this, &AActionPracticeCharacter::OnMontageEnded);
-	}
+	// Initialize GAS
+	InitializeAbilitySystem();
 
 	EquipWeapon(LoadWeaponClassByName("BP_OneHandedSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
@@ -76,6 +85,7 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
+		// ===== Basic Input Actions (Direct Function Binding) =====
 		// Movement
 		if (IA_Move)
 		{
@@ -85,41 +95,6 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		if (IA_Look)
 		{
 			EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AActionPracticeCharacter::Look);
-		}
-        
-		// Actions
-		if (IA_Jump)
-		{
-			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartJump);
-			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopJump);
-		}
-        
-		if (IA_Sprint)
-		{
-			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartSprint);
-			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopSprint);
-		}
-        
-		if (IA_Crouch)
-		{
-			EnhancedInputComponent->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AActionPracticeCharacter::ToggleCrouch);
-		}
-        
-		// Combat
-		if (IA_Attack)
-		{
-			EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionPracticeCharacter::Attack);
-		}
-        
-		if (IA_Block)
-		{
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartBlock);
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopBlock);
-		}
-        
-		if (IA_Roll)
-		{
-			EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionPracticeCharacter::Roll);
 		}
 
 		if(IA_LockOn)
@@ -131,18 +106,59 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		{
 			EnhancedInputComponent->BindAction(IA_WeaponSwitch, ETriggerEvent::Started, this, &AActionPracticeCharacter::WeaponSwitch);
 		}
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
+
+		// ===== GAS Ability Input Actions =====
+		// Jump
+		if (IA_Jump)
+		{
+			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnJumpInput);
+		}
+        
+		// Sprint (Hold)
+		if (IA_Sprint)
+		{
+			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnSprintInput);
+			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnSprintInputReleased);
+		}
+        
+		// Crouch
+		if (IA_Crouch)
+		{
+			EnhancedInputComponent->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnCrouchInput);
+		}
+        
+		// Roll
+		if (IA_Roll)
+		{
+			EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnRollInput);
+		}
+        
+		// Attack
+		if (IA_Attack)
+		{
+			EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnAttackInput);
+		}
+        
+		// Block (Hold)
+		if (IA_Block)
+		{
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnBlockInput);
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnBlockInputReleased);
+		}
+    }
 }
 
 #pragma region "Move Functions"
 void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 {
 	MovementInputVector = Value.Get<FVector2D>();
-    
+
+	//공격 어빌리티 중단
+	if (MovementInputVector.Size() > 0.1f)
+	{
+		CancelAttackForMove();
+	}
+	
 	if (Controller != nullptr && !bIsRolling && !bIsAttacking)
 	{
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
@@ -181,6 +197,23 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			AddMovementInput(ForwardDirection, MovementInputVector.Y);
 			AddMovementInput(RightDirection, MovementInputVector.X);
 		}		
+	}
+}
+
+void AActionPracticeCharacter::CancelAttackForMove()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+    
+	// State.Attacking 태그가 없으면 Attack 어빌리티 캔슬 가능
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Attacking")))
+	{
+		// Ability.Attack 태그를 가진 어빌리티 취소
+		FGameplayTagContainer CancelTags;
+		CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Attack"));
+		AbilitySystemComponent->CancelAbilities(&CancelTags);
 	}
 }
 
@@ -290,7 +323,6 @@ void AActionPracticeCharacter::StopJump()
     StopJumping();
 }
 
-// Roll 함수 구현
 void AActionPracticeCharacter::Roll()
 {
     if (!CanPerformAction() || !RollMontage)
@@ -333,8 +365,7 @@ void AActionPracticeCharacter::Roll()
     // 몽타주 재생
     PlayAnimMontage(RollMontage);
     
-    // 블루프린트 이벤트
-    OnRollStart();
+
 }
 #pragma endregion
 
@@ -434,108 +465,6 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
 		// Spring Arm이 캐릭터 회전을 따르지 않도록 설정
 		//CameraBoom->bInheritRoll = false;
 	}
-}
-#pragma endregion
-
-#pragma region "Attack Functions"
-/* 몽타주에 노티파이 넣는 순서 (수행 매커니즘)
- * 1. 몽타주 실행
- *		bIsAttacking = true
- * 2. enablecomboInput = 입력으로 다음공격, 구르기 저장가능 지점 (구르기 저장중이어도 다음공격 우선)
- *		bCanComboSave = true (bCanRollSave = false로) / bCanRollSave = true (bCanComboSave = true면 X)
- * 3. AttackRecoveryEnd / CheckComboInput = 공격 선딜이 끝나는 지점, 저장했으면 자동으로 다음공격 수행 (끝나고 이동, 구르기 가능)
- *		bIsAttacking = false
- * 4. ResetCombo = 공격 콤보 끝남 (2-3 사이 공격하면 다음 콤보)
- *
- */
-void AActionPracticeCharacter::Attack()
-{
-	if (!bIsAttacking) //공격 가능 구간일때
-	{
-		if (!bCanComboSave) //첫 공격
-		{
-			ComboCounter = 0;
-			PlayAttackMontage();
-		}
-
-		else if (ComboCounter < MaxComboCount) //선딜 이후 공격
-		{
-			PlayAttackMontage();
-		}
-	}
-	
-	else //공격 선딜일때 저장
-	{
-		SaveComboInput();
-	}
-}
-
-void AActionPracticeCharacter::SaveComboInput() 
-{
-	if (bCanComboSave && ComboCounter < MaxComboCount && !bComboInputSaved)
-	{
-		bComboInputSaved = true;
-		UE_LOG(LogTemp, Warning, TEXT("Combo Input Saved! Next combo will be: Attack%d"), ComboCounter + 2);
-	}
-}
-
-void AActionPracticeCharacter::PlayAttackMontage()
-{
-	bIsAttacking = true;
-	bComboInputSaved = false;
-	bCanABPInterruptMontage = false;
-	ComboCounter++;
-
-	FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter));
-	
-	if (ComboCounter == 1)
-	{
-		PlayAnimMontage(AttackMontage, 1.0f, SectionName);
-	}
-
-	else if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-	{
-		AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
-	}
-
-	// 블루프린트 이벤트
-	OnAttackStart(ComboCounter);
-		
-	UE_LOG(LogTemp, Warning, TEXT("Combo Continued: %s"), *SectionName.ToString());
-}
-
-void AActionPracticeCharacter::CheckComboInput()
-{
-	if (bComboInputSaved && ComboCounter < MaxComboCount)
-	{
-		PlayAttackMontage();
-	}
-	
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No combo input saved or max combo reached"));
-	}
-}
-
-void AActionPracticeCharacter::EnableComboInput()
-{
-	bCanComboSave = true;
-	UE_LOG(LogTemp, Warning, TEXT("Combo Input Enabled"));
-}
-
-void AActionPracticeCharacter::AttackRecoveryEnd()
-{
-	bIsAttacking = false;
-	bCanComboSave = true;
-}
-
-void AActionPracticeCharacter::ResetCombo()
-{
-	ComboCounter = 0;
-	bComboInputSaved = false;
-	bCanComboSave = false;
-	
-	UE_LOG(LogTemp, Warning, TEXT("Combo Reset"));
 }
 #pragma endregion
 
@@ -688,26 +617,219 @@ TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FStri
 }
 #pragma endregion
 
-void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+#pragma region "GAS Input Functions"
+void AActionPracticeCharacter::OnJumpInput()
 {
-	if (Montage == AttackMontage)
-	{
-		bIsAttacking = false;
-		bCanComboSave = false;
-		
-		// 인터럽트된 경우 또는 정상 종료 시 콤보 리셋
-		ResetCombo();
-		
-		UE_LOG(LogTemp, Warning, TEXT("Attack Montage Ended. Interrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
-	}
-	else if (Montage == RollMontage)
-	{
-		bIsRolling = false;
-		OnRollEnd();
-	}
+	GASInputPressed(IA_Jump);
 }
+
+void AActionPracticeCharacter::OnSprintInput()
+{
+	GASInputPressed(IA_Sprint);
+}
+
+void AActionPracticeCharacter::OnSprintInputReleased()
+{
+	GASInputReleased(IA_Sprint);
+}
+
+void AActionPracticeCharacter::OnCrouchInput()
+{
+	GASInputPressed(IA_Crouch);
+}
+
+void AActionPracticeCharacter::OnRollInput()
+{
+	GASInputPressed(IA_Roll);
+}
+
+void AActionPracticeCharacter::OnAttackInput()
+{
+	GASInputPressed(IA_Attack);
+}
+
+void AActionPracticeCharacter::OnBlockInput()
+{
+	GASInputPressed(IA_Block);
+}
+
+void AActionPracticeCharacter::OnBlockInputReleased()
+{
+	GASInputReleased(IA_Block);
+}
+#pragma endregion
 
 bool AActionPracticeCharacter::CanPerformAction() const
 {
 	return !bIsRolling && !GetCharacterMovement()->IsFalling();
 }
+
+#pragma region "GAS Functions"
+UAbilitySystemComponent* AActionPracticeCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void AActionPracticeCharacter::InitializeAbilitySystem()
+{
+	if (AbilitySystemComponent)
+	{
+		// Initialize the Ability System Component on the owning actor (this character)
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		
+		// Set up the Attribute Set
+		if (AttributeSet)
+		{
+			// Attributes are automatically initialized in the AttributeSet constructor
+			// Additional setup can be done here if needed
+		}
+		
+		// Grant startup abilities
+		for (const auto& StartAbility : StartAbilities)
+		{
+			GiveAbility(StartAbility);
+		}
+
+		for (const auto& StartInputAbility : StartInputAbilities)
+		{
+			GiveAbility(StartInputAbility.Value);
+		}
+
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+		
+		for (const auto& StartEffect : StartEffects)
+		{
+			if (StartEffect)
+			{
+				FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(StartEffect, 1, EffectContext);
+				if (SpecHandle.IsValid())
+				{
+					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				}
+			}
+		}
+	}
+}
+
+void AActionPracticeCharacter::GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass)
+{
+	if (AbilitySystemComponent && AbilityClass)
+	{
+		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+		AbilitySystemComponent->GiveAbility(AbilitySpec);
+	}
+}
+
+void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
+{
+	if (!AbilitySystemComponent || !InputAction) return;
+	
+	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
+	//FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(*AbilityClass);
+	
+	if (Spec)
+	{
+		Spec->InputPressed = true;
+		
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
+		}
+
+		else
+		{
+			AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+		}
+	}
+	
+	else
+	{
+		// GAS 능력을 찾지 못했다면 기본 함수들 호출
+		CallFallbackFunction(InputAction, true);
+	}
+}
+
+void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
+{
+	if (!AbilitySystemComponent || !InputAction) return;
+	
+	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
+	//FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(*AbilityClass);
+
+	if (Spec)
+	{
+		Spec->InputPressed = false;
+		
+		if (Spec->IsActive())
+		{
+			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
+		}
+	}
+	
+	else
+	{
+		// GAS 능력을 찾지 못했다면 기본 함수들 호출
+		CallFallbackFunction(InputAction, false);
+	}
+}
+
+void AActionPracticeCharacter::CallFallbackFunction(const UInputAction* InputAction, bool bIsPressed)
+{
+	if (InputAction == IA_Jump)
+	{
+		if (bIsPressed)
+		{
+			StartJump();
+		}
+		else
+		{
+			StopJump();
+		}
+	}
+	else if (InputAction == IA_Sprint)
+	{
+		if (bIsPressed)
+		{
+			StartSprint();
+		}
+		else
+		{
+			StopSprint();
+		}
+	}
+	else if (InputAction == IA_Crouch)
+	{
+		if (bIsPressed)
+		{
+			ToggleCrouch();
+		}
+		// Crouch는 토글이므로 Released 이벤트는 무시
+	}
+	else if (InputAction == IA_Roll)
+	{
+		if (bIsPressed)
+		{
+			Roll();
+		}
+		// Roll은 one-shot이므로 Released 이벤트는 무시
+	}
+	else if (InputAction == IA_Block)
+	{
+		if (bIsPressed)
+		{
+			StartBlock();
+		}
+		else
+		{
+			StopBlock();
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemplateCharacter, Warning, TEXT("No fallback function found for InputAction"));
+	}
+}
+#pragma endregion

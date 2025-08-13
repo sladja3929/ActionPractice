@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Public/Items/WeaponEnums.h"
+#include "Public/Items/WeaponData.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
@@ -13,16 +14,37 @@ class AWeapon : public AActor
 
 public:
 	AWeapon();
-
+	virtual void Tick(float DeltaTime) override;
+	virtual void BeginPlay() override;
+	
 	// ===== Info Getter =====
 	FORCEINLINE FString GetWeaponName() const {return WeaponName;}
 	FORCEINLINE WeaponEnums GetWeaponType() const {return WeaponType;}
-	FORCEINLINE float GetDamage() const {return Damage;}
-	FORCEINLINE float GetDamageReduction() const {return DamageReduction;}
-	FORCEINLINE float GetShockAbsorption() const {return ShockAbsorption;}
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
+	const UWeaponDataAsset* GetWeaponData() const { return WeaponData.Get(); }
+	const FBlockActionData* GetWeaponBlockData() const;
+	const FAttackActionData* GetWeaponAttackDataByTag(FGameplayTag AttackTag) const;
+	
+	// 무기 사용 함수
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual void EquipWeapon();
+
+	// ===== Combat Calculation Functions =====
+	/*UFUNCTION(BlueprintPure, Category = "Combat")
+	float CalculateTotalAttackPower(float PlayerStrength, float PlayerDexterity) const;
+
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	bool CheckStatRequirements(float PlayerStrength, float PlayerDexterity) const;
+
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	float GetAttackPowerPenalty(float PlayerStrength, float PlayerDexterity) const;*/
+
+	// 콜리전 이벤트 함수들
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	
 protected:
-	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* WeaponMesh;
@@ -32,25 +54,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Info")
 	WeaponEnums WeaponType;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat Info")
-	float Damage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat Info")
-	float DamageReduction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat Info")
-	float ShockAbsorption;
-
-
-public:
-	virtual void Tick(float DeltaTime) override;
-
-	// 무기 사용 함수
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	virtual void UseWeapon();
-
-	// 콜리전 이벤트 함수들
-	UFUNCTION()
-	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
+	TObjectPtr<UWeaponDataAsset> WeaponData;
 };

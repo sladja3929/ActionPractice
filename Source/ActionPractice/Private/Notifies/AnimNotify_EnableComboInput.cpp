@@ -3,14 +3,14 @@
 
 #include "Notifies/AnimNotify_EnableComboInput.h"
 #include "Characters/ActionPracticeCharacter.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayTagContainer.h"
 
 void UAnimNotify_EnableComboInput::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		if (AActionPracticeCharacter* Character = Cast<AActionPracticeCharacter>(MeshComp->GetOwner()))
-		{
-			Character->EnableComboInput();
-		}
+		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Montage.EnableComboInput"));
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
 	}
 }

@@ -3,15 +3,14 @@
 
 #include "Notifies/AnimNotify_AttackRecoveryEnd.h"
 #include "Characters/ActionPracticeCharacter.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayTagContainer.h"
 
 void UAnimNotify_AttackRecoveryEnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		if (AActionPracticeCharacter* Character = Cast<AActionPracticeCharacter>(MeshComp->GetOwner()))
-		{
-			Character->AttackRecoveryEnd();
-			Character->CheckComboInput();
-		}
+		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Montage.AttackRecoveryEnd"));
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
 	}
 }

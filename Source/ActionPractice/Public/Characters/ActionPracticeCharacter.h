@@ -6,17 +6,23 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "AbilitySystemInterface.h"
+#include "GameplayEffect.h"
+#include "GameplayTagContainer.h"
 #include "ActionPracticeCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
+class UAbilitySystemComponent;
+class UActionPracticeAttributeSet;
+class UGameplayAbility;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
 UCLASS(abstract)
-class AActionPracticeCharacter : public ACharacter
+class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -28,12 +34,20 @@ class AActionPracticeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
+	/** Ability System Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	UAbilitySystemComponent* AbilitySystemComponent;
+
+	/** Attribute Set */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	UActionPracticeAttributeSet* AttributeSet;
+
 public:
 #pragma region "Public Variables"
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	FString WeaponBlueprintBasePath = TEXT("/Game/Items/BluePrint/");
-
+	
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -47,6 +61,14 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }	
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	// ===== GAS Interface =====
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return AttributeSet; }
+
+	// ===== Weapon Getter Functions =====
+	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
+	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
+
 	// ===== Weapon Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	TSubclassOf<AWeapon> LoadWeaponClassByName(const FString& WeaponName);
@@ -56,19 +78,19 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void UnequipWeapon(bool bIsLeftHand = true);
-
-	// ===== Combo System Functions (Blueprint Callable for AnimNotify) =====	
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void CheckComboInput();
 	
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void EnableComboInput();
-	
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void AttackRecoveryEnd();
+	// ===== GAS Functions =====
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void InitializeAbilitySystem();
 
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	void ResetCombo();
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GASInputPressed(const UInputAction* InputAction);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GASInputReleased(const UInputAction* InputAction);
 	
 #pragma endregion
 
@@ -183,52 +205,62 @@ protected:
     
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	AWeapon* RightWeapon = nullptr;
+
+	// ===== GAS Properties =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
+	TMap<UInputAction*, TSubclassOf<UGameplayAbility>> StartInputAbilities;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
 	
 #pragma endregion
 
 #pragma region "Protected Functions"
 	
-	// ===== Locomotion Action Functions =====
+	// ===== Input Handler Functions =====
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void ToggleLockOn();
+	void WeaponSwitch();
+
+	// ===== Input Handler Additional Functions =====
+	void CancelAttackForMove();
+	AActor* FindNearestTarget();
+	void UpdateLockOnCamera();
+	
+	// ===== Legacy Action Functions =====
 	void StartSprint();
 	void StopSprint();
 	void ToggleCrouch();
 	void StartJump();
 	void StopJump();
-	virtual void Roll();
-	
-	// ===== Combat Action Functions =====
-	virtual void Attack();
-	void SaveComboInput();
-	void PlayAttackMontage();
+	virtual void Roll();	
 	virtual void StartBlock();
 	virtual void StopBlock();	
-	void ToggleLockOn();
-	AActor* FindNearestTarget();
-	void UpdateLockOnCamera();
-	void WeaponSwitch();
+	
+	// ===== GAS Input Handler Functions =====
+	void OnJumpInput();
+	void OnSprintInput();
+	void OnSprintInputReleased();
+	void OnCrouchInput();
+	void OnRollInput();
+	void OnAttackInput();
+	void OnBlockInput();
+	void OnBlockInputReleased();
 	
 	// ===== Utility Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	bool CanPerformAction() const;
-    
-	// ===== Blueprint Events =====
-	UFUNCTION(BlueprintImplementableEvent, Category = "Combat")
-	void OnAttackStart(int32 ComboIndex);
-    
-	UFUNCTION(BlueprintImplementableEvent, Category = "Combat")
-	void OnAttackHit(AActor* HitActor, const FHitResult& HitResult);
-    
-	UFUNCTION(BlueprintImplementableEvent, Category = "Movement")
-	void OnRollStart();
-    
-	UFUNCTION(BlueprintImplementableEvent, Category = "Movement")
-	void OnRollEnd();
-    
-	// ===== Montage Callbacks =====
-	UFUNCTION()
-	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+#pragma endregion
+
+private:
+#pragma region "Private Functions"
+	
+	void CallFallbackFunction(const UInputAction* InputAction, bool bIsPressed);
+	
 #pragma endregion
 };

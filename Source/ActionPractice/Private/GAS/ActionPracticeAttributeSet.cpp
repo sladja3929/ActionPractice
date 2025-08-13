@@ -2,16 +2,21 @@
 #include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UActionPracticeAttributeSet::UActionPracticeAttributeSet()
 {
-	// Set default values
+	// Set default values (엘든링 초기 스텟)
 	InitHealth(100.0f);
 	InitMaxHealth(100.0f);
 	InitStamina(100.0f);
 	InitMaxStamina(100.0f);
-	InitAttackPower(50.0f);
+	InitStaminaRegenRate(10.0f);
 	InitDefense(10.0f);
+	InitStrength(10.0f);
+	InitDexterity(10.0f);
+	InitPhysicalAttackPower(50.0f);
 	InitMovementSpeed(600.0f);
 }
 
@@ -23,8 +28,11 @@ void UActionPracticeAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimePro
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Stamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, MaxStamina, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, AttackPower, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, StaminaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Defense, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Strength, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Dexterity, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, PhysicalAttackPower, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
 }
 
@@ -49,13 +57,21 @@ void UActionPracticeAttributeSet::PreAttributeChange(const FGameplayAttribute& A
 	{
 		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
 	}
-	else if (Attribute == GetAttackPowerAttribute())
+	else if (Attribute == GetStaminaRegenRateAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
 	}
 	else if (Attribute == GetDefenseAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetStrengthAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 1.0f); // 최소 1
+	}
+	else if (Attribute == GetDexterityAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 1.0f); // 최소 1
 	}
 	else if (Attribute == GetMovementSpeedAttribute())
 	{
@@ -71,24 +87,19 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 	UAbilitySystemComponent* Source = Context.GetOriginalInstigatorAbilitySystemComponent();
 	const FGameplayTagContainer& SourceTags = *Data.EffectSpec.CapturedSourceTags.GetAggregatedTags();
 
-	// Compute the delta between old and new, if it is available
-	float DeltaValue = 0;
-	if (Data.EvaluatedData.ModifierOp == EGameplayModOp::Type::Additive)
-	{
-		DeltaValue = Data.EvaluatedData.Magnitude;
-	}
-
 	// Get the Target actor, which should be our owner
 	AActor* TargetActor = nullptr;
 	AController* TargetController = nullptr;
+	ACharacter* TargetCharacter = nullptr;
 	if (Data.Target.AbilityActorInfo.IsValid() && Data.Target.AbilityActorInfo->AvatarActor.IsValid())
 	{
 		TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
 		TargetController = Data.Target.AbilityActorInfo->PlayerController.Get();
+		TargetCharacter = Cast<ACharacter>(TargetActor);
 	}
 
-	// Handle damage
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
+	// Handle incoming damage
+	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
 	{
 		// Get the Source actor
 		AActor* SourceActor = nullptr;
@@ -99,35 +110,42 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 			SourceController = Source->AbilityActorInfo->PlayerController.Get();
 		}
 
-		// Try to extract a hit result
-		FHitResult HitResult;
-		if (Context.GetHitResult())
-		{
-			HitResult = *Context.GetHitResult();
-		}
-
 		// Store a local copy of the amount of damage done and clear the damage attribute
-		const float LocalDamageDone = GetDamage();
-		SetDamage(0.f);
+		const float LocalIncomingDamage = GetIncomingDamage();
+		SetIncomingDamage(0.f);
 
-		if (LocalDamageDone > 0)
+		if (LocalIncomingDamage > 0)
 		{
-			// Apply the health change and then clamp it
+			// Apply defense calculation (엘든링 스타일 방어력 계산)
+			const float DefenseReduction = GetDefense() / (GetDefense() + 100.0f);
+			const float FinalDamage = LocalIncomingDamage * (1.0f - DefenseReduction);
+			
+			// Apply the health change
 			const float OldHealth = GetHealth();
-			const float DamageReduced = LocalDamageDone * (1.0f - (GetDefense() / (GetDefense() + 100.0f)));
-			SetHealth(FMath::Clamp(OldHealth - DamageReduced, 0.0f, GetMaxHealth()));
+			SetHealth(FMath::Clamp(OldHealth - FinalDamage, 0.0f, GetMaxHealth()));
 
+			// Handle death
 			if (GetHealth() <= 0.0f)
 			{
-				// Handle death
 				// TODO: Implement death logic
 			}
 		}
 	}
-	// Handle healing
+	// Handle incoming healing
+	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
+	{
+		const float LocalIncomingHealing = GetIncomingHealing();
+		SetIncomingHealing(0.f);
+
+		if (LocalIncomingHealing > 0)
+		{
+			const float OldHealth = GetHealth();
+			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
+		}
+	}
+	// Handle direct health changes
 	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
-		// Clamp health
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
 	}
 	// Handle stamina changes
@@ -145,8 +163,53 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, GetMaxStamina(), GetStaminaAttribute());
 	}
+	// Handle stat changes that affect secondary attributes
+	else if (Data.EvaluatedData.Attribute == GetStrengthAttribute() || 
+			 Data.EvaluatedData.Attribute == GetDexterityAttribute())
+	{
+		CalculateSecondaryAttributes();
+	}
+	// Handle movement speed changes
+	else if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
+	{
+		if (TargetCharacter && TargetCharacter->GetCharacterMovement())
+		{
+			TargetCharacter->GetCharacterMovement()->MaxWalkSpeed = GetMovementSpeed();
+		}
+	}
 }
 
+void UActionPracticeAttributeSet::CalculateSecondaryAttributes()
+{
+	// Calculate Physical Attack Power based on Strength and Dexterity
+	// 기본 공격력 + 스텟 보너스
+	const float BaseAttackPower = 50.0f;
+	const float StrengthBonus = GetStrength() * 0.8f;
+	const float DexterityBonus = GetDexterity() * 0.6f;
+	
+	SetPhysicalAttackPower(BaseAttackPower + StrengthBonus + DexterityBonus);
+}
+
+float UActionPracticeAttributeSet::GetHealthPercent() const
+{
+	return GetMaxHealth() > 0.0f ? GetHealth() / GetMaxHealth() : 0.0f;
+}
+
+float UActionPracticeAttributeSet::GetStaminaPercent() const
+{
+	return GetMaxStamina() > 0.0f ? GetStamina() / GetMaxStamina() : 0.0f;
+}
+
+float UActionPracticeAttributeSet::CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const
+{
+	// 엘든링 스타일 무기 스케일링 계산
+	const float StrengthBonus = GetStrength() * StrengthScaling * 0.01f; // 스케일링을 퍼센트로 계산
+	const float DexterityBonus = GetDexterity() * DexterityScaling * 0.01f;
+	
+	return StrengthBonus + DexterityBonus;
+}
+
+// Rep Notify Functions
 void UActionPracticeAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, Health, OldHealth);
@@ -167,14 +230,29 @@ void UActionPracticeAttributeSet::OnRep_MaxStamina(const FGameplayAttributeData&
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, MaxStamina, OldMaxStamina);
 }
 
-void UActionPracticeAttributeSet::OnRep_AttackPower(const FGameplayAttributeData& OldAttackPower)
+void UActionPracticeAttributeSet::OnRep_StaminaRegenRate(const FGameplayAttributeData& OldStaminaRegenRate)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, AttackPower, OldAttackPower);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, StaminaRegenRate, OldStaminaRegenRate);
 }
 
 void UActionPracticeAttributeSet::OnRep_Defense(const FGameplayAttributeData& OldDefense)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, Defense, OldDefense);
+}
+
+void UActionPracticeAttributeSet::OnRep_Strength(const FGameplayAttributeData& OldStrength)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, Strength, OldStrength);
+}
+
+void UActionPracticeAttributeSet::OnRep_Dexterity(const FGameplayAttributeData& OldDexterity)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, Dexterity, OldDexterity);
+}
+
+void UActionPracticeAttributeSet::OnRep_PhysicalAttackPower(const FGameplayAttributeData& OldPhysicalAttackPower)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, PhysicalAttackPower, OldPhysicalAttackPower);
 }
 
 void UActionPracticeAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed)

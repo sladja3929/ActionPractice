@@ -2,6 +2,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
+#include "Math/UnrealMathUtility.h"
 
 AWeapon::AWeapon()
 {
@@ -26,9 +27,7 @@ AWeapon::AWeapon()
     
     // Hit 이벤트 바인딩
     WeaponMesh->OnComponentHit.AddDynamic(this, &AWeapon::OnHit);
-
-    // 기본값 설정
-    Damage = 50.0f;
+    
     WeaponName = TEXT("DefaultWeapon");
 }
 
@@ -44,8 +43,6 @@ void AWeapon::BeginPlay()
         
         // 콜리전 업데이트
         WeaponMesh->UpdateCollisionFromStaticMesh();
-        
-        UE_LOG(LogTemp, Warning, TEXT("Weapon %s initialized with complex collision"), *WeaponName);
     }
 }
 
@@ -54,13 +51,26 @@ void AWeapon::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
-void AWeapon::UseWeapon()
+const FBlockActionData* AWeapon::GetWeaponBlockData() const
 {
-    // 기본 무기 사용 로직
-    UE_LOG(LogTemp, Warning, TEXT("Using weapon: %s with damage: %f"), *WeaponName, Damage);
+    if (!WeaponData) return nullptr;
+
+    return &WeaponData->BlockData;
+}
+
+
+const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(FGameplayTag AttackTag) const
+{
+    if (!WeaponData) return nullptr;
     
+    return WeaponData->AttackDataMap.Find(AttackTag);
+}
+
+
+void AWeapon::EquipWeapon()
+{    
     // 여기에 무기별 고유 로직을 추가할 수 있습니다
-    // 예: 이펙트 재생, 사운드 재생, 데미지 처리 등
+    // 예: 몽타주 재생, 이펙트 재생, 사운드 재생, 데미지 처리 등
 }
 
 void AWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
