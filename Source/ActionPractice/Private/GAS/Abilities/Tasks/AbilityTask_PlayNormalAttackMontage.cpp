@@ -4,6 +4,7 @@
 #include "Animation/AnimInstance.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 UAbilityTask_PlayNormalAttackMontage::UAbilityTask_PlayNormalAttackMontage(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -101,7 +102,7 @@ void UAbilityTask_PlayNormalAttackMontage::PlayAttackMontage()
 
     if (AbilitySystemComponent.IsValid())
     {
-        AbilitySystemComponent->AddLooseGameplayTag(AttackStateTag);
+        AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
     }
     
     AnimInstance->Montage_Play(MontageToPlay, Rate);
@@ -154,7 +155,7 @@ void UAbilityTask_PlayNormalAttackMontage::JumpToNextAttackSection()
 
     if (AbilitySystemComponent.IsValid())
     {
-        AbilitySystemComponent->AddLooseGameplayTag(AttackStateTag);
+        AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
     }
 
     FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter + 1));
@@ -208,7 +209,7 @@ void UAbilityTask_PlayNormalAttackMontage::HandleActionRecoveryEndEvent(const FG
     {
         if (AbilitySystemComponent.IsValid())
         {
-            AbilitySystemComponent->RemoveLooseGameplayTag(AttackStateTag);
+            AbilitySystemComponent->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
         }
  
         bIsInCancellableRecovery = true;
@@ -226,7 +227,7 @@ void UAbilityTask_PlayNormalAttackMontage::RegisterGameplayEventCallbacks()
     if (AbilitySystemComponent.IsValid() && Ability)
     {
         // EnableComboInput 이벤트 - Lambda 사용
-        EnableComboInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_EnableComboInput)
+        EnableComboInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
@@ -236,7 +237,7 @@ void UAbilityTask_PlayNormalAttackMontage::RegisterGameplayEventCallbacks()
             });
 
         // ActionRecoveryEnd 이벤트 - Lambda 사용
-        ActionRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ActionRecoveryEnd)
+        ActionRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
@@ -246,7 +247,7 @@ void UAbilityTask_PlayNormalAttackMontage::RegisterGameplayEventCallbacks()
             });
 
         // ResetCombo 이벤트 - Lambda 사용
-        ResetComboHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ResetCombo)
+        ResetComboHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
@@ -263,19 +264,19 @@ void UAbilityTask_PlayNormalAttackMontage::UnregisterGameplayEventCallbacks()
     {
         if (EnableComboInputHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_EnableComboInput)
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
                 .Remove(EnableComboInputHandle);
         }
 
         if (ActionRecoveryEndHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ActionRecoveryEnd)
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
                 .Remove(ActionRecoveryEndHandle);
         }
 
         if (ResetComboHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ResetCombo)
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
                 .Remove(ResetComboHandle);
         }
     }
@@ -372,7 +373,7 @@ void UAbilityTask_PlayNormalAttackMontage::OnDestroy(bool AbilityEnded)
     // 상태 정리
     if (AbilitySystemComponent.IsValid())
     {
-        AbilitySystemComponent->RemoveLooseGameplayTag(AttackStateTag);
+        AbilitySystemComponent->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
     }
     
     bCanComboSave = false;

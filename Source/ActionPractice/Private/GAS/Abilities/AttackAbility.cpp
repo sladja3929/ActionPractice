@@ -71,10 +71,6 @@ void UAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
         // 태스크 세팅
         NormalAttackTask->MaxComboCount = WeaponAttackData->ComboAttackData.Num();;
         NormalAttackTask->ComboCounter = 0;
-        NormalAttackTask->EventTag_ActionRecoveryEnd = EventTag_ActionRecoveryEnd;
-        NormalAttackTask->EventTag_EnableComboInput = EventTag_EnableComboInput;
-        NormalAttackTask->EventTag_ResetCombo = EventTag_ResetCombo;
-        NormalAttackTask->AttackStateTag = AttackStateTag;
         
         // 델리게이트 바인딩
         NormalAttackTask->OnCompleted.AddDynamic(this, &UAttackAbility::OnTaskCompleted);

@@ -28,17 +28,6 @@ protected:
 	
 	const FAttackActionData* WeaponAttackData;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag EventTag_EnableComboInput;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag EventTag_ActionRecoveryEnd;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag EventTag_ResetCombo;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag AttackStateTag;
 	
 #pragma endregion
 

@@ -50,18 +50,6 @@ public:
     UPROPERTY()
     bool bIsInCancellableRecovery = false;
 
-    // 이벤트 태그
-    UPROPERTY()
-    FGameplayTag EventTag_EnableComboInput;
-    
-    UPROPERTY()
-    FGameplayTag EventTag_ActionRecoveryEnd;
-
-    UPROPERTY()
-    FGameplayTag EventTag_ResetCombo;
-
-    UPROPERTY()
-    FGameplayTag AttackStateTag;
     
     // 어빌리티가 취소되면 몽타주 정지
     UPROPERTY()

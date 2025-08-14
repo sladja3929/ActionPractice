@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 URollAbility::URollAbility()
 {
@@ -163,14 +164,7 @@ void URollAbility::StartInvincibility()
 	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
 	if (ASC)
 	{
-		FGameplayTagContainer InvincibilityTags;
-		// 런타임에 태그 생성 (안전하지 않을 수 있음)
-		FGameplayTag InvincibleTag = FGameplayTag::RequestGameplayTag(FName("State.Invincible"), false);
-		if (InvincibleTag.IsValid())
-		{
-			InvincibilityTags.AddTag(InvincibleTag);
-			ASC->AddLooseGameplayTags(InvincibilityTags);
-		}
+		ASC->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateInvincibleTag());
 	}
 
 	// 무적 상태 타이머 설정
@@ -200,14 +194,7 @@ void URollAbility::EndInvincibility()
 	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
 	if (ASC)
 	{
-		FGameplayTagContainer InvincibilityTags;
-		// 런타임에 태그 생성 (안전하지 않을 수 있음)
-		FGameplayTag InvincibleTag = FGameplayTag::RequestGameplayTag(FName("State.Invincible"), false);
-		if (InvincibleTag.IsValid())
-		{
-			InvincibilityTags.AddTag(InvincibleTag);
-			ASC->RemoveLooseGameplayTags(InvincibilityTags);
-		}
+		ASC->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateInvincibleTag());
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Invincibility ended"));

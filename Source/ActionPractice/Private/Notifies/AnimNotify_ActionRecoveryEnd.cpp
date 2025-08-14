@@ -5,12 +5,16 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayTagContainer.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 void UAnimNotify_ActionRecoveryEnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Notify.ActionRecoveryEnd"));
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			MeshComp->GetOwner(), 
+			UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag(), 
+			FGameplayEventData()
+		);
 	}
 }

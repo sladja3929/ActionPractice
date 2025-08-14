@@ -16,6 +16,7 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
 #include "GAS/Abilities/AttackAbility.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -208,11 +209,11 @@ void AActionPracticeCharacter::CancelActionForMove()
 	}
     
 	// State.Recovering 태그가 없으면 어빌리티 캔슬 가능
-	if (!AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Recovering")))
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
 	{
 		// Ability.Attack 태그를 가진 어빌리티 취소
 		FGameplayTagContainer CancelTags;
-		CancelTags.AddTag(FGameplayTag::RequestGameplayTag("Ability.Attack"));
+		CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
 		AbilitySystemComponent->CancelAbilities(&CancelTags);
 	}
 }

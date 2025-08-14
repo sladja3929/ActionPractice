@@ -5,12 +5,16 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayTagContainer.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 void UAnimNotify_EnableComboInput::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Notify.EnableComboInput"));
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+			MeshComp->GetOwner(), 
+			UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag(), 
+			FGameplayEventData()
+		);
 	}
 }

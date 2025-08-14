@@ -78,7 +78,6 @@ void AWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitive
     if (OtherActor && OtherActor != this)
     {
         UE_LOG(LogTemp, Warning, TEXT("Weapon %s hit %s"), *WeaponName, *OtherActor->GetName());
-        
         // 여기에 히트 처리 로직 추가
         // 예: 데미지 처리, 이펙트 재생 등
     }
