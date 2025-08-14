@@ -71,7 +71,7 @@ void UAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
         // 태스크 세팅
         NormalAttackTask->MaxComboCount = WeaponAttackData->ComboAttackData.Num();;
         NormalAttackTask->ComboCounter = 0;
-        NormalAttackTask->EventTag_AttackRecoveryEnd = EventTag_AttackRecoveryEnd;
+        NormalAttackTask->EventTag_ActionRecoveryEnd = EventTag_ActionRecoveryEnd;
         NormalAttackTask->EventTag_EnableComboInput = EventTag_EnableComboInput;
         NormalAttackTask->EventTag_ResetCombo = EventTag_ResetCombo;
         NormalAttackTask->AttackStateTag = AttackStateTag;

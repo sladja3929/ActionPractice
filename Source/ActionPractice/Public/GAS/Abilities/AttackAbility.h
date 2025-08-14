@@ -32,7 +32,7 @@ protected:
 	FGameplayTag EventTag_EnableComboInput;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag EventTag_AttackRecoveryEnd;
+	FGameplayTag EventTag_ActionRecoveryEnd;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag EventTag_ResetCombo;

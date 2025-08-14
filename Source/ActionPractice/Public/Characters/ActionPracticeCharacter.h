@@ -227,7 +227,7 @@ protected:
 	void WeaponSwitch();
 
 	// ===== Input Handler Additional Functions =====
-	void CancelAttackForMove();
+	void CancelActionForMove();
 	AActor* FindNearestTarget();
 	void UpdateLockOnCamera();
 	

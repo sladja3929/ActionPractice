@@ -7,7 +7,7 @@ void UAnimNotify_ResetCombo::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Montage.ResetCombo"));
+		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Notify.ResetCombo"));
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
 	}
 }

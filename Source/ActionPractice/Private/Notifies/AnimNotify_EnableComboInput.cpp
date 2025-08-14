@@ -10,7 +10,7 @@ void UAnimNotify_EnableComboInput::Notify(USkeletalMeshComponent* MeshComp, UAni
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Montage.EnableComboInput"));
+		FGameplayTag EventTag = FGameplayTag::RequestGameplayTag(FName("Event.Notify.EnableComboInput"));
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(MeshComp->GetOwner(), EventTag, FGameplayEventData());
 	}
 }

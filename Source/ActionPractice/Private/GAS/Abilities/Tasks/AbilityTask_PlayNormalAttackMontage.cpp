@@ -77,14 +77,12 @@ void UAbilityTask_PlayNormalAttackMontage::Activate()
 /* 공격 수행 메커니즘
  * 1. 몽타주 실행 (State.IsAttacking 태그 추가)
  * 2. enablecomboInput = 입력 저장 가능 구간, 다음 공격과 구르기 저장 가능 (구르기를 저장해도 다음 공격 우선 저장)
- * 3. AttackRecoveryEnd = 공격 선딜이 끝나는 지점
+ * 3. ActionRecoveryEnd = 공격 선딜이 끝나는 지점
  * 3-1. 2~3 사이 저장한 행동이 있을 경우 CheckComboInput으로 행동 수행
  * 3-2. 2~3 사이 저장한 행동이 없을 경우 입력이 들어오면 다음 공격 가능, 이동/점프/구르기로 캔슬 가능 (State.IsAttacking 태그 제거)
  * 4. ResetCombo = 공격 콤보가 초기화되어 다음 콤보로 연계되지 않음, 이후 바로 어빌리티 종료
  * 5. 몽타주 종료 (ResetCombo와 같지 않음)
  */
-//AttackRecoveryEnd -> RecoveryEnd
-//State.Recovering
 #pragma region "Attack Functions"
 void UAbilityTask_PlayNormalAttackMontage::PlayAttackMontage()
 {
@@ -179,7 +177,7 @@ void UAbilityTask_PlayNormalAttackMontage::CheckComboInputPreseed() //어빌리�
         bCanComboSave = false;
         UE_LOG(LogAbilitySystemComponent, Warning, TEXT("Combo Saved"));
     }
-    // 3-2. AttackRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
+    // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
     else if (bIsInCancellableRecovery)
     {
         UE_LOG(LogAbilitySystemComponent, Warning, TEXT("Combo Played After Recovery"));
@@ -195,7 +193,7 @@ void UAbilityTask_PlayNormalAttackMontage::HandleEnableComboInputEvent(const FGa
     bCanComboSave = true;
 }
 
-void UAbilityTask_PlayNormalAttackMontage::HandleAttackRecoveryEndEvent(const FGameplayEventData& Payload)
+void UAbilityTask_PlayNormalAttackMontage::HandleActionRecoveryEndEvent(const FGameplayEventData& Payload)
 {
     bCanComboSave = false;
 
@@ -237,13 +235,13 @@ void UAbilityTask_PlayNormalAttackMontage::RegisterGameplayEventCallbacks()
                 }
             });
 
-        // AttackRecoveryEnd 이벤트 - Lambda 사용
-        AttackRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_AttackRecoveryEnd)
+        // ActionRecoveryEnd 이벤트 - Lambda 사용
+        ActionRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ActionRecoveryEnd)
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
                 {
-                    HandleAttackRecoveryEndEvent(*EventData);
+                    HandleActionRecoveryEndEvent(*EventData);
                 }
             });
 
@@ -269,10 +267,10 @@ void UAbilityTask_PlayNormalAttackMontage::UnregisterGameplayEventCallbacks()
                 .Remove(EnableComboInputHandle);
         }
 
-        if (AttackRecoveryEndHandle.IsValid())
+        if (ActionRecoveryEndHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_AttackRecoveryEnd)
-                .Remove(AttackRecoveryEndHandle);
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag_ActionRecoveryEnd)
+                .Remove(ActionRecoveryEndHandle);
         }
 
         if (ResetComboHandle.IsValid())

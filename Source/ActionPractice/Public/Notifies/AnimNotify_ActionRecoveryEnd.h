@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
-#include "AnimNotify_AttackRecoveryEnd.generated.h"
+#include "AnimNotify_ActionRecoveryEnd.generated.h"
 
-UCLASS(meta = (DisplayName = "Attack Recovery End"))
-class ACTIONPRACTICE_API UAnimNotify_AttackRecoveryEnd : public UAnimNotify
+UCLASS(meta = (DisplayName = "Action Recovery End"))
+class ACTIONPRACTICE_API UAnimNotify_ActionRecoveryEnd : public UAnimNotify
 {
 	GENERATED_BODY()
 
@@ -17,6 +17,6 @@ public:
 	
 	virtual FString GetNotifyName_Implementation() const override
 	{
-		return TEXT("Attack Recovery End");
+		return TEXT("Action Recovery End");
 	}
 };

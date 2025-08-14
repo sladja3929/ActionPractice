@@ -156,7 +156,7 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 	//공격 어빌리티 중단
 	if (MovementInputVector.Size() > 0.1f)
 	{
-		CancelAttackForMove();
+		CancelActionForMove();
 	}
 	
 	if (Controller != nullptr && !bIsRolling && !bIsAttacking)
@@ -200,15 +200,15 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-void AActionPracticeCharacter::CancelAttackForMove()
+void AActionPracticeCharacter::CancelActionForMove()
 {
 	if (!AbilitySystemComponent)
 	{
 		return;
 	}
     
-	// State.Attacking 태그가 없으면 Attack 어빌리티 캔슬 가능
-	if (!AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Attacking")))
+	// State.Recovering 태그가 없으면 어빌리티 캔슬 가능
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag("State.Recovering")))
 	{
 		// Ability.Attack 태그를 가진 어빌리티 취소
 		FGameplayTagContainer CancelTags;

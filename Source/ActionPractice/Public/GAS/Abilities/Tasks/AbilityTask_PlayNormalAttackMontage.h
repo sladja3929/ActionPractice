@@ -55,7 +55,7 @@ public:
     FGameplayTag EventTag_EnableComboInput;
     
     UPROPERTY()
-    FGameplayTag EventTag_AttackRecoveryEnd;
+    FGameplayTag EventTag_ActionRecoveryEnd;
 
     UPROPERTY()
     FGameplayTag EventTag_ResetCombo;
@@ -126,7 +126,7 @@ protected:
 
     // 이벤트 핸들
     FDelegateHandle EnableComboInputHandle;
-    FDelegateHandle AttackRecoveryEndHandle;
+    FDelegateHandle ActionRecoveryEndHandle;
     FDelegateHandle ResetComboHandle;
     
 #pragma endregion
@@ -150,7 +150,7 @@ protected:
     void HandleEnableComboInputEvent(const FGameplayEventData& Payload);
 
     UFUNCTION()
-    void HandleAttackRecoveryEndEvent(const FGameplayEventData& Payload);
+    void HandleActionRecoveryEndEvent(const FGameplayEventData& Payload);
 
     UFUNCTION()
     void HandleResetComboEvent(const FGameplayEventData& Payload);
