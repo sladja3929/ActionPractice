@@ -77,3 +77,4 @@ DerivedDataCache/*
 # AI Configuration files
 CLAUDE.md
 .env
+*/repopackpy-output.txt

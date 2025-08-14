@@ -1,0 +1,163 @@
+﻿#pragma once
+
+#include "CoreMinimal.h"
+#include "Abilities/Tasks/AbilityTask.h"
+#include "GameplayTagContainer.h"
+#include "Abilities/GameplayAbilityTypes.h"
+#include "AbilityTask_PlayNormalAttackMontage.generated.h"
+
+class UAnimMontage;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNormalAttackMontageDelegate);
+
+UCLASS()
+class ACTIONPRACTICE_API UAbilityTask_PlayNormalAttackMontage : public UAbilityTask
+{
+    GENERATED_BODY()
+
+public:
+#pragma region "Public Variables" //=======================================================
+    
+    // 델리게이트들
+    UPROPERTY(BlueprintAssignable)
+    FNormalAttackMontageDelegate OnCompleted;
+
+    UPROPERTY(BlueprintAssignable)
+    FNormalAttackMontageDelegate OnBlendOut;
+
+    UPROPERTY(BlueprintAssignable)
+    FNormalAttackMontageDelegate OnInterrupted;
+
+    UPROPERTY(BlueprintAssignable)
+    FNormalAttackMontageDelegate OnCancelled;
+
+    // 콤보 진행시 호출
+    UPROPERTY(BlueprintAssignable)
+    FNormalAttackMontageDelegate OnComboPerformed;
+    
+    UPROPERTY()
+    int32 ComboCounter = 0;
+
+    UPROPERTY()
+    int32 MaxComboCount = 3;
+
+    UPROPERTY()
+    bool bCanComboSave = false;
+
+    UPROPERTY()
+    bool bComboInputSaved = false;
+
+    UPROPERTY()
+    bool bIsInCancellableRecovery = false;
+
+    // 이벤트 태그
+    UPROPERTY()
+    FGameplayTag EventTag_EnableComboInput;
+    
+    UPROPERTY()
+    FGameplayTag EventTag_AttackRecoveryEnd;
+
+    UPROPERTY()
+    FGameplayTag EventTag_ResetCombo;
+
+    UPROPERTY()
+    FGameplayTag AttackStateTag;
+    
+    // 어빌리티가 취소되면 몽타주 정지
+    UPROPERTY()
+    bool bStopMontageWhenAbilityCancelled;
+    
+#pragma endregion
+
+#pragma region "Public Functions" //==========================================================
+
+    UAbilityTask_PlayNormalAttackMontage(const FObjectInitializer& ObjectInitializer);
+
+    // 태스크 생성 함수
+    UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (DisplayName = "PlayNormalAttackMontage",
+        HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
+    static UAbilityTask_PlayNormalAttackMontage* CreatePlayNormalAttackMontageProxy(
+        UGameplayAbility* OwningAbility,
+        FName TaskInstanceName,
+        UAnimMontage* MontageToPlay,
+        float Rate = 1.0f,
+        FName StartSection = NAME_None,
+        float AnimRootMotionTranslationScale = 1.0f);
+
+    // 태스크 활성화
+    virtual void Activate() override;
+
+    // 태스크 정리
+    virtual void OnDestroy(bool AbilityEnded) override;
+
+    // 외부 정지
+    virtual void ExternalCancel() override;
+
+    // 콤보 입력 처리 (원본의 InputPressed 로직)
+    void CheckComboInputPreseed();
+
+    // 콤보 체크 (원본 함수명 유지)
+    void JumpToNextAttackSection();
+    
+#pragma endregion
+
+protected:
+#pragma region "Protected Variables" //=============================================================
+
+    // 몽타주
+    UPROPERTY()
+    UAnimMontage* MontageToPlay;
+
+    // 재생 속도
+    UPROPERTY()
+    float Rate;
+
+    // 시작 섹션
+    UPROPERTY()
+    FName StartSectionName;
+
+    // 루트 모션 스케일
+    UPROPERTY()
+    float AnimRootMotionTranslationScale;
+
+    // 몽타주 델리게이트 핸들
+    FOnMontageBlendingOutStarted BlendingOutDelegate;
+    FOnMontageEnded MontageEndedDelegate;
+
+    // 이벤트 핸들
+    FDelegateHandle EnableComboInputHandle;
+    FDelegateHandle AttackRecoveryEndHandle;
+    FDelegateHandle ResetComboHandle;
+    
+#pragma endregion
+    
+#pragma region "Protected Functions" //=============================================================
+    
+    UFUNCTION()
+    void PlayAttackMontage();
+    
+    UFUNCTION()
+    void StopPlayingMontage();
+
+    // 이벤트 핸들러
+    UFUNCTION()
+    void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
+
+    UFUNCTION()
+    void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+    
+    UFUNCTION()
+    void HandleEnableComboInputEvent(const FGameplayEventData& Payload);
+
+    UFUNCTION()
+    void HandleAttackRecoveryEndEvent(const FGameplayEventData& Payload);
+
+    UFUNCTION()
+    void HandleResetComboEvent(const FGameplayEventData& Payload);
+
+    // 이벤트 핸들 등록/해제
+    void RegisterGameplayEventCallbacks();
+    void UnregisterGameplayEventCallbacks();
+    
+#pragma endregion
+};
