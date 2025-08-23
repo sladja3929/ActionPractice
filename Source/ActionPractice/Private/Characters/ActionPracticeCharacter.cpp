@@ -20,6 +20,15 @@
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
+// 디버그 로그 활성화/비활성화 (0: 비활성화, 1: 활성화)
+#define ENABLE_DEBUG_LOG 0
+
+#if ENABLE_DEBUG_LOG
+#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+#else
+#define DEBUG_LOG(Format, ...)
+#endif
+
 AActionPracticeCharacter::AActionPracticeCharacter()
 {
 	// Set size for collision capsule
@@ -71,7 +80,7 @@ void AActionPracticeCharacter::BeginPlay()
 	// Initialize GAS
 	InitializeAbilitySystem();
 
-	EquipWeapon(LoadWeaponClassByName("BP_OneHandedSword"), false, false);
+	EquipWeapon(LoadWeaponClassByName("BP_StraightSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
 }
 
@@ -87,7 +96,6 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// ===== Basic Input Actions (Direct Function Binding) =====
-		// Movement
 		if (IA_Move)
 		{
 			EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AActionPracticeCharacter::Move);
@@ -139,7 +147,14 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		{
 			EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnAttackInput);
 		}
-        
+
+		//Hold
+		if (IA_ChargeAttack)
+		{
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnChargeAttackInput);
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnChargeAttackReleased);
+		}
+		
 		// Block (Hold)
 		if (IA_Block)
 		{
@@ -159,9 +174,13 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 	{
 		CancelActionForMove();
 	}
+
+	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
 	
-	if (Controller != nullptr && !bIsRolling && !bIsAttacking)
+	if (Controller != nullptr && !bIsRecovering)
 	{
+		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateSprintingTag());
+		
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
 		{
 			const FVector TargetLocation = LockedOnTarget->GetActorLocation();
@@ -208,165 +227,25 @@ void AActionPracticeCharacter::CancelActionForMove()
 		return;
 	}
     
-	// State.Recovering 태그가 없으면 어빌리티 캔슬 가능
-	if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+	// Attack 어빌리티가 활성화되어 있는지 확인
+	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAttackingTag());
+	
+	if (bHasActiveAttackAbility)
 	{
-		// Ability.Attack 태그를 가진 어빌리티 취소
-		FGameplayTagContainer CancelTags;
-		CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
-		AbilitySystemComponent->CancelAbilities(&CancelTags);
+		// State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
+		if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+		{
+			// Ability.Attack 태그를 가진 어빌리티 취소
+			FGameplayTagContainer CancelTags;
+			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackNormalTag());
+			AbilitySystemComponent->CancelAbilities(&CancelTags);
+			UE_LOG(LogTemp, Warning, TEXT("Attack Ability Cancelled by Move Input"));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Attack Ability is in Recovering state - cannot cancel"));
+		}
 	}
-}
-
-void AActionPracticeCharacter::StartSprint()
-{
-    // 달리기 가능 조건 체크
-    if (bIsCrouching || bIsAttacking || bIsRolling || bIsBlocking)
-    {
-        return;
-    }
-    
-    // 공중에서는 달리기 시작 불가
-    if (GetCharacterMovement()->IsFalling())
-    {
-        return;
-    }
-    
-    bIsSprinting = true;
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
-}
-
-void AActionPracticeCharacter::StopSprint()
-{
-    bIsSprinting = false;
-    
-    // 앉아있는 상태면 앉기 속도로, 아니면 걷기 속도로
-    if (bIsCrouching)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
-    else if (bIsBlocking)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-    }
-    else
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    }
-}
-
-void AActionPracticeCharacter::ToggleCrouch()
-{
-    // 액션 중에는 앉기 불가
-    if (bIsAttacking || bIsRolling)
-    {
-        return;
-    }
-    
-    if (bIsCrouching)
-    {
-        // 일어서기
-        UnCrouch();
-        bIsCrouching = false;
-        
-        // 달리고 있었다면 달리기 속도로, 아니면 걷기 속도로
-        if (bIsSprinting)
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
-        }
-        else if (bIsBlocking)
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-        }
-        else
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-        }
-    }
-    else
-    {
-        // 앉기
-        Crouch();
-        bIsCrouching = true;
-        
-        // 달리기 중이었다면 달리기 해제
-        if (bIsSprinting)
-        {
-            bIsSprinting = false;
-        }
-        
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
-}
-
-void AActionPracticeCharacter::StartJump()
-{
-    // 점프 가능 조건 체크
-    if (bIsAttacking || bIsRolling || bIsBlocking)
-    {
-        return;
-    }
-    
-    // 앉아있는 상태에서는 점프 대신 일어서기
-    if (bIsCrouching)
-    {
-        ToggleCrouch();
-        return;
-    }
-    
-    // 기본 점프 함수 호출
-    Jump();
-}
-
-void AActionPracticeCharacter::StopJump()
-{
-    // 기본 점프 중지 함수 호출
-    StopJumping();
-}
-
-void AActionPracticeCharacter::Roll()
-{
-    if (!CanPerformAction() || !RollMontage)
-    {
-        return;
-    }
-    
-    // 추가 조건 체크
-    if (bIsAttacking || bIsBlocking || bIsCrouching)
-    {
-        return;
-    }
-    
-    bIsRolling = true;
-    
-    // 달리기 중이었다면 해제
-    if (bIsSprinting)
-    {
-        bIsSprinting = false;
-    }
-    
-    // 입력 방향으로 캐릭터 회전
-    if (MovementInputVector.Size() > 0.1f)
-    {
-        const FRotator ControlRotation = GetControlRotation();
-        const FRotator YawRotation(0, ControlRotation.Yaw, 0);
-        
-        const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-        const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-        
-        const FVector RollDirection = 
-            (ForwardDirection * MovementInputVector.Y + RightDirection * MovementInputVector.X).GetSafeNormal();
-        
-        if (RollDirection.Size() > 0.1f)
-        {
-            SetActorRotation(RollDirection.Rotation());
-        }
-    }
-    
-    // 몽타주 재생
-    PlayAnimMontage(RollMontage);
-    
-
 }
 #pragma endregion
 
@@ -469,65 +348,6 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
 }
 #pragma endregion
 
-#pragma region "Block Functions"
-// StartBlock 함수 구현
-void AActionPracticeCharacter::StartBlock()
-{
-    if (!CanPerformAction() || bIsAttacking || bIsRolling)
-    {
-        return;
-    }
-    
-    bIsBlocking = true;
-    
-    // 달리기 중이었다면 해제
-    if (bIsSprinting)
-    {
-        bIsSprinting = false;
-    }
-    
-    // 이동 속도 감소
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-    
-    // 시작 몽타주가 있다면 재생
-    if (BlockStartMontage)
-    {
-        PlayAnimMontage(BlockStartMontage);
-    }
-}
-
-// StopBlock 함수 구현  
-void AActionPracticeCharacter::StopBlock()
-{
-    if (!bIsBlocking)
-    {
-        return;
-    }
-    
-    bIsBlocking = false;
-    
-    // 속도 복구
-    if (bIsCrouching)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
-    else if (bIsSprinting)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
-    }
-    else
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    }
-    
-    // 종료 몽타주가 있다면 재생
-    if (BlockEndMontage)
-    {
-        PlayAnimMontage(BlockEndMontage);
-    }
-}
-#pragma endregion
-
 #pragma region "Weapon Functions"
 void AActionPracticeCharacter::WeaponSwitch()
 {
@@ -568,7 +388,7 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 		}
 		
 		FName SocketName = FName(*SocketString);
-		UE_LOG(LogTemp, Warning, TEXT("asdasdasda%s"), *SocketString);
+		UE_LOG(LogTemp, Warning, TEXT("Equiped Weapon: %s"), *SocketString);
 		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 		if(bIsTwoHanded)
@@ -658,12 +478,18 @@ void AActionPracticeCharacter::OnBlockInputReleased()
 {
 	GASInputReleased(IA_Block);
 }
-#pragma endregion
 
-bool AActionPracticeCharacter::CanPerformAction() const
+void AActionPracticeCharacter::OnChargeAttackInput()
 {
-	return !bIsRolling && !GetCharacterMovement()->IsFalling();
+	
 }
+
+void AActionPracticeCharacter::OnChargeAttackReleased()
+{
+	
+}
+
+#pragma endregion
 
 #pragma region "GAS Functions"
 UAbilitySystemComponent* AActionPracticeCharacter::GetAbilitySystemComponent() const
@@ -728,7 +554,6 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 	
 	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
 	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
-	//FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(*AbilityClass);
 	
 	if (Spec)
 	{
@@ -744,12 +569,6 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 			AbilitySystemComponent->TryActivateAbility(Spec->Handle);
 		}
 	}
-	
-	else
-	{
-		// GAS 능력을 찾지 못했다면 기본 함수들 호출
-		CallFallbackFunction(InputAction, true);
-	}
 }
 
 void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
@@ -758,7 +577,6 @@ void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 	
 	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
 	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
-	//FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(*AbilityClass);
 
 	if (Spec)
 	{
@@ -768,69 +586,6 @@ void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 		{
 			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
 		}
-	}
-	
-	else
-	{
-		// GAS 능력을 찾지 못했다면 기본 함수들 호출
-		CallFallbackFunction(InputAction, false);
-	}
-}
-
-void AActionPracticeCharacter::CallFallbackFunction(const UInputAction* InputAction, bool bIsPressed)
-{
-	if (InputAction == IA_Jump)
-	{
-		if (bIsPressed)
-		{
-			StartJump();
-		}
-		else
-		{
-			StopJump();
-		}
-	}
-	else if (InputAction == IA_Sprint)
-	{
-		if (bIsPressed)
-		{
-			StartSprint();
-		}
-		else
-		{
-			StopSprint();
-		}
-	}
-	else if (InputAction == IA_Crouch)
-	{
-		if (bIsPressed)
-		{
-			ToggleCrouch();
-		}
-		// Crouch는 토글이므로 Released 이벤트는 무시
-	}
-	else if (InputAction == IA_Roll)
-	{
-		if (bIsPressed)
-		{
-			Roll();
-		}
-		// Roll은 one-shot이므로 Released 이벤트는 무시
-	}
-	else if (InputAction == IA_Block)
-	{
-		if (bIsPressed)
-		{
-			StartBlock();
-		}
-		else
-		{
-			StopBlock();
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Warning, TEXT("No fallback function found for InputAction"));
 	}
 }
 #pragma endregion

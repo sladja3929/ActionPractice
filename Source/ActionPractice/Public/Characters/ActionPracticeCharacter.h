@@ -47,7 +47,19 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	FString WeaponBlueprintBasePath = TEXT("/Game/Items/BluePrint/");
+
+	// ===== Movement Properties =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	float WalkSpeed = 400.0f;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	float SprintSpeedMultiplier = 1.5f;
+    
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	float CrouchSpeedMultiplier = 0.5f;
+    
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
+	float BlockingSpeedMultiplier = 1.0f;
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -127,75 +139,23 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	UInputAction* IA_WeaponSwitch;
-	
-	// ===== Animation Montages =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Montages")
-	class UAnimMontage* RollMontage;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Montages")
-	class UAnimMontage* AttackMontage;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Montages")
-	class UAnimMontage* BlockStartMontage;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation|Montages")
-	class UAnimMontage* BlockEndMontage;
 
-	// ===== Movement Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float WalkSpeed = 400.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	UInputAction* IA_ChargeAttack;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float SprintSpeedMultiplier = 1.5f;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float CrouchSpeedMultiplier = 0.5f;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float BlockingSpeedMultiplier = 1.0f;
-
 	// ===== State Variables =====
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsSprinting = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsCrouching = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsBlocking = false;
-    
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsAttacking = false;
-    
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsRolling = false;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsLockOn = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
 	bool bIsSwitching = false;
 
-	// ===== Combo System Variables =====
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bCanComboSave = false;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
-	bool bComboInputSaved = false;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat")
-	int32 MaxComboCount = 3;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	int32 ComboCounter = 0;
-
+	// ===== LockOn =====
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	AActor* LockedOnTarget = nullptr;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	bool bCanABPInterruptMontage = false;
 	
 	FVector2D MovementInputVector;
+	
 	// ===== Weapon Properties =====
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AWeapon> WeaponClass = nullptr;
@@ -231,16 +191,6 @@ protected:
 	AActor* FindNearestTarget();
 	void UpdateLockOnCamera();
 	
-	// ===== Legacy Action Functions =====
-	void StartSprint();
-	void StopSprint();
-	void ToggleCrouch();
-	void StartJump();
-	void StopJump();
-	virtual void Roll();	
-	virtual void StartBlock();
-	virtual void StopBlock();	
-	
 	// ===== GAS Input Handler Functions =====
 	void OnJumpInput();
 	void OnSprintInput();
@@ -250,17 +200,16 @@ protected:
 	void OnAttackInput();
 	void OnBlockInput();
 	void OnBlockInputReleased();
+	void OnChargeAttackInput();
+	void OnChargeAttackReleased();
 	
 	// ===== Utility Functions =====
-	UFUNCTION(BlueprintCallable, Category = "Combat")
-	bool CanPerformAction() const;
 
 #pragma endregion
 
 private:
 #pragma region "Private Functions"
-	
-	void CallFallbackFunction(const UInputAction* InputAction, bool bIsPressed);
+
 	
 #pragma endregion
 };

@@ -18,7 +18,8 @@ public:
 	// Static 게임플레이 태그 접근 함수들
 	
 	// Ability Tags
-	static const FGameplayTag& GetAbilityAttackTag();
+	static const FGameplayTag& GetAbilityAttackNormalTag();
+	static const FGameplayTag& GetAbilityAttackChargeTag();
 	static const FGameplayTag& GetAbilityRollTag();
 	static const FGameplayTag& GetAbilitySprintTag();
 	static const FGameplayTag& GetAbilityJumpTag();
@@ -30,6 +31,8 @@ public:
 	static const FGameplayTag& GetStateRecoveringTag();
 	static const FGameplayTag& GetStateStunnedTag();
 	static const FGameplayTag& GetStateInvincibleTag();
+	static const FGameplayTag& GetStateJumpingTag();
+	static const FGameplayTag& GetStateSprintingTag();
 	
 	// Event Tags
 	static const FGameplayTag& GetEventNotifyEnableComboInputTag();
@@ -43,7 +46,8 @@ private:
 	// 게임플레이 태그 접근 함수들 (인스턴스 버전)
 	
 	// Ability Tags
-	const FGameplayTag& GetAbilityAttackTagInternal() const;
+	const FGameplayTag& GetAbilityAttackNormalTagInternal() const;
+	const FGameplayTag& GetAbilityAttackChargeTagInternal() const;
 	const FGameplayTag& GetAbilityRollTagInternal() const;
 	const FGameplayTag& GetAbilitySprintTagInternal() const;
 	const FGameplayTag& GetAbilityJumpTagInternal() const;
@@ -55,6 +59,8 @@ private:
 	const FGameplayTag& GetStateRecoveringTagInternal() const;
 	const FGameplayTag& GetStateStunnedTagInternal() const;
 	const FGameplayTag& GetStateInvincibleTagInternal() const;
+	const FGameplayTag& GetStateJumpingTagInternal() const;
+	const FGameplayTag& GetStateSprintingTagInternal() const;
 	
 	// Event Tags
 	const FGameplayTag& GetEventNotifyEnableComboInputTagInternal() const;

@@ -32,10 +32,11 @@ struct FAttackActionData
 {
 	GENERATED_BODY()
 	
+	// 콤보별 몽타주 배열
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
-	TSoftObjectPtr<UAnimMontage> AttackMontage;
+	TArray<TSoftObjectPtr<UAnimMontage>> AttackMontages;
 
-	//MaxComboCount는 배열 크기로
+	// 콤보별 공격 데이터 (AttackMontages와 배열 크기가 같아야 함)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TArray<FIndividualAttackData> ComboAttackData;
 };

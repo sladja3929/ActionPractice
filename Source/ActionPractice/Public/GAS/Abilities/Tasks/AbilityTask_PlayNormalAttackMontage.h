@@ -50,6 +50,9 @@ public:
     UPROPERTY()
     bool bIsInCancellableRecovery = false;
 
+    // 콤보 전환 중인지 표시하는 플래그
+    UPROPERTY()
+    bool bIsTransitioningToNextCombo = false;
     
     // 어빌리티가 취소되면 몽타주 정지
     UPROPERTY()
@@ -67,7 +70,7 @@ public:
     static UAbilityTask_PlayNormalAttackMontage* CreatePlayNormalAttackMontageProxy(
         UGameplayAbility* OwningAbility,
         FName TaskInstanceName,
-        UAnimMontage* MontageToPlay,
+        const TArray<TSoftObjectPtr<UAnimMontage>>& MontagesToPlay,
         float Rate = 1.0f,
         FName StartSection = NAME_None,
         float AnimRootMotionTranslationScale = 1.0f);
@@ -84,17 +87,21 @@ public:
     // 콤보 입력 처리 (원본의 InputPressed 로직)
     void CheckComboInputPreseed();
 
-    // 콤보 체크 (원본 함수명 유지)
-    void JumpToNextAttackSection();
+    // 다음 콤보 몽타주 재생
+    void PlayNextAttackCombo();
     
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables" //=============================================================
 
-    // 몽타주
+    // 몽타주 배열 (콤보별)
     UPROPERTY()
-    UAnimMontage* MontageToPlay;
+    TArray<TSoftObjectPtr<UAnimMontage>> MontagesToPlay;
+    
+    // 현재 재생 중인 몽타주
+    UPROPERTY()
+    UAnimMontage* CurrentMontage;
 
     // 재생 속도
     UPROPERTY()

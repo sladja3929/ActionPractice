@@ -39,6 +39,11 @@ void UBlockAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, con
 	StartBlocking();
 }
 
+void UBlockAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+}
+
 void UBlockAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	// 방어 종료

@@ -6,6 +6,14 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
+#define ENABLE_DEBUG_LOG 1
+
+#if ENABLE_DEBUG_LOG
+	#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+#else
+	#define DEBUG_LOG(Format, ...)
+#endif
+
 USprintAbility::USprintAbility()
 {
 	// GameplayTag는 Blueprint에서 설정
@@ -14,7 +22,7 @@ USprintAbility::USprintAbility()
 	StaminaCost = 0.0f;
 	
 	// 기본값 설정
-	SprintSpeedMultiplier = 1.8f;
+	SprintSpeedMultiplier = 1.5f;
 	StaminaDrainPerSecond = 12.0f;
 	MinStaminaToStart = 10.0f;
 	MinStaminaToContinue = 5.0f;
@@ -47,15 +55,34 @@ void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 		return;
 	}
 
+	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
+	if (!Character)
+	{
+		return;
+	}
+
+	SprintSpeedMultiplier = Character->SprintSpeedMultiplier;
 	// 스프린트 시작
 	StartSprinting();
+}
+
+void USprintAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	DEBUG_LOG(TEXT("Sprint Input Released - Ending Ability"));
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+void USprintAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+{
+	DEBUG_LOG(TEXT("sprint cancel"));
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 }
 
 void USprintAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	// 스프린트 종료
 	StopSprinting();
-
+	DEBUG_LOG(TEXT("sprint end"));
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 

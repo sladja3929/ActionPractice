@@ -40,11 +40,20 @@ UGameplayTagsSubsystem* UGameplayTagsSubsystem::Get()
 #pragma region "Static Accessor Functions"
 
 // Ability Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTag()
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackNormalTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
-		return Subsystem->GetAbilityAttackTagInternal();
+		return Subsystem->GetAbilityAttackNormalTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackChargeTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityAttackChargeTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -131,6 +140,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetStateJumpingTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateJumpingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateSprintingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 // Event Tags
 const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag()
 {
@@ -164,11 +191,20 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyResetComboTag()
 #pragma region "Internal Tag Functions"
 
 // Ability Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTagInternal() const
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackNormalTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
-		return GameplayTagsDataAsset->Ability_Attack;
+		return GameplayTagsDataAsset->Ability_Attack_Normal;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackChargeTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_Attack_Charge;
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -251,6 +287,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTagInternal() cons
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->State_Invincible;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateJumpingTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Jumping;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Sprinting;
 	}
 	return FGameplayTag::EmptyTag;
 }

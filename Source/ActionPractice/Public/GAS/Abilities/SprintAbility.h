@@ -15,7 +15,7 @@ public:
 protected:
 	// 스프린트 속도 배율
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
-	float SprintSpeedMultiplier = 1.8f;
+	float SprintSpeedMultiplier = 1.5f;
 
 	// 스프린트 중 스태미나 소모량 (초당)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
@@ -36,6 +36,10 @@ public:
 	// 어빌리티 활성화
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
+	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	
 	// 어빌리티 종료
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
