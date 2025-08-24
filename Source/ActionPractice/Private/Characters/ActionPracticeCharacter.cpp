@@ -243,7 +243,7 @@ void AActionPracticeCharacter::CancelActionForMove()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Attack Ability is in Recovering state - cannot cancel"));
+			DEBUG_LOG(TEXT("Attack Ability is in Recovering state - cannot cancel"));
 		}
 	}
 }

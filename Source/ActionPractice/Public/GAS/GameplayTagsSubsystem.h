@@ -18,6 +18,7 @@ public:
 	// Static 게임플레이 태그 접근 함수들
 	
 	// Ability Tags
+	static const FGameplayTag& GetAbilityAttackTag();
 	static const FGameplayTag& GetAbilityAttackNormalTag();
 	static const FGameplayTag& GetAbilityAttackChargeTag();
 	static const FGameplayTag& GetAbilityRollTag();
@@ -46,6 +47,7 @@ private:
 	// 게임플레이 태그 접근 함수들 (인스턴스 버전)
 	
 	// Ability Tags
+	const FGameplayTag& GetAbilityAttackTagInternal() const;
 	const FGameplayTag& GetAbilityAttackNormalTagInternal() const;
 	const FGameplayTag& GetAbilityAttackChargeTagInternal() const;
 	const FGameplayTag& GetAbilityRollTagInternal() const;

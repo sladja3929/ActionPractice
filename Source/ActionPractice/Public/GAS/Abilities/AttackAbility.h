@@ -4,6 +4,7 @@
 #include "Public/Items/WeaponData.h"
 #include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "Engine/Engine.h"
+#include "Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "Tasks/AbilityTask_PlayNormalAttackMontage.h"
 #include "AttackAbility.generated.h"
 
@@ -28,21 +29,45 @@ protected:
 	
 	const FAttackActionData* WeaponAttackData;
 
+	UPROPERTY()
+	int32 ComboCounter = 0;
+
+	UPROPERTY()
+	int32 MaxComboCount = 1;
+
+	UPROPERTY()
+	bool bCanComboSave = false;
+
+	UPROPERTY()
+	bool bComboInputSaved = false;
+
+	UPROPERTY()
+	bool bIsInCancellableRecovery = false;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
 
-	// ===== Task Evenet Handler Functions =====
-	
 	UFUNCTION()
-	void OnTaskCompleted();
+	void ExecuteMontageTask();
+	
+	void PlayNextAttackCombo();
+
+	// ===== Task Event Handler Functions =====
+	UFUNCTION()
+	void OnTaskMontageCompleted();
 
 	UFUNCTION()
-	void OnTaskInterrupted();
-	
+	void OnTaskMontageInterrupted();
+
 	UFUNCTION()
-	void OnComboPerformed();
+	void OnNotifyEnableComboInput();
+
+	UFUNCTION()
+	void OnNotifyActionRecoveryEnd();
+
+	UFUNCTION()
+	void OnNotifyResetCombo();
 	
 #pragma endregion
 
@@ -51,6 +76,9 @@ private:
 
 	UPROPERTY()
 	UAbilityTask_PlayNormalAttackMontage* NormalAttackTask;
+
+	UPROPERTY()
+	UAbilityTask_PlayMontageWithEvents* MontageTask;
 	
 #pragma endregion
 

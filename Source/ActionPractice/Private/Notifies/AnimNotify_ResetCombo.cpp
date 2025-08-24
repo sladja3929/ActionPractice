@@ -8,10 +8,14 @@ void UAnimNotify_ResetCombo::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-			MeshComp->GetOwner(), 
-			UGameplayTagsSubsystem::GetEventNotifyResetComboTag(), 
-			FGameplayEventData()
-		);
+		// AbilitySystemComponent가 있는 액터에서만 이벤트 전송 (애니메이션 에디터 프리뷰 액터 제외)
+		if (UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(MeshComp->GetOwner()))
+		{
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				MeshComp->GetOwner(), 
+				UGameplayTagsSubsystem::GetEventNotifyResetComboTag(), 
+				FGameplayEventData()
+			);
+		}
 	}
 }

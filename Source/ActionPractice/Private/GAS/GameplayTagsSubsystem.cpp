@@ -40,6 +40,15 @@ UGameplayTagsSubsystem* UGameplayTagsSubsystem::Get()
 #pragma region "Static Accessor Functions"
 
 // Ability Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityAttackTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackNormalTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -191,6 +200,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyResetComboTag()
 #pragma region "Internal Tag Functions"
 
 // Ability Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_Attack;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackNormalTagInternal() const
 {
 	if (GameplayTagsDataAsset)

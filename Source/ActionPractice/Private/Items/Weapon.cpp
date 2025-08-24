@@ -3,6 +3,15 @@
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
 #include "Math/UnrealMathUtility.h"
+#include "Animation/AnimMontage.h"
+
+#define ENABLE_DEBUG_LOG 1
+
+#if ENABLE_DEBUG_LOG
+    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+#else
+    #define DEBUG_LOG(Format, ...)
+#endif
 
 AWeapon::AWeapon()
 {
@@ -44,6 +53,7 @@ void AWeapon::BeginPlay()
         // 콜리전 업데이트
         WeaponMesh->UpdateCollisionFromStaticMesh();
     }
+    
 }
 
 void AWeapon::Tick(float DeltaTime)
@@ -72,6 +82,7 @@ void AWeapon::EquipWeapon()
     // 여기에 무기별 고유 로직을 추가할 수 있습니다
     // 예: 몽타주 재생, 이펙트 재생, 사운드 재생, 데미지 처리 등
 }
+
 
 void AWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {

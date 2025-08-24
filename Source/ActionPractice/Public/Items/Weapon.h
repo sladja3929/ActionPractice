@@ -25,6 +25,7 @@ public:
 	const UWeaponDataAsset* GetWeaponData() const { return WeaponData.Get(); }
 	const FBlockActionData* GetWeaponBlockData() const;
 	const FAttackActionData* GetWeaponAttackDataByTag(FGameplayTag AttackTag) const;
+
 	
 	// 무기 사용 함수
 	UFUNCTION(BlueprintCallable, Category = "Weapon")

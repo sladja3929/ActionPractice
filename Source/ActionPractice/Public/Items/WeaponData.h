@@ -64,6 +64,38 @@ class UWeaponDataAsset : public UPrimaryDataAsset
 	GENERATED_BODY()
 
 public:
+	
+	// WeaponData가 로드될 때 자동으로 몽타주들을 프리로딩
+	virtual void PostLoad() override
+	{
+		Super::PostLoad();
+		
+		// 에디터에서는 프리뷰 월드 체크로 애니메이션 에디터 제외
+		UWorld* World = GetWorld();
+		if (!World || World->IsPreviewWorld())
+		{
+			return;
+		}
+		
+		// 모든 공격 몽타주 프리로딩
+		for (auto& AttackDataPair : AttackDataMap)
+		{
+			FAttackActionData& AttackData = AttackDataPair.Value;
+			for (TSoftObjectPtr<UAnimMontage>& SoftMontage : AttackData.AttackMontages)
+			{
+				if (!SoftMontage.IsNull() && !SoftMontage.IsValid())
+				{
+					(void)SoftMontage.LoadSynchronous();
+				}
+			}
+		}
+		
+		// 블록 몽타주 프리로딩
+		if (!BlockData.BlockMontage.IsNull() && !BlockData.BlockMontage.IsValid())
+		{
+			(void)BlockData.BlockMontage.LoadSynchronous();
+		}
+	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats")
 	float BaseDamage = 100.0f;
