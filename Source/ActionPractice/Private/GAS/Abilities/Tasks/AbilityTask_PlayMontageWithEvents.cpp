@@ -7,7 +7,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 
 // 디버그 로그 활성화/비활성화 (0: 비활성화, 1: 활성화)
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
@@ -20,7 +20,7 @@ UAbilityTask_PlayMontageWithEvents::UAbilityTask_PlayMontageWithEvents(const FOb
 {
     Rate = 1.0f;
     bStopMontageWhenAbilityCancelled = false;
-    
+    bStopBroadCastMontageEvents = false;
     MontageToPlay = nullptr;
 }
 
@@ -120,9 +120,9 @@ void UAbilityTask_PlayMontageWithEvents::ChangeMontageAndPlay(UAnimMontage* NewM
         DEBUG_LOG(TEXT("No Montage or AnimInstance or Task"));
         //return;
     }
-
+    
+    bStopBroadCastMontageEvents = true;
     UnbindMontageCallbacks();
-
     StopPlayingMontage();
 
     MontageToPlay = NewMontage;
@@ -133,6 +133,7 @@ void UAbilityTask_PlayMontageWithEvents::ChangeMontageAndPlay(UAnimMontage* NewM
     {
         // 새 콜백 바인딩
         BindMontageCallbacks();
+        bStopBroadCastMontageEvents = false;
     }
 }
 
@@ -176,7 +177,7 @@ void UAbilityTask_PlayMontageWithEvents::OnMontageBlendingOut(UAnimMontage* Mont
         }
     }
 
-    if (ShouldBroadcastAbilityTaskDelegates())
+    if (ShouldBroadcastAbilityTaskDelegates() && !bStopBroadCastMontageEvents)
     {
         OnMontageBlendOut.Broadcast();
     }
@@ -190,14 +191,14 @@ void UAbilityTask_PlayMontageWithEvents::OnMontageEnded(UAnimMontage* Montage, b
            
     if (!bInterrupted)
     {
-        if (ShouldBroadcastAbilityTaskDelegates())
+        if (ShouldBroadcastAbilityTaskDelegates() && !bStopBroadCastMontageEvents)
         {
             OnMontageCompleted.Broadcast();
         }
     }
     else
     {
-        if (ShouldBroadcastAbilityTaskDelegates())
+        if (ShouldBroadcastAbilityTaskDelegates() && !bStopBroadCastMontageEvents)
         {
             OnMontageInterrupted.Broadcast();
         }
@@ -227,6 +228,14 @@ void UAbilityTask_PlayMontageWithEvents::HandleResetComboEvent(const FGameplayEv
     if (ShouldBroadcastAbilityTaskDelegates())
     {
         OnResetCombo.Broadcast(); 
+    }
+}
+
+void UAbilityTask_PlayMontageWithEvents::HandleChargeStartEvent(const FGameplayEventData& Payload)
+{
+    if (ShouldBroadcastAbilityTaskDelegates())
+    {
+        OnChargeStart.Broadcast();
     }
 }
 #pragma endregion
@@ -265,6 +274,16 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
                     HandleResetComboEvent(*EventData);
                 }
             });
+
+        // ChargeStart 이벤트 - Lambda 사용
+        ChargeStartHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyChargeStartTag())
+            .AddLambda([this](const FGameplayEventData* EventData)
+            {
+                if (IsValid(this) && EventData)
+                {
+                    HandleChargeStartEvent(*EventData);
+                }
+            });
     }
 }
 
@@ -288,6 +307,12 @@ void UAbilityTask_PlayMontageWithEvents::UnregisterGameplayEventCallbacks()
         {
             AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
                 .Remove(ResetComboHandle);
+        }
+
+        if (ChargeStartHandle.IsValid())
+        {
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyChargeStartTag())
+                .Remove(ChargeStartHandle);
         }
     }
 }

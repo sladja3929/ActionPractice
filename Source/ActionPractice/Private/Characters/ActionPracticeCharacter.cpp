@@ -15,7 +15,7 @@
 #include "AbilitySystemComponent.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
-#include "GAS/Abilities/AttackAbility.h"
+#include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -151,8 +151,8 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		//Hold
 		if (IA_ChargeAttack)
 		{
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnChargeAttackInput);
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnChargeAttackReleased);
+			EnhancedInputComponent->BindAction(IA_ChargeAttack, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnChargeAttackInput);
+			EnhancedInputComponent->BindAction(IA_ChargeAttack, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnChargeAttackReleased);
 		}
 		
 		// Block (Hold)
@@ -239,7 +239,7 @@ void AActionPracticeCharacter::CancelActionForMove()
 			FGameplayTagContainer CancelTags;
 			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackNormalTag());
 			AbilitySystemComponent->CancelAbilities(&CancelTags);
-			UE_LOG(LogTemp, Warning, TEXT("Attack Ability Cancelled by Move Input"));
+			DEBUG_LOG(TEXT("Attack Ability Cancelled by Move Input"));
 		}
 		else
 		{
@@ -481,12 +481,12 @@ void AActionPracticeCharacter::OnBlockInputReleased()
 
 void AActionPracticeCharacter::OnChargeAttackInput()
 {
-	
+	GASInputPressed(IA_ChargeAttack);
 }
 
 void AActionPracticeCharacter::OnChargeAttackReleased()
 {
-	
+	GASInputReleased(IA_ChargeAttack);
 }
 
 #pragma endregion

@@ -1,33 +1,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Public/Items/WeaponData.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/BaseAttackAbility.h"
 #include "Engine/Engine.h"
 #include "Tasks/AbilityTask_PlayMontageWithEvents.h"
-#include "Tasks/AbilityTask_PlayNormalAttackMontage.h"
-#include "AttackAbility.generated.h"
+#include "ChargeAttackAbility.generated.h"
 
 UCLASS()
-class ACTIONPRACTICE_API UAttackAbility : public UActionPracticeGameplayAbility
+class ACTIONPRACTICE_API UChargeAttackAbility : public UBaseAttackAbility
 {
 	GENERATED_BODY()
 
 public:
 #pragma region "Public Functions" //==================================================
 	
-	UAttackAbility();
+	UChargeAttackAbility();
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
 
 #pragma endregion
 
 protected:
 #pragma region "Protected Vriables" //================================================
-	
-	const FAttackActionData* WeaponAttackData;
 
 	UPROPERTY()
 	int32 ComboCounter = 0;
@@ -43,43 +40,45 @@ protected:
 
 	UPROPERTY()
 	bool bIsInCancellableRecovery = false;
+
+	UPROPERTY()
+	bool bMaxCharged = false;
+
+	UPROPERTY()
+	bool bIsCharging = false;
+
+	UPROPERTY()
+	bool bNoCharge = false;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
 
-	UFUNCTION()
-	void ExecuteMontageTask();
+	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay) override;
+
+	void ChargeFinished();
 	
-	void PlayNextAttackCombo();
-
+	void PlayNextChargeMontage();
+	
 	// ===== Task Event Handler Functions =====
-	UFUNCTION()
-	void OnTaskMontageCompleted();
-
-	UFUNCTION()
-	void OnTaskMontageInterrupted();
-
+	virtual void OnTaskMontageCompleted() override;
+	
 	UFUNCTION()
 	void OnNotifyEnableComboInput();
 
-	UFUNCTION()
-	void OnNotifyActionRecoveryEnd();
+	virtual void OnNotifyActionRecoveryEnd() override;
 
 	UFUNCTION()
 	void OnNotifyResetCombo();
+
+	UFUNCTION()
+	void OnNotifyChargeStart();
 	
 #pragma endregion
 
 private:
 #pragma region "Private Variables"
 
-	UPROPERTY()
-	UAbilityTask_PlayNormalAttackMontage* NormalAttackTask;
-
-	UPROPERTY()
-	UAbilityTask_PlayMontageWithEvents* MontageTask;
-	
 #pragma endregion
 
 #pragma region "Private Functions"

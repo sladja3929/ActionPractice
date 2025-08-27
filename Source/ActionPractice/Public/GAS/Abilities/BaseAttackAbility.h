@@ -1,0 +1,68 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Public/Items/WeaponData.h"
+#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "Engine/Engine.h"
+#include "Tasks/AbilityTask_PlayMontageWithEvents.h"
+#include "BaseAttackAbility.generated.h"
+
+UCLASS()
+class ACTIONPRACTICE_API UBaseAttackAbility : public UActionPracticeGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+#pragma region "Public Functions" //==================================================
+	
+	UBaseAttackAbility();
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+	
+#pragma endregion
+
+protected:
+#pragma region "Protected Vriables" //================================================
+	
+	const FAttackActionData* WeaponAttackData;
+
+	UPROPERTY()
+	UAbilityTask_PlayMontageWithEvents* MontageTask;
+	
+#pragma endregion
+
+#pragma region "Protected Functions" //================================================
+
+	UFUNCTION()
+	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay);
+
+	// ===== Task Event Handler Functions =====
+	UFUNCTION()
+	virtual void OnTaskMontageCompleted();
+
+	UFUNCTION()
+	virtual void OnTaskMontageInterrupted();
+
+	UFUNCTION()
+	virtual void OnNotifyActionRecoveryEnd();
+
+	// Weapon 레퍼런스
+	UFUNCTION()
+	class AWeapon* GetWeaponClassFromActorInfo() const;
+
+	// WeaponData
+	UFUNCTION()
+	bool SetWeaponAttackDataFromActorInfo();
+	
+#pragma endregion
+
+private:
+#pragma region "Private Variables"
+
+	
+#pragma endregion
+
+#pragma region "Private Functions"
+
+#pragma endregion
+};

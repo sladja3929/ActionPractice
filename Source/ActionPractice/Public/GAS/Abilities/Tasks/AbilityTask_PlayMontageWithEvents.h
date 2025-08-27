@@ -40,10 +40,16 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FMontageWithEventsDelegate OnResetCombo;
+
+    UPROPERTY(BlueprintAssignable)
+    FMontageWithEventsDelegate OnChargeStart;
     
     // 어빌리티가 취소되면 몽타주 정지
     UPROPERTY()
     bool bStopMontageWhenAbilityCancelled;
+
+    UPROPERTY()
+    bool bStopBroadCastMontageEvents;
     
 #pragma endregion
 
@@ -103,6 +109,7 @@ protected:
     FDelegateHandle EnableComboInputHandle;
     FDelegateHandle ActionRecoveryEndHandle;
     FDelegateHandle ResetComboHandle;
+    FDelegateHandle ChargeStartHandle;
     
 #pragma endregion
     
@@ -129,6 +136,9 @@ protected:
 
     UFUNCTION()
     void HandleResetComboEvent(const FGameplayEventData& Payload);
+
+    UFUNCTION()
+    void HandleChargeStartEvent(const FGameplayEventData& Payload);
 
     // 이벤트 핸들 등록/해제
     void RegisterGameplayEventCallbacks();

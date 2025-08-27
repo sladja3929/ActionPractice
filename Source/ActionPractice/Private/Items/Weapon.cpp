@@ -72,6 +72,26 @@ const FBlockActionData* AWeapon::GetWeaponBlockData() const
 const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(FGameplayTag AttackTag) const
 {
     if (!WeaponData) return nullptr;
+
+    else
+    {
+        // 첫 번째 몽타주만 체크 (대표로)
+        // 첫 번째가 로드되었으면 나머지도 로드되었다고 가정
+        for (const auto& AttackDataPair : WeaponData->AttackDataMap)
+        {
+            if (AttackDataPair.Value.AttackMontages.Num() > 0)
+            {
+                const TSoftObjectPtr<UAnimMontage>& FirstMontage = AttackDataPair.Value.AttackMontages[0];
+                if (!FirstMontage.IsNull() && !FirstMontage.IsValid())
+                {
+                    // 아직 로드 안됨
+                    WeaponData->PreloadAllMontages();
+                    break;
+                }
+                break;  // 첫 번째만 체크
+            }
+        }
+    }
     
     return WeaponData->AttackDataMap.Find(AttackTag);
 }

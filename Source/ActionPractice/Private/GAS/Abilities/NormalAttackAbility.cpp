@@ -1,13 +1,11 @@
-#include "GAS/Abilities/AttackAbility.h"
-#include "Characters/ActionPracticeCharacter.h"
+#include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Items/Weapon.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
-#include "GameplayTagContainer.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
@@ -15,7 +13,7 @@
     #define DEBUG_LOG(Format, ...)
 #endif
 
-UAttackAbility::UAttackAbility()
+UNormalAttackAbility::UNormalAttackAbility()
 {
     StaminaCost = 15.0f;
     ComboCounter = 0;
@@ -25,7 +23,7 @@ UAttackAbility::UAttackAbility()
     bIsInCancellableRecovery = false;
 }
 
-void UAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
     if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
     {
@@ -34,44 +32,9 @@ void UAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
         return;
     }
 
-    // 무기 정보 가져오기
-    AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-    if (!Character)
+    if (!SetWeaponAttackDataFromActorInfo())
     {
-        DEBUG_LOG(TEXT("No Character"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
-
-    AWeapon* Weapon = Character->GetRightWeapon();
-    if (!Weapon)
-    {
-        DEBUG_LOG(TEXT("No Weapon"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
-
-    FGameplayTag MainTag = this->AbilityTags.First();
-    if (!MainTag.IsValid())
-    {
-        DEBUG_LOG(TEXT("No Ability MainTag"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
-
-    WeaponAttackData = Weapon->GetWeaponAttackDataByTag(MainTag);
-    if (WeaponAttackData->AttackMontages.IsEmpty() || !WeaponAttackData->AttackMontages[0])
-    {
-        DEBUG_LOG(TEXT("No Montage Data - ListEmpty: %d, FirstEmpty: %d"), WeaponAttackData->AttackMontages.IsEmpty(), !WeaponAttackData->AttackMontages[0]);
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-        return;
-    }
-    
-    // 몽타주 배열과 콤보 데이터 배열 크기 일치 검증
-    if (WeaponAttackData->AttackMontages.Num() != WeaponAttackData->ComboAttackData.Num())
-    {
-        UE_LOG(LogAbilitySystemComponent, Error, TEXT("AttackMontages and ComboAttackData array size mismatch!"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
 
@@ -84,11 +47,10 @@ void UAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
     bCanComboSave = false;
     bIsInCancellableRecovery = false;
     
-    DEBUG_LOG(TEXT("Starting Attack Montage"));
-    ExecuteMontageTask();
+    ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get());
 }
 
-void UAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
     // 2. enablecomboInput 구간에서 입력이 들어오면 저장
     if (bCanComboSave)
@@ -116,7 +78,7 @@ void UAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const
  * 5. 몽타주 종료 (ResetCombo와 같지 않음)
  */
 
-void UAttackAbility::ExecuteMontageTask()
+void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
 {
     // 스태미나 소모
     if (!ConsumeStamina())
@@ -131,11 +93,11 @@ void UAttackAbility::ExecuteMontageTask()
         AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
     }
     
-    // 커스텀 태스크 생성 - 몽타주 배열 전달
+    // 커스텀 태스크 생성
     MontageTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
         this,
         NAME_None,
-        WeaponAttackData->AttackMontages[ComboCounter].Get(),
+        MontageToPlay,
         1.0f,
         NAME_None,
         1.0f
@@ -144,11 +106,11 @@ void UAttackAbility::ExecuteMontageTask()
     if (MontageTask)
     {        
         // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
-        MontageTask->OnMontageCompleted.AddDynamic(this, &UAttackAbility::OnTaskMontageCompleted);
-        MontageTask->OnMontageInterrupted.AddDynamic(this, &UAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnEnableComboInput.AddDynamic(this, &UAttackAbility::OnNotifyEnableComboInput);
-        MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UAttackAbility::OnNotifyActionRecoveryEnd);
-        MontageTask->OnResetCombo.AddDynamic(this, &UAttackAbility::OnNotifyResetCombo);
+        MontageTask->OnMontageCompleted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageCompleted);
+        MontageTask->OnMontageInterrupted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageInterrupted);
+        MontageTask->OnEnableComboInput.AddDynamic(this, &UNormalAttackAbility::OnNotifyEnableComboInput);
+        MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UNormalAttackAbility::OnNotifyActionRecoveryEnd);
+        MontageTask->OnResetCombo.AddDynamic(this, &UNormalAttackAbility::OnNotifyResetCombo);
 
         // 태스크 활성화
         MontageTask->ReadyForActivation();
@@ -161,7 +123,7 @@ void UAttackAbility::ExecuteMontageTask()
     }
 }
 
-void UAttackAbility::PlayNextAttackCombo()
+void UNormalAttackAbility::PlayNextAttackCombo()
 {
     ComboCounter++;
     bComboInputSaved = false;
@@ -187,40 +149,17 @@ void UAttackAbility::PlayNextAttackCombo()
     }
     else
     {
-        // 프리로드가 실패했거나 누락된 경우 폴백으로 동기 로딩 시도
-        DEBUG_LOG(TEXT("Montage not preloaded, attempting LoadSynchronous for combo %d"), ComboCounter);
-        NextMontage = WeaponAttackData->AttackMontages[ComboCounter].LoadSynchronous();
-        
-        if (NextMontage)
-        {
-            MontageTask->ChangeMontageAndPlay(NextMontage);
-        }
-        else
-        {
-            DEBUG_LOG(TEXT("Failed to load montage for combo %d"), ComboCounter);
-            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        }
+        DEBUG_LOG(TEXT("Failed to load montage for combo %d"), ComboCounter);
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
     }
 }
 
-void UAttackAbility::OnTaskMontageCompleted()
-{
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-    DEBUG_LOG(TEXT("Task Completed - EndAbility"));
-}
-
-void UAttackAbility::OnTaskMontageInterrupted()
-{
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-    DEBUG_LOG(TEXT("Task Interrupted - EndAbility"));
-}
-
-void UAttackAbility::OnNotifyEnableComboInput()
+void UNormalAttackAbility::OnNotifyEnableComboInput()
 {
     bCanComboSave = true;
 }
 
-void UAttackAbility::OnNotifyActionRecoveryEnd()
+void UNormalAttackAbility::OnNotifyActionRecoveryEnd()
 {
     bCanComboSave = false;
 
@@ -247,33 +186,23 @@ void UAttackAbility::OnNotifyActionRecoveryEnd()
     }
 }
 
-void UAttackAbility::OnNotifyResetCombo()
+void UNormalAttackAbility::OnNotifyResetCombo()
 {
     ComboCounter = 0;
 }
 
-void UAttackAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+void UNormalAttackAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
 {
     DEBUG_LOG(TEXT("AttackAbility Cancelled"));    
     Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 }
 
-void UAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+void UNormalAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-    DEBUG_LOG(TEXT("EndAbility %d"), bWasCancelled);
-
     ComboCounter = 0;
     bComboInputSaved = false;
     bCanComboSave = false;
     bIsInCancellableRecovery = false;
     
-    if (IsEndAbilityValid(Handle, ActorInfo))
-    {
-        if (MontageTask)
-        {
-            MontageTask->bStopMontageWhenAbilityCancelled = bWasCancelled;
-        }
-
-        Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-    }
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
