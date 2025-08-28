@@ -55,8 +55,6 @@ protected:
 #pragma region "Protected Functions" //================================================
 
 	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay) override;
-
-	void ChargeFinished();
 	
 	void PlayNextChargeMontage();
 	
@@ -64,7 +62,7 @@ protected:
 	virtual void OnTaskMontageCompleted() override;
 	
 	UFUNCTION()
-	void OnNotifyEnableComboInput();
+	void OnNotifyEnableBufferInput();
 
 	virtual void OnNotifyActionRecoveryEnd() override;
 

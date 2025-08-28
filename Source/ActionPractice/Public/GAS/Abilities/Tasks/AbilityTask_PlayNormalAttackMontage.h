@@ -120,7 +120,7 @@ protected:
     FOnMontageEnded MontageEndedDelegate;
 
     // 이벤트 핸들
-    FDelegateHandle EnableComboInputHandle;
+    FDelegateHandle EnableBufferInputHandle;
     FDelegateHandle ActionRecoveryEndHandle;
     FDelegateHandle ResetComboHandle;
     
@@ -142,7 +142,7 @@ protected:
     void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
     
     UFUNCTION()
-    void HandleEnableComboInputEvent(const FGameplayEventData& Payload);
+    void HandleEnableBufferInputEvent(const FGameplayEventData& Payload);
 
     UFUNCTION()
     void HandleActionRecoveryEndEvent(const FGameplayEventData& Payload);

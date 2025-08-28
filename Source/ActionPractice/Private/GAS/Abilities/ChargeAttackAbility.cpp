@@ -76,7 +76,7 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }
     
     // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
-    else if (bIsInCancellableRecovery)
+    else if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
     {
         bNoCharge = false;
         PlayNextChargeMontage();
@@ -114,7 +114,7 @@ void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
         MontageTask->OnMontageCompleted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageCompleted);
         MontageTask->OnMontageInterrupted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnEnableComboInput.AddDynamic(this, &UChargeAttackAbility::OnNotifyEnableComboInput);
+        MontageTask->OnEnableBufferInput.AddDynamic(this, &UChargeAttackAbility::OnNotifyEnableBufferInput);
         MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UChargeAttackAbility::OnNotifyActionRecoveryEnd);
         MontageTask->OnResetCombo.AddDynamic(this, &UChargeAttackAbility::OnNotifyResetCombo);
         MontageTask->OnChargeStart.AddDynamic(this, &UChargeAttackAbility::OnNotifyChargeStart);
@@ -189,7 +189,7 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
     }
 }
 
-void UChargeAttackAbility::OnNotifyEnableComboInput()
+void UChargeAttackAbility::OnNotifyEnableBufferInput()
 {
     bCanComboSave = true;
 }
@@ -223,7 +223,8 @@ void UChargeAttackAbility::OnNotifyActionRecoveryEnd()
 
 void UChargeAttackAbility::OnNotifyResetCombo()
 {
-    ComboCounter = 0;
+    DEBUG_LOG(TEXT("Reset Combo"));
+    ComboCounter = -1; //어빌리티가 살아있는 동안 입력이 들어오면 PlayNext로 0이 되고, 어빌리티가 죽으면 초기화
 }
 
 void UChargeAttackAbility::OnNotifyChargeStart()

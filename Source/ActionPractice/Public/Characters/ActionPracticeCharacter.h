@@ -8,7 +8,6 @@
 #include "Logging/LogMacros.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffect.h"
-#include "GameplayTagContainer.h"
 #include "ActionPracticeCharacter.generated.h"
 
 class USpringArmComponent;
@@ -18,6 +17,7 @@ struct FInputActionValue;
 class UAbilitySystemComponent;
 class UActionPracticeAttributeSet;
 class UGameplayAbility;
+class UInputBufferComponent;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
@@ -41,6 +41,10 @@ class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterfa
 	/** Attribute Set */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
 	UActionPracticeAttributeSet* AttributeSet;
+
+	/** Input Buffer Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	UInputBufferComponent* InputBufferComponent;
 
 public:
 #pragma region "Public Variables"
@@ -69,14 +73,18 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// ===== Return Functions =====
+	// ===== Camera =====
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }	
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	// ===== GAS Interface =====
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return AttributeSet; }
-
+	FORCEINLINE const TMap<UInputAction*, TSubclassOf<UGameplayAbility>>& GetStartInputAbilities() const { return StartInputAbilities; }
+	
+	// ===== Input Buffer Interface =====
+	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
+	
 	// ===== Weapon Getter Functions =====
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
@@ -204,7 +212,7 @@ protected:
 	void OnChargeAttackReleased();
 	
 	// ===== Utility Functions =====
-
+	
 #pragma endregion
 
 private:

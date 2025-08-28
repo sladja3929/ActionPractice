@@ -65,7 +65,7 @@ public:
 #pragma region "Event Tags"
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
-	FGameplayTag Event_Notify_EnableComboInput;
+	FGameplayTag Event_Notify_EnableBufferInput;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Notify_ActionRecoveryEnd;

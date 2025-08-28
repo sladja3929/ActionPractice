@@ -207,11 +207,11 @@ void UAbilityTask_PlayMontageWithEvents::OnMontageEnded(UAnimMontage* Montage, b
     EndTask();
 }
 
-void UAbilityTask_PlayMontageWithEvents::HandleEnableComboInputEvent(const FGameplayEventData& Payload)
+void UAbilityTask_PlayMontageWithEvents::HandleEnableBufferInputEvent(const FGameplayEventData& Payload)
 {
     if (ShouldBroadcastAbilityTaskDelegates())
     {
-        OnEnableComboInput.Broadcast();
+        OnEnableBufferInput.Broadcast();
     }
 }
 
@@ -246,12 +246,12 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
     if (AbilitySystemComponent.IsValid() && Ability)
     {
         // EnableComboInput 이벤트 - Lambda 사용
-        EnableComboInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
+        EnableBufferInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
                 {
-                    HandleEnableComboInputEvent(*EventData);
+                    HandleEnableBufferInputEvent(*EventData);
                 }
             });
 
@@ -291,10 +291,10 @@ void UAbilityTask_PlayMontageWithEvents::UnregisterGameplayEventCallbacks()
 {
     if (AbilitySystemComponent.IsValid())
     {
-        if (EnableComboInputHandle.IsValid())
+        if (EnableBufferInputHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
-                .Remove(EnableComboInputHandle);
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
+                .Remove(EnableBufferInputHandle);
         }
 
         if (ActionRecoveryEndHandle.IsValid())

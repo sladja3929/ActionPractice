@@ -168,11 +168,11 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTag()
 }
 
 // Event Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag()
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
-		return Subsystem->GetEventNotifyEnableComboInputTagInternal();
+		return Subsystem->GetEventNotifyEnableBufferInputTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -337,11 +337,11 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTagInternal() const
 }
 
 // Event Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTagInternal() const
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
-		return GameplayTagsDataAsset->Event_Notify_EnableComboInput;
+		return GameplayTagsDataAsset->Event_Notify_EnableBufferInput;
 	}
 	return FGameplayTag::EmptyTag;
 }

@@ -1,13 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Notifies/AnimNotify_EnableComboInput.h"
+#include "Notifies/AnimNotify_EnableBufferInput.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayTagContainer.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-void UAnimNotify_EnableComboInput::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+void UAnimNotify_EnableBufferInput::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
@@ -16,7 +16,7 @@ void UAnimNotify_EnableComboInput::Notify(USkeletalMeshComponent* MeshComp, UAni
 		{
 			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 				MeshComp->GetOwner(), 
-				UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag(), 
+				UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag(), 
 				FGameplayEventData()
 			);
 		}

@@ -36,7 +36,7 @@ public:
 	static const FGameplayTag& GetStateSprintingTag();
 	
 	// Event Tags
-	static const FGameplayTag& GetEventNotifyEnableComboInputTag();
+	static const FGameplayTag& GetEventNotifyEnableBufferInputTag();
 	static const FGameplayTag& GetEventNotifyActionRecoveryEndTag();
 	static const FGameplayTag& GetEventNotifyResetComboTag();
 	static const FGameplayTag& GetEventNotifyChargeStartTag();
@@ -66,7 +66,7 @@ private:
 	const FGameplayTag& GetStateSprintingTagInternal() const;
 	
 	// Event Tags
-	const FGameplayTag& GetEventNotifyEnableComboInputTagInternal() const;
+	const FGameplayTag& GetEventNotifyEnableBufferInputTagInternal() const;
 	const FGameplayTag& GetEventNotifyActionRecoveryEndTagInternal() const;
 	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
 	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;

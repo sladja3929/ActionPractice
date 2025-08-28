@@ -10,13 +10,12 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "Interfaces/IHttpResponse.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystemComponent.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
-#include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Characters/InputBufferComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -68,6 +67,9 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 
 	// Create Attribute Set
 	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
+
+	// Create Input Buffer Component
+	InputBufferComponent = CreateDefaultSubobject<UInputBufferComponent>(TEXT("InputBufferComponent"));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -237,7 +239,7 @@ void AActionPracticeCharacter::CancelActionForMove()
 		{
 			// Ability.Attack 태그를 가진 어빌리티 취소
 			FGameplayTagContainer CancelTags;
-			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackNormalTag());
+			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
 			AbilitySystemComponent->CancelAbilities(&CancelTags);
 			DEBUG_LOG(TEXT("Attack Ability Cancelled by Move Input"));
 		}
@@ -438,6 +440,10 @@ TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FStri
 }
 #pragma endregion
 
+#pragma region "Attack Combo Functions"
+
+#pragma endregion
+
 #pragma region "GAS Input Functions"
 void AActionPracticeCharacter::OnJumpInput()
 {
@@ -564,9 +570,18 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 			AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
 		}
 
-		else
+		else //어빌리티가 활성화되지 않음 -> 다른 어빌리티 실행 중 or 어빌리티 x
 		{
-			AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+			if (InputBufferComponent->bCanBufferInput)
+			{
+				
+			}
+
+			else
+			{
+				InputBufferComponent->bCanBufferInput = false;
+				AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+			}
 		}
 	}
 }

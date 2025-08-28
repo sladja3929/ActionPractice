@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
-#include "AnimNotify_EnableComboInput.generated.h"
+#include "AnimNotify_EnableBufferInput.generated.h"
 
 /**
  * 
  */
-UCLASS(meta = (DisplayName = "Enable Combo Input"))
-class ACTIONPRACTICE_API UAnimNotify_EnableComboInput : public UAnimNotify
+UCLASS(meta = (DisplayName = "Enable Buffer Input"))
+class ACTIONPRACTICE_API UAnimNotify_EnableBufferInput : public UAnimNotify
 {
 	GENERATED_BODY()
 
@@ -20,6 +20,6 @@ public:
 	
 	virtual FString GetNotifyName_Implementation() const override
 	{
-		return TEXT("Enable Combo Input");
+		return TEXT("Enable Buffer Input");
 	}
 };

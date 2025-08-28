@@ -50,7 +50,7 @@ protected:
 
 	// ===== Task Event Handler Functions =====
 	UFUNCTION()
-	void OnNotifyEnableComboInput();
+	void OnNotifyEnableBufferInput();
 
 	virtual void OnNotifyActionRecoveryEnd() override;
 

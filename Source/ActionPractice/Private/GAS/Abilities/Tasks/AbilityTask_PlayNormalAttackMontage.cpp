@@ -219,7 +219,7 @@ void UAbilityTask_PlayNormalAttackMontage::CheckComboInputPreseed() //어빌리�
 #pragma endregion
 
 #pragma region "AnimNotify Event Functions"
-void UAbilityTask_PlayNormalAttackMontage::HandleEnableComboInputEvent(const FGameplayEventData& Payload)
+void UAbilityTask_PlayNormalAttackMontage::HandleEnableBufferInputEvent(const FGameplayEventData& Payload)
 {
     bCanComboSave = true;
 }
@@ -267,12 +267,12 @@ void UAbilityTask_PlayNormalAttackMontage::RegisterGameplayEventCallbacks()
     if (AbilitySystemComponent.IsValid() && Ability)
     {
         // EnableComboInput 이벤트 - Lambda 사용
-        EnableComboInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
+        EnableBufferInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
                 if (IsValid(this) && EventData)
                 {
-                    HandleEnableComboInputEvent(*EventData);
+                    HandleEnableBufferInputEvent(*EventData);
                 }
             });
 
@@ -302,10 +302,10 @@ void UAbilityTask_PlayNormalAttackMontage::UnregisterGameplayEventCallbacks()
 {
     if (AbilitySystemComponent.IsValid())
     {
-        if (EnableComboInputHandle.IsValid())
+        if (EnableBufferInputHandle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableComboInputTag())
-                .Remove(EnableComboInputHandle);
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
+                .Remove(EnableBufferInputHandle);
         }
 
         if (ActionRecoveryEndHandle.IsValid())
