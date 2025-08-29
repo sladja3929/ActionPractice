@@ -33,15 +33,6 @@ protected:
 	int32 MaxComboCount = 1;
 
 	UPROPERTY()
-	bool bCanComboSave = false;
-
-	UPROPERTY()
-	bool bComboInputSaved = false;
-
-	UPROPERTY()
-	bool bIsInCancellableRecovery = false;
-
-	UPROPERTY()
 	bool bMaxCharged = false;
 
 	UPROPERTY()
@@ -60,17 +51,14 @@ protected:
 	
 	// ===== Task Event Handler Functions =====
 	virtual void OnTaskMontageCompleted() override;
-	
-	UFUNCTION()
-	void OnNotifyEnableBufferInput();
-
-	virtual void OnNotifyActionRecoveryEnd() override;
 
 	UFUNCTION()
 	void OnNotifyResetCombo();
 
 	UFUNCTION()
 	void OnNotifyChargeStart();
+
+	virtual void OnEventPlayBuffer(FGameplayEventData Payload) override;
 	
 #pragma endregion
 

@@ -561,25 +561,26 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
 	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
 	
+	InputBufferComponent->bBufferActionReleased = false;
+	
 	if (Spec)
 	{
-		Spec->InputPressed = true;
-		
-		if (Spec->IsActive())
+		if (InputBufferComponent->bCanBufferInput) //다른 어빌리티가 수행중이고 입력 버퍼 가능할 때
 		{
-			AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
+			InputBufferComponent->BufferNextAction(InputAction);
 		}
 
-		else //어빌리티가 활성화되지 않음 -> 다른 어빌리티 실행 중 or 어빌리티 x
+		else
 		{
-			if (InputBufferComponent->bCanBufferInput)
+			Spec->InputPressed = true;
+			
+			if (Spec->IsActive())
 			{
-				
+				AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
 			}
 
 			else
-			{
-				InputBufferComponent->bCanBufferInput = false;
+			{				
 				AbilitySystemComponent->TryActivateAbility(Spec->Handle);
 			}
 		}
@@ -594,11 +595,16 @@ void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
 
 	if (Spec)
-	{
-		Spec->InputPressed = false;
+	{	
 		
-		if (Spec->IsActive())
+		if (InputBufferComponent->bCanBufferInput) //다른 어빌리티가 수행중이고 입력 버퍼 가능할 때
 		{
+			InputBufferComponent->bBufferActionReleased = true;
+		}
+		
+		else if (Spec->IsActive())
+		{
+			Spec->InputPressed = false;
 			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
 		}
 	}

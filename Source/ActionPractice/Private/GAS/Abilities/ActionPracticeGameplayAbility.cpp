@@ -115,3 +115,13 @@ UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAt
 	}
 	return nullptr;
 }
+
+class UInputBufferComponent* UActionPracticeGameplayAbility::GetInputBufferComponentFromActorInfo() const
+{
+	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
+	if (Character)
+	{
+		return Character->GetInputBufferComponent();
+	}
+	return nullptr;
+}

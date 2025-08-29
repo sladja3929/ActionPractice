@@ -40,6 +40,7 @@ public:
 	static const FGameplayTag& GetEventNotifyActionRecoveryEndTag();
 	static const FGameplayTag& GetEventNotifyResetComboTag();
 	static const FGameplayTag& GetEventNotifyChargeStartTag();
+	static const FGameplayTag& GetEventActionPlayBufferTag();
 
 private:
 	// Internal helper function
@@ -70,6 +71,7 @@ private:
 	const FGameplayTag& GetEventNotifyActionRecoveryEndTagInternal() const;
 	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
 	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;
+	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
 
 protected:
 	// 태그 데이터 에셋

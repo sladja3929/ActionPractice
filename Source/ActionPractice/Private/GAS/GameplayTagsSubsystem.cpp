@@ -204,6 +204,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyChargeStartTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventActionPlayBufferTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 #pragma endregion
 
 #pragma region "Internal Tag Functions"
@@ -369,6 +378,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyChargeStartTagInternal
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Event_Notify_ChargeStart;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Action_PlayBuffer;
 	}
 	return FGameplayTag::EmptyTag;
 }

@@ -33,8 +33,7 @@ public:
 	FGameplayTag Ability_Jump;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
-	FGameplayTag Ability_Block
-	;
+	FGameplayTag Ability_Block;
 #pragma endregion
 
 #pragma region "State Tags"
@@ -50,7 +49,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
 	FGameplayTag State_Jumping;
-	
+
+	//주의! 이 태그는 어빌리티의 블루프린트 소유로 넣지 말 것. 오로지 GAS 코드에서만 관리
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
 	FGameplayTag State_Recovering;
 
@@ -75,6 +75,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Notify_ChargeStart;
-	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Action_PlayBuffer;
 #pragma endregion
 };

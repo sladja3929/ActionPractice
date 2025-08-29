@@ -57,4 +57,7 @@ protected:
 	// AttributeSet 레퍼런스 가져오기
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	class UActionPracticeAttributeSet* GetActionPracticeAttributeSetFromActorInfo() const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability")
+	class UInputBufferComponent* GetInputBufferComponentFromActorInfo() const;
 };

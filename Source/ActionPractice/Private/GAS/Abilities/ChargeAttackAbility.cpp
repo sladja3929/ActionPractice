@@ -1,14 +1,18 @@
 #include "GAS/Abilities/ChargeAttackAbility.h"
+
+#include <Characters/InputBufferComponent.h>
+
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Items/Weapon.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
 #else
     #define DEBUG_LOG(Format, ...)
 #endif
@@ -18,9 +22,6 @@ UChargeAttackAbility::UChargeAttackAbility()
     StaminaCost = 15.0f;
     ComboCounter = 0;
     MaxComboCount = 1;
-    bCanComboSave = false;
-    bComboInputSaved = false;
-    bIsInCancellableRecovery = false;
     bMaxCharged = false;
     bIsCharging = false;
     bNoCharge = false;
@@ -48,40 +49,30 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         return;
     }
 
+    //이벤트 태스크 실행
+    WaitPlayBufferEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this, UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), nullptr, false, true);
+    WaitPlayBufferEventTask->EventReceived.AddDynamic(this, &UChargeAttackAbility::OnEventPlayBuffer);
+    WaitPlayBufferEventTask->ReadyForActivation();
+    
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
     
-    //차지어택에 따라 추후 변경
     ComboCounter = 0;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     bMaxCharged = false;
     bIsCharging = false;
-    bNoCharge = false;
+    bNoCharge = GetInputBufferComponentFromActorInfo()->bBufferActionReleased;
     
     DEBUG_LOG(TEXT("Charge Ability Activated"));
     ExecuteMontageTask(WeaponAttackData->SubAttackMontages[ComboCounter].Get());
 }
 
 void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{
-    // 2. enablecomboInput 구간에서 입력이 들어오면 저장
-    if (bCanComboSave)
-    {
-        bNoCharge = false;
-        bComboInputSaved = true;
-        bCanComboSave = false;
-        DEBUG_LOG(TEXT("Input Pressed - Combo Saved"));
-    }
-    
+{    
     // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
-    else if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
-    {
-        bNoCharge = false;
-        PlayNextChargeMontage();
-        DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
-    }
+    bNoCharge = false;
+    PlayNextChargeMontage();
+    DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
 }
 
 void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
@@ -114,8 +105,6 @@ void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
         MontageTask->OnMontageCompleted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageCompleted);
         MontageTask->OnMontageInterrupted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnEnableBufferInput.AddDynamic(this, &UChargeAttackAbility::OnNotifyEnableBufferInput);
-        MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UChargeAttackAbility::OnNotifyActionRecoveryEnd);
         MontageTask->OnResetCombo.AddDynamic(this, &UChargeAttackAbility::OnNotifyResetCombo);
         MontageTask->OnChargeStart.AddDynamic(this, &UChargeAttackAbility::OnNotifyChargeStart);
         
@@ -133,9 +122,6 @@ void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
 void UChargeAttackAbility::PlayNextChargeMontage()
 {
     ComboCounter++;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     bMaxCharged = false;
     bIsCharging = false;
     
@@ -188,7 +174,7 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
     }
 }
-
+/*
 void UChargeAttackAbility::OnNotifyEnableBufferInput()
 {
     bCanComboSave = true;
@@ -216,9 +202,15 @@ void UChargeAttackAbility::OnNotifyActionRecoveryEnd()
             }
             DEBUG_LOG(TEXT("Can ABP Interrupt Attack Montage"));
         }
- 
-        bIsInCancellableRecovery = true;
     }
+}
+*/
+
+void UChargeAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
+{
+    bNoCharge = GetInputBufferComponentFromActorInfo()->bBufferActionReleased;
+    PlayNextChargeMontage();
+    DEBUG_LOG(TEXT("Attack Recovery End - Play Next Charge"));
 }
 
 void UChargeAttackAbility::OnNotifyResetCombo()
@@ -236,7 +228,7 @@ void UChargeAttackAbility::OnNotifyChargeStart()
         UAnimMontage* NextMontage = WeaponAttackData->AttackMontages[ComboCounter].Get();
         if (NextMontage)
         {
-            DEBUG_LOG(TEXT("Charge Start Notify - Next Attack: %s"), *NextMontage->GetName()); 
+            DEBUG_LOG(TEXT("Charge Start Notify - No Charge, Next Attack: %s"), *NextMontage->GetName()); 
             MontageTask->ChangeMontageAndPlay(NextMontage);            
         }
         else
@@ -286,9 +278,6 @@ void UChargeAttackAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 void UChargeAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
     ComboCounter = 0;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     bMaxCharged = false;
     bIsCharging = false;
     bNoCharge = false;

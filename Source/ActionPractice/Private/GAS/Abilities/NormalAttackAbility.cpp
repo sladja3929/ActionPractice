@@ -4,11 +4,12 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
 #else
     #define DEBUG_LOG(Format, ...)
 #endif
@@ -18,9 +19,6 @@ UNormalAttackAbility::UNormalAttackAbility()
     StaminaCost = 15.0f;
     ComboCounter = 0;
     MaxComboCount = 1;
-    bCanComboSave = false;
-    bComboInputSaved = false;
-    bIsInCancellableRecovery = false;
 }
 
 void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -38,34 +36,26 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         return;
     }
 
+    //이벤트 태스크 실행
+    WaitPlayBufferEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this, UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), nullptr, false, true);
+    WaitPlayBufferEventTask->EventReceived.AddDynamic(this, &UNormalAttackAbility::OnEventPlayBuffer);
+    WaitPlayBufferEventTask->ReadyForActivation();
+    
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
     
     //차지어택에 따라 추후 변경
     ComboCounter = 0;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     
     ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get());
 }
 
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{
-    // 2. enablecomboInput 구간에서 입력이 들어오면 저장
-    if (bCanComboSave)
-    {
-        bComboInputSaved = true;
-        bCanComboSave = false;
-        DEBUG_LOG(TEXT("Input Pressed - Combo Saved"));
-    }
-    
+{     
     // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
-    else if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
-    {
-        PlayNextAttackCombo();
-        DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
-    }
+    PlayNextAttackCombo();
+    DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
 }
 
 /* 공격 수행 메커니즘
@@ -108,8 +98,6 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
         MontageTask->OnMontageCompleted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageCompleted);
         MontageTask->OnMontageInterrupted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnEnableBufferInput.AddDynamic(this, &UNormalAttackAbility::OnNotifyEnableBufferInput);
-        MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UNormalAttackAbility::OnNotifyActionRecoveryEnd);
         MontageTask->OnResetCombo.AddDynamic(this, &UNormalAttackAbility::OnNotifyResetCombo);
 
         // 태스크 활성화
@@ -126,9 +114,6 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
 void UNormalAttackAbility::PlayNextAttackCombo()
 {
     ++ComboCounter;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     
     if (ComboCounter >= MaxComboCount)
     {
@@ -151,7 +136,7 @@ void UNormalAttackAbility::PlayNextAttackCombo()
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
     }
 }
-
+/*
 void UNormalAttackAbility::OnNotifyEnableBufferInput()
 {
     bCanComboSave = true;
@@ -179,9 +164,13 @@ void UNormalAttackAbility::OnNotifyActionRecoveryEnd()
             }
             DEBUG_LOG(TEXT("Can ABP Interrupt Attack Montage"));
         }
- 
-        bIsInCancellableRecovery = true;
     }
+}
+*/
+void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
+{
+    PlayNextAttackCombo();
+    DEBUG_LOG(TEXT("Attack Recovery End - Play Next Attack"));
 }
 
 void UNormalAttackAbility::OnNotifyResetCombo()
@@ -199,9 +188,6 @@ void UNormalAttackAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle
 void UNormalAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
     ComboCounter = 0;
-    bComboInputSaved = false;
-    bCanComboSave = false;
-    bIsInCancellableRecovery = false;
     
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

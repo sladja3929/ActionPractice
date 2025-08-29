@@ -6,11 +6,13 @@
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
 #else
     #define DEBUG_LOG(Format, ...)
 #endif
@@ -18,6 +20,9 @@
 UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
+    WeaponAttackData = nullptr;
+    MontageTask = nullptr;
+    WaitPlayBufferEventTask = nullptr;
 }
 
 void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -68,7 +73,6 @@ void UBaseAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
         MontageTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
         MontageTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnActionRecoveryEnd.AddDynamic(this, &UBaseAttackAbility::OnNotifyActionRecoveryEnd);
 
         // 태스크 활성화
         MontageTask->ReadyForActivation();
@@ -91,18 +95,6 @@ void UBaseAttackAbility::OnTaskMontageInterrupted()
 {
     DEBUG_LOG(TEXT("Task Interrupted - EndAbility"));
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-}
-
-void UBaseAttackAbility::OnNotifyActionRecoveryEnd()
-{
-    if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
-    {
-        // 모든 StateRecovering 태그 제거 (스택된 태그 모두 제거)
-        while (AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
-        {
-            AbilitySystemComponent->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-        }
-    }
 }
 
 bool UBaseAttackAbility::SetWeaponAttackDataFromActorInfo()

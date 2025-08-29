@@ -4,9 +4,10 @@
 #include "Public/Items/WeaponData.h"
 #include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "Engine/Engine.h"
-#include "Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "BaseAttackAbility.generated.h"
 
+class UAbilityTask_PlayMontageWithEvents;
+class UAbilityTask_WaitGameplayEvent;
 UCLASS()
 class ACTIONPRACTICE_API UBaseAttackAbility : public UActionPracticeGameplayAbility
 {
@@ -28,6 +29,9 @@ protected:
 
 	UPROPERTY()
 	UAbilityTask_PlayMontageWithEvents* MontageTask;
+
+	UPROPERTY()
+	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask;
 	
 #pragma endregion
 
@@ -44,8 +48,8 @@ protected:
 	virtual void OnTaskMontageInterrupted();
 
 	UFUNCTION()
-	virtual void OnNotifyActionRecoveryEnd();
-
+	virtual void OnEventPlayBuffer(FGameplayEventData Payload) {}
+	
 	// Weapon 레퍼런스
 	UFUNCTION()
 	class AWeapon* GetWeaponClassFromActorInfo() const;

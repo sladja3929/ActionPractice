@@ -15,7 +15,9 @@ public:
 
 	UPROPERTY()
 	bool bCanBufferInput;
-	
+
+	UPROPERTY()
+	bool bBufferActionReleased;
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -24,18 +26,24 @@ public:
 
 	//어빌리티의 EnableBufferInput에서 호출
 	UFUNCTION()
-	void BufferNextAction(UInputAction* InputedAction);
+	void BufferNextAction(const UInputAction* InputedAction);
 
 	//어빌리티의 OnMontageEnded나, ActionRecoveryEnd에서 호출
 	UFUNCTION()
 	void ActivateBufferAction();
+
+	UFUNCTION()
+	bool IsBufferWaiting();
 
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables"
 
-	UInputAction* BufferedAction;
+	const UInputAction* BufferedAction;
+
+	FDelegateHandle EnableBufferInputHandle;
+	FDelegateHandle ActionRecoveryEndHandle;
 	
 #pragma endregion
 
@@ -43,6 +51,13 @@ protected:
 
 	virtual void BeginPlay() override;
 
+	UFUNCTION()
+	void OnEnableBufferInput(const FGameplayEventData& EventData);
+
+	UFUNCTION()
+	void OnActionRecoveryEnd(const FGameplayEventData& EventData);
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 #pragma endregion
 
 private:
