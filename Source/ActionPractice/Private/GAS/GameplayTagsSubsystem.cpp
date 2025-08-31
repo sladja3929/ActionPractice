@@ -204,11 +204,30 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyChargeStartTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventNotifyInvincibleStartTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
 		return Subsystem->GetEventActionPlayBufferTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+// Effect Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectInvincibilityDurationTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -382,11 +401,30 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyChargeStartTagInternal
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Notify_InvincibleStart;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Event_Action_PlayBuffer;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+// Effect Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectInvincibilityDurationTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Invincibility_Duration;
 	}
 	return FGameplayTag::EmptyTag;
 }

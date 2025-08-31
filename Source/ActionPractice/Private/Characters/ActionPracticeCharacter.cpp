@@ -16,6 +16,7 @@
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Characters/InputBufferComponent.h"
+#include "Items/Weapon.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -169,10 +170,10 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 #pragma region "Move Functions"
 void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 {
-	MovementInputVector = Value.Get<FVector2D>();
+	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	//공격 어빌리티 중단
-	if (MovementInputVector.Size() > 0.1f)
+	if (MovementVector.Size() > 0.1f)
 	{
 		CancelActionForMove();
 	}
@@ -199,10 +200,10 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			const FVector BackwardDirection = -DirectionToTarget; // 타겟 반대 방향
             
 			// Strafe 이동 (좌우 이동)
-			AddMovementInput(RightDirection, MovementInputVector.X);
+			AddMovementInput(RightDirection, MovementVector.X);
             
 			// 전후 이동 (타겟을 기준으로)
-			AddMovementInput(BackwardDirection, -MovementInputVector.Y);
+			AddMovementInput(BackwardDirection, -MovementVector.Y);
             
 			// 캐릭터가 타겟을 바라보도록 회전
 			SetActorRotation(TargetRotation);
@@ -216,8 +217,8 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
         
-			AddMovementInput(ForwardDirection, MovementInputVector.Y);
-			AddMovementInput(RightDirection, MovementInputVector.X);
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
 		}		
 	}
 }
@@ -599,7 +600,7 @@ void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 		
 		if (InputBufferComponent->bCanBufferInput) //다른 어빌리티가 수행중이고 입력 버퍼 가능할 때
 		{
-			InputBufferComponent->bBufferActionReleased = true;
+			InputBufferComponent->UnBufferHoldAction(InputAction);
 		}
 		
 		else if (Spec->IsActive())

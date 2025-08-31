@@ -1,11 +1,16 @@
 #pragma once
 
 #include "Public/Items/WeaponEnums.h"
-#include "Public/Items/WeaponData.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/StaticMeshComponent.h"
 #include "Weapon.generated.h"
+
+class UWeaponDataAsset;
+class UStaticMeshComponent;
+class UPrimitiveComponent;
+struct FGameplayTag;
+struct FBlockActionData;
+struct FAttackActionData;
 
 UCLASS()
 class AWeapon : public AActor

@@ -2,10 +2,11 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Items/Weapon.h"
+#include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
-#include "GAS/GameplayTagsSubsystem.h"
+#include "Characters/InputBufferComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
@@ -53,9 +54,10 @@ void UBaseAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         return;
     }
 
-    if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
+    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
-        AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
+        FGameplayEventData EventData;
+        IBC->OnActionRecoveryStart(EventData);
     }
     
     // 커스텀 태스크 생성

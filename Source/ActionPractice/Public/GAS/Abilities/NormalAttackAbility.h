@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "GAS/Abilities/BaseAttackAbility.h"
 #include "Engine/Engine.h"
-#include "Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "NormalAttackAbility.generated.h"
 
 UCLASS()

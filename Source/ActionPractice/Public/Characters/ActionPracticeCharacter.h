@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "Public/Items/Weapon.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
@@ -18,6 +17,7 @@ class UAbilitySystemComponent;
 class UActionPracticeAttributeSet;
 class UGameplayAbility;
 class UInputBufferComponent;
+class AWeapon;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
@@ -88,6 +88,7 @@ public:
 	// ===== Weapon Getter Functions =====
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
+
 
 	// ===== Weapon Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -161,8 +162,6 @@ protected:
 	// ===== LockOn =====
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	AActor* LockedOnTarget = nullptr;
-	
-	FVector2D MovementInputVector;
 	
 	// ===== Weapon Properties =====
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")

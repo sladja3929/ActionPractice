@@ -2,8 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Public/Characters/ActionPracticeCharacter.h"
 #include "InputBufferComponent.generated.h"
+
+class AActionPracticeCharacter;
+class UInputAction;
+class UActionPracticeGameplayAbility;
+struct FGameplayEventData;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ACTIONPRACTICE_API UInputBufferComponent : public UActorComponent
@@ -24,13 +28,23 @@ public:
 
 	UInputBufferComponent();
 
-	//어빌리티의 EnableBufferInput에서 호출
 	UFUNCTION()
 	void BufferNextAction(const UInputAction* InputedAction);
 
-	//어빌리티의 OnMontageEnded나, ActionRecoveryEnd에서 호출
 	UFUNCTION()
-	void ActivateBufferAction();
+	void UnBufferHoldAction(const UInputAction* InputedAction);
+	
+	//어빌리티 몽타주 Start에서 직접 호출 (추후 노티파이 추가 가능)
+	UFUNCTION()
+	void OnActionRecoveryStart(const FGameplayEventData& EventData);
+	
+	//노티파이를 부착하거나, 어빌리티 몽타주 Start에서 직접 호출
+	UFUNCTION()
+	void OnEnableBufferInput(const FGameplayEventData& EventData);
+
+	//노티파이를 부착하거나, 어빌리티 몽타주 End에서 직접 호출
+	UFUNCTION()
+	void OnActionRecoveryEnd(const FGameplayEventData& EventData);
 
 	UFUNCTION()
 	bool IsBufferWaiting();
@@ -41,6 +55,8 @@ protected:
 #pragma region "Protected Variables"
 
 	const UInputAction* BufferedAction;
+	int32 CurrentBufferPriority;
+	TSet<const UInputAction*> BufferedHoldAction;
 
 	FDelegateHandle EnableBufferInputHandle;
 	FDelegateHandle ActionRecoveryEndHandle;
@@ -51,13 +67,11 @@ protected:
 
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-	void OnEnableBufferInput(const FGameplayEventData& EventData);
-
-	UFUNCTION()
-	void OnActionRecoveryEnd(const FGameplayEventData& EventData);
-
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
+	UFUNCTION()
+	void ActivateBufferAction();
+	
 #pragma endregion
 
 private:
@@ -70,6 +84,16 @@ private:
 	
 #pragma region "Private Functions"
 
+	// 인풋액션으로 해당 어빌리티의 버퍼 가능 여부와 우선순위 확인
+	UFUNCTION()
+	bool CanBufferAction(const UInputAction* InputAction, int32& OutPriority, bool& bIsHoldAction) const;
+	
+	// 어빌리티 클래스 가져오기
+	UFUNCTION()
+	TSubclassOf<UGameplayAbility> GetAbilityFromInputAction(const UInputAction* InputAction) const;
+
+	UFUNCTION()
+	void ActivateAbility(const UInputAction* InputAction);
 #pragma endregion
 
 };

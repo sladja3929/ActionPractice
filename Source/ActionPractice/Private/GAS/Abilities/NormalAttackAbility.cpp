@@ -1,10 +1,12 @@
 #include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/ActionPracticeAttributeSet.h"
-#include "Items/Weapon.h"
+#include "Characters/InputBufferComponent.h"
+#include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -54,8 +56,11 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {     
     // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
-    PlayNextAttackCombo();
-    DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
+    if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+    {
+        PlayNextAttackCombo();
+        DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
+    }    
 }
 
 /* 공격 수행 메커니즘
@@ -78,9 +83,10 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         return;
     }
 
-    if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
+    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
-        AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
+        FGameplayEventData EventData;
+        IBC->OnActionRecoveryStart(EventData);
     }
     
     // 커스텀 태스크 생성
@@ -120,9 +126,10 @@ void UNormalAttackAbility::PlayNextAttackCombo()
         ComboCounter = 0;
     }
     DEBUG_LOG(TEXT("NextAttack - ComboCounter: %d"),ComboCounter);
-    if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
+    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
-        AbilitySystemComponent->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
+        FGameplayEventData EventData;
+        IBC->OnActionRecoveryStart(EventData);
     }
     
     UAnimMontage* NextMontage = WeaponAttackData->AttackMontages[ComboCounter].Get();
@@ -136,37 +143,7 @@ void UNormalAttackAbility::PlayNextAttackCombo()
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
     }
 }
-/*
-void UNormalAttackAbility::OnNotifyEnableBufferInput()
-{
-    bCanComboSave = true;
-}
 
-void UNormalAttackAbility::OnNotifyActionRecoveryEnd()
-{
-    bCanComboSave = false;
-
-    // 3-1. 2~3 사이 저장한 행동이 있을 경우
-    if (bComboInputSaved)
-    {
-        PlayNextAttackCombo();
-        DEBUG_LOG(TEXT("Attack Recovery End - Play Next Attack"));
-    }
-    // 3-2. 저장한 행동이 없을 경우
-    else
-    {
-        if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponentFromActorInfo())
-        {
-            // 모든 StateRecovering 태그 제거 (스택된 태그 모두 제거)
-            while (AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
-            {
-                AbilitySystemComponent->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-            }
-            DEBUG_LOG(TEXT("Can ABP Interrupt Attack Montage"));
-        }
-    }
-}
-*/
 void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
 {
     PlayNextAttackCombo();

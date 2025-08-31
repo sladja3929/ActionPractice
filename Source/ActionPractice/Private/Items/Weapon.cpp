@@ -1,9 +1,11 @@
 #include "Public/Items/Weapon.h"
+#include "Public/Items/WeaponData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
 #include "Math/UnrealMathUtility.h"
 #include "Animation/AnimMontage.h"
+#include "GameplayTagContainer.h"
 
 #define ENABLE_DEBUG_LOG 1
 

@@ -9,7 +9,7 @@
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-	#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+	#define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
 #else
 	#define DEBUG_LOG(Format, ...)
 #endif
@@ -62,13 +62,13 @@ void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	}
 
 	SprintSpeedMultiplier = Character->SprintSpeedMultiplier;
-	// 스프린트 시작
+	DEBUG_LOG(TEXT("Sprint Ability Activated"));
 	StartSprinting();
 }
 
 void USprintAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
-	DEBUG_LOG(TEXT("Sprint Input Released - Ending Ability"));
+	DEBUG_LOG(TEXT("Sprint Input Released - End Ability"));
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
@@ -129,7 +129,7 @@ void USprintAbility::StartSprinting()
 		);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Sprint started - Speed: %f"), MovementComp->MaxWalkSpeed);
+	DEBUG_LOG(TEXT("Sprint started - Speed: %f"), MovementComp->MaxWalkSpeed);
 }
 
 void USprintAbility::StopSprinting()
@@ -152,7 +152,7 @@ void USprintAbility::StopSprinting()
 		GetWorld()->GetTimerManager().ClearTimer(SprintCheckTimer);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Sprint ended"));
+	DEBUG_LOG(TEXT("Sprint ended"));
 }
 
 void USprintAbility::HandleSprinting()
@@ -173,6 +173,7 @@ bool USprintAbility::CanContinueSprinting() const
 	// 스태미나 확인
 	if (AttributeSet->GetStamina() < MinStaminaToContinue)
 	{
+		DEBUG_LOG(TEXT("CanContinueSprinting Stop - No Stamina"));
 		return false;
 	}
 
@@ -186,6 +187,7 @@ bool USprintAbility::CanContinueSprinting() const
 	// 공중에 있으면 스프린트 불가
 	if (MovementComp && MovementComp->IsFalling())
 	{
+		DEBUG_LOG(TEXT("CanContinueSprinting Stop - Is Falling"));
 		return false;
 	}
 

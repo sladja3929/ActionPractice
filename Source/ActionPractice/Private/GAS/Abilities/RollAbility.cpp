@@ -1,33 +1,47 @@
 #include "GAS/Abilities/RollAbility.h"
+
+#include <Characters/InputBufferComponent.h>
+
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Engine/World.h"
-#include "TimerManager.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "GameplayEffect.h"
+
+#define ENABLE_DEBUG_LOG 1
+
+#if ENABLE_DEBUG_LOG
+    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+#else
+    #define DEBUG_LOG(Format, ...)
+#endif
 
 URollAbility::URollAbility()
 {
-	// GameplayTag는 Blueprint에서 설정
-	
-	// 스태미나 비용
 	StaminaCost = 20.0f;
-	
-	// 기본값 설정
-	RollDistance = 400.0f;
-	RollSpeed = 800.0f;
-	InvincibilityFrames = 0.5f;
-	RecoveryTime = 0.3f;
+	InvincibilityDuration = 0.5f;
+	MontageTask = nullptr;
+	WaitInvincibleStartEventTask = nullptr;
 }
 
 void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
+		DEBUG_LOG(TEXT("Cannot Commit Roll Ability"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
+	if (!Character || !RollMontage)
+	{
+		DEBUG_LOG(TEXT("No Character or RollMontage"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
@@ -35,192 +49,114 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	// 스태미나 소모
 	if (!ConsumeStamina())
 	{
+		DEBUG_LOG(TEXT("No Stamina for Roll"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	
+	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
+	{
+		FGameplayEventData EventData;
+		IBC->OnActionRecoveryStart(EventData);
+	}
+	
+	WaitInvincibleStartEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
+	);
 
-	// 구르기 실행
-	PerformRoll();
+	if (WaitInvincibleStartEventTask)
+	{
+		WaitInvincibleStartEventTask->EventReceived.AddDynamic(this, &URollAbility::OnNotifyInvincibleStart);
+		WaitInvincibleStartEventTask->ReadyForActivation();
+	}
+	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+		this,
+		NAME_None,
+		RollMontage
+	);
+
+	if (MontageTask)
+	{
+		MontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnMontageTaskCompleted);
+		MontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnMontageTaskInterrupted);
+		MontageTask->ReadyForActivation();
+		DEBUG_LOG(TEXT("Roll Montage Task Started"));
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("Failed to create Montage Task"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+	}
+}
+
+void URollAbility::ApplyInvincibilityEffect()
+{
+	if (!InvincibilityEffect)
+	{
+		DEBUG_LOG(TEXT("No InvincibilityEffect set in Blueprint"));
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		DEBUG_LOG(TEXT("No AbilitySystemComponent"));
+		return;
+	}
+
+	// 무적 이펙트 적용
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(InvincibilityEffect, 1.0f, EffectContext);
+
+	if (EffectSpec.IsValid())
+	{
+		EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag(), InvincibilityDuration);
+		InvincibilityEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+		DEBUG_LOG(TEXT("Invincibility Effect Applied with Duration: %f"), InvincibilityDuration)
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("Failed to create Invincibility Effect Spec"));
+	}
+}
+
+void URollAbility::OnMontageTaskCompleted()
+{
+	DEBUG_LOG(TEXT("Roll Montage Task Completed"));
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void URollAbility::OnMontageTaskInterrupted()
+{
+	DEBUG_LOG(TEXT("Roll Montage Task Interrupted"));
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+}
+
+void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
+{
+	DEBUG_LOG(TEXT("Invincible Start - Event Received"));
+	ApplyInvincibilityEffect();
 }
 
 void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{
-	// 무적 상태 종료
-	EndInvincibility();
-
-	// 타이머 정리
-	if (GetWorld())
+{	
+	// 무적 이펙트 제거
+	if (InvincibilityEffectHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(InvincibilityTimer);
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			ASC->RemoveActiveGameplayEffect(InvincibilityEffectHandle);
+			InvincibilityEffectHandle = FActiveGameplayEffectHandle();
+		}
 	}
-
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void URollAbility::PerformRoll()
-{
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character || !RollMontage)
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance();
-	if (!AnimInstance)
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
-	// 구르기 방향 계산
-	FVector RollDirection = CalculateRollDirection();
 	
-	// 캐릭터 회전 설정
-	if (RollDirection.Size() > 0.1f)
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	//버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
+	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
 	{
-		Character->SetActorRotation(RollDirection.Rotation());
-	}
-
-	// 몽타주 재생
-	if (!MontageEndedDelegate.IsBound())
-	{
-		MontageEndedDelegate = FOnMontageEnded::CreateUObject(this, &URollAbility::OnMontageEnded);
-		AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, RollMontage);
-	}
-
-	AnimInstance->Montage_Play(RollMontage);
-
-	// 구르기 시작 시간 기록
-	RollStartTime = GetWorld()->GetTimeSeconds();
-
-	// 무적 상태 시작
-	StartInvincibility();
-
-	// 이동 임펄스 적용 (더 자연스러운 구르기 위해)
-	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
-	if (MovementComp)
-	{
-		// 중력 일시 감소 (구르기 느낌)
-		float OriginalGravity = MovementComp->GravityScale;
-		MovementComp->GravityScale = 0.5f;
-		
-		// 구르기 후 중력 복구
-		FTimerHandle GravityTimer;
-		GetWorld()->GetTimerManager().SetTimer(
-			GravityTimer,
-			[MovementComp, OriginalGravity]()
-			{
-				if (MovementComp)
-				{
-					MovementComp->GravityScale = OriginalGravity;
-				}
-			},
-			0.8f,
-			false
-		);
-
-		// 구르기 방향으로 임펄스 적용
-		FVector LaunchVelocity = RollDirection * RollSpeed;
-		LaunchVelocity.Z = 0.0f; // 수평 이동만
-		Character->LaunchCharacter(LaunchVelocity, true, true);
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Roll performed in direction: %s"), *RollDirection.ToString());
-}
-
-FVector URollAbility::CalculateRollDirection() const
-{
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character)
-	{
-		return FVector::ForwardVector;
-	}
-
-	// 입력 방향 가져오기 (현재 캐릭터의 MovementInputVector 사용)
-	// 실제로는 Enhanced Input에서 직접 가져와야 하지만, 여기서는 캐릭터의 현재 이동 방향 사용
-	FVector InputDirection = Character->GetVelocity();
-	InputDirection.Z = 0.0f;
-	InputDirection.Normalize();
-
-	// 입력이 없으면 캐릭터가 바라보는 방향으로
-	if (InputDirection.Size() < 0.1f)
-	{
-		InputDirection = Character->GetActorForwardVector();
-	}
-
-	return InputDirection;
-}
-
-void URollAbility::StartInvincibility()
-{
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character)
-	{
-		return;
-	}
-
-	// 무적 태그 추가
-	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-	if (ASC)
-	{
-		ASC->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateInvincibleTag());
-	}
-
-	// 무적 상태 타이머 설정
-	if (GetWorld())
-	{
-		GetWorld()->GetTimerManager().SetTimer(
-			InvincibilityTimer,
-			this,
-			&URollAbility::EndInvincibility,
-			InvincibilityFrames,
-			false
-		);
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Invincibility started for %f seconds"), InvincibilityFrames);
-}
-
-void URollAbility::EndInvincibility()
-{
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character)
-	{
-		return;
-	}
-
-	// 무적 태그 제거
-	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-	if (ASC)
-	{
-		ASC->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateInvincibleTag());
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Invincibility ended"));
-}
-
-void URollAbility::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	if (Montage == RollMontage)
-	{
-		// 회복 시간 후 어빌리티 종료
-		if (GetWorld())
-		{
-			FTimerHandle RecoveryTimer;
-			GetWorld()->GetTimerManager().SetTimer(
-				RecoveryTimer,
-				[this]()
-				{
-					EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-				},
-				RecoveryTime,
-				false
-			);
-		}
-		else
-		{
-			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bInterrupted);
-		}
+		FGameplayEventData EventData;
+		IBC->OnActionRecoveryEnd(EventData);
 	}
 }

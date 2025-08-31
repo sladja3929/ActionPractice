@@ -40,7 +40,11 @@ public:
 	static const FGameplayTag& GetEventNotifyActionRecoveryEndTag();
 	static const FGameplayTag& GetEventNotifyResetComboTag();
 	static const FGameplayTag& GetEventNotifyChargeStartTag();
+	static const FGameplayTag& GetEventNotifyInvincibleStartTag();
 	static const FGameplayTag& GetEventActionPlayBufferTag();
+	
+	// Effect Tags
+	static const FGameplayTag& GetEffectInvincibilityDurationTag();
 
 private:
 	// Internal helper function
@@ -71,7 +75,11 @@ private:
 	const FGameplayTag& GetEventNotifyActionRecoveryEndTagInternal() const;
 	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
 	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyInvincibleStartTagInternal() const;
 	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
+	
+	// Effect Tags
+	const FGameplayTag& GetEffectInvincibilityDurationTagInternal() const;
 
 protected:
 	// 태그 데이터 에셋

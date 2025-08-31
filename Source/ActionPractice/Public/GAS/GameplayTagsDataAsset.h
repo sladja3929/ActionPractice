@@ -6,6 +6,7 @@
 #include "GameplayTagsDataAsset.generated.h"
 
 // 태그를 추가하면 에디터의 데이터 에셋에서 꼭 실제 태그를 바인딩할 것
+// 게임플레이 태그 서브시스템 클래스 위치: GAS/GameplayTagsSubsystem.h
 UCLASS(BlueprintType)
 class ACTIONPRACTICE_API UGameplayTagsDataAsset : public UDataAsset
 {
@@ -77,6 +78,16 @@ public:
 	FGameplayTag Event_Notify_ChargeStart;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Notify_InvincibleStart;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Action_PlayBuffer;
+
+#pragma endregion
+
+#pragma region "Effect Tags"
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_Invincibility_Duration;
 #pragma endregion
 };

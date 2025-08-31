@@ -1,7 +1,10 @@
 #include "Characters/InputBufferComponent.h"
+#include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "EnhancedInputComponent.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -18,6 +21,7 @@ UInputBufferComponent::UInputBufferComponent()
 	BufferedAction = nullptr;
 	OwnerCharacter = nullptr;
 	bBufferActionReleased = false;
+	CurrentBufferPriority = -1;
 }
 
 void UInputBufferComponent::BeginPlay()
@@ -57,30 +61,105 @@ void UInputBufferComponent::BeginPlay()
 	Super::BeginPlay();
 }
 
+bool UInputBufferComponent::CanBufferAction(const UInputAction* InputAction, int32& OutPriority, bool& bIsHoldAction) const
+{
+	if (!InputAction || !OwnerCharacter)
+	{
+		OutPriority = -1;
+		bIsHoldAction = false;
+		return false;
+	}
+
+	TSubclassOf<UGameplayAbility> AbilityClass = GetAbilityFromInputAction(InputAction);
+	if (!AbilityClass)
+	{
+		OutPriority = -1;
+		bIsHoldAction = false;
+		return false;
+	}
+
+	const UActionPracticeGameplayAbility* ActionPracticeAbility = Cast<UActionPracticeGameplayAbility>(AbilityClass->GetDefaultObject());
+	if (!ActionPracticeAbility)
+	{
+		OutPriority = -1;
+		bIsHoldAction = false;
+		return false;
+	}
+
+	OutPriority = ActionPracticeAbility->GetBufferPriority();
+	bIsHoldAction = ActionPracticeAbility->GetIsHoldAction();
+	return ActionPracticeAbility->GetCanBuffered();
+}
+
+TSubclassOf<UGameplayAbility> UInputBufferComponent::GetAbilityFromInputAction(const UInputAction* InputAction) const
+{
+	if (!InputAction || !OwnerCharacter)
+	{
+		return nullptr;
+	}
+
+	const TMap<UInputAction*, TSubclassOf<UGameplayAbility>>& StartInputAbilities = OwnerCharacter->GetStartInputAbilities();
+	const TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
+	
+	if (!AbilityClass || !*AbilityClass)
+	{
+		return nullptr;
+	}
+
+	return *AbilityClass;
+}
+
 void UInputBufferComponent::BufferNextAction(const UInputAction* InputedAction)
 {
 	if (!bCanBufferInput) return;
 
-	bBufferActionReleased = false;
-	BufferedAction = InputedAction;
-	//어빌리티에 따라 버퍼에 안넣는거 결정
+	int32 NewActionPriority;
+	bool bIsHoldAction;
+	if (!CanBufferAction(InputedAction, NewActionPriority, bIsHoldAction))
+	{
+		DEBUG_LOG(TEXT("Cannot buffer action, bCanBuffered is false - Action: %s"), *InputedAction->GetName());
+		return;
+	}
+
+	if (bIsHoldAction)
+	{
+		BufferedHoldAction.Add(InputedAction);
+		DEBUG_LOG(TEXT("Buffered hold action added - Action: %s"), *InputedAction->GetName());
+	}
+	
+	else if (NewActionPriority >= CurrentBufferPriority) // 현재 버퍼된 액션보다 우선순위가 높거나 같으면 교체
+	{
+		bBufferActionReleased = false;
+		BufferedAction = InputedAction;
+		CurrentBufferPriority = NewActionPriority;
+		DEBUG_LOG(TEXT("Buffered action updated - Action: %s"), *InputedAction->GetName());
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("Buffer action ignored - Lower priority: %d vs %d"), NewActionPriority, CurrentBufferPriority);
+	}
 }
 
-void UInputBufferComponent::ActivateBufferAction()
+void UInputBufferComponent::UnBufferHoldAction(const UInputAction* InputedAction)
 {
-	bCanBufferInput = false;
+	bBufferActionReleased = true;
+	BufferedHoldAction.Remove(InputedAction);
+	DEBUG_LOG(TEXT("Buffered hold action removed - Action: %s"), *InputedAction->GetName());
+}
 
-	if (!BufferedAction) return;
+void UInputBufferComponent::ActivateAbility(const UInputAction* InputAction)
+{
+	if (!InputAction) return;
 	
-	const TMap<UInputAction*, TSubclassOf<UGameplayAbility>>& StartInputAbilities = OwnerCharacter->GetStartInputAbilities();
 	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
-	if (StartInputAbilities.IsEmpty() || !ASC)	return;
+	if (!ASC) return;
 	
-	const TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(BufferedAction);
+	// GetAbilityFromInputAction 사용하여 어빌리티 클래스 가져오기
+	TSubclassOf<UGameplayAbility> AbilityClass = GetAbilityFromInputAction(InputAction);
 	if (!AbilityClass) return;
-
 	
-	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(*AbilityClass);
+	// ASC에서 해당 어빌리티의 Spec 찾기
+	FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromClass(AbilityClass);
 
 	if (Spec)
 	{
@@ -88,24 +167,54 @@ void UInputBufferComponent::ActivateBufferAction()
 		
 		if (Spec->IsActive()) //어빌리티가 실행중이면 (콤보 공격)
 		{
-			DEBUG_LOG(TEXT("Play Buffer - Play Buffer Event"));
+			DEBUG_LOG(TEXT("Play Buffer - Play Buffer Event: %s"), *InputAction->GetName());
 			FGameplayEventData EventData;
 			ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), &EventData);
 		}
-
 		else
 		{
-			DEBUG_LOG(TEXT("Play Buffer - Activate Ability"));
+			DEBUG_LOG(TEXT("Play Buffer - Activate Ability: %s"), *InputAction->GetName());
 			ASC->TryActivateAbility(Spec->Handle);
 		}
 	}
+}
 
-	BufferedAction = nullptr;
+void UInputBufferComponent::ActivateBufferAction()
+{
+	bCanBufferInput = false;
+
+	//일반버퍼와 홀드버퍼가 같이 있다면 버퍼만 실행, 홀드버퍼는 일반버퍼 액션 실행 후 일반버퍼가 비어있다면 실행
+	if (BufferedAction)
+	{
+		ActivateAbility(BufferedAction);
+		
+		BufferedAction = nullptr;
+		CurrentBufferPriority = -1;
+	}
+	
+	else if (BufferedHoldAction.Num() > 0)
+	{
+		for (const UInputAction* InputAction : BufferedHoldAction)
+		{
+			ActivateAbility(InputAction);
+		}
+		
+		BufferedHoldAction.Empty();
+	}	
 }
 
 bool UInputBufferComponent::IsBufferWaiting()
 {
 	return BufferedAction != nullptr;
+}
+
+void UInputBufferComponent::OnActionRecoveryStart(const FGameplayEventData& EventData)
+{
+	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
+	{
+		ASC->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
+	}
+	DEBUG_LOG(TEXT("Action Recovery Start - Add State.Recovering"));
 }
 
 void UInputBufferComponent::OnEnableBufferInput(const FGameplayEventData& EventData)
@@ -125,14 +234,16 @@ void UInputBufferComponent::OnActionRecoveryEnd(const FGameplayEventData& EventD
 		{
 			ASC->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
 		}
-		//DEBUG_LOG(TEXT("Action Recovery End - Remove State.Recovering"));
+		DEBUG_LOG(TEXT("Action Recovery End - Remove State.Recovering"));
 	}
 	
-	if (BufferedAction) // 3-1. 2~3 사이 저장한 행동이 있을 경우
+	if (BufferedAction || BufferedHoldAction.Num() > 0) // 3-1. 2~3 사이 저장한 행동이 있을 경우
 	{
 		DEBUG_LOG(TEXT("Action Recovery End - Play Buffer"));
 		ActivateBufferAction();
 	}
+
+	else DEBUG_LOG(TEXT("Action Recovery End - No Buffered Action"));
 }
 
 void UInputBufferComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Public/Items/WeaponData.h"
 #include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "Engine/Engine.h"
 #include "BaseAttackAbility.generated.h"
 
 class UAbilityTask_PlayMontageWithEvents;
 class UAbilityTask_WaitGameplayEvent;
+struct FAttackActionData;
 UCLASS()
 class ACTIONPRACTICE_API UBaseAttackAbility : public UActionPracticeGameplayAbility
 {
