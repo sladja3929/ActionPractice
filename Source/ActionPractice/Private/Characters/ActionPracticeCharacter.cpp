@@ -223,6 +223,53 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
+FVector2D AActionPracticeCharacter::GetCurrentMovementInput() const
+{
+	// PlayerController를 통해 어디서든 접근 가능
+	APlayerController* PC = GetController<APlayerController>();
+	if (PC && IA_Move)
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = 
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			// 특정 액션의 현재 값 조회
+			FInputActionValue ActionValue = Subsystem->GetPlayerInput()->GetActionValue(IA_Move);
+			return ActionValue.Get<FVector2D>();
+		}
+	}
+	return FVector2D::ZeroVector;
+}
+
+void AActionPracticeCharacter::RotateCharacterToInputDirection()
+{
+	// 현재 입력 값 가져오기
+	FVector2D MovementInput = GetCurrentMovementInput();
+	
+	// 입력이 없으면 회전하지 않음
+	if (MovementInput.IsZero())
+	{
+		return;
+	}
+	
+	// 카메라의 Yaw 회전만 가져오기
+	FRotator CameraRotation = FollowCamera->GetComponentRotation();
+	FRotator CameraYaw = FRotator(0.0f, CameraRotation.Yaw, 0.0f);
+	
+	// 입력 벡터를 3D로 변환 (X = Forward/Backward, Y = Right/Left)
+	FVector InputDirection = FVector(MovementInput.Y, MovementInput.X, 0.0f);
+	
+	// 카메라 기준으로 입력 방향 변환
+	FVector WorldDirection = CameraYaw.RotateVector(InputDirection);
+	WorldDirection.Normalize();
+	
+	// 새로운 회전 계산 (Yaw만 사용)
+	FRotator NewRotation = WorldDirection.Rotation();
+	FRotator TargetRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
+	
+	// 캐릭터 회전 설정
+	SetActorRotation(TargetRotation);
+}
+
 void AActionPracticeCharacter::CancelActionForMove()
 {
 	if (!AbilitySystemComponent)

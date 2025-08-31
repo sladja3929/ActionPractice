@@ -38,6 +38,10 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions"
+
+	UFUNCTION()
+	void ExecuteMontageTask();
+	
 	// 애님 노티파이 이벤트 수신 시 호출
 	UFUNCTION()
 	virtual void OnNotifyInvincibleStart(FGameplayEventData Payload);

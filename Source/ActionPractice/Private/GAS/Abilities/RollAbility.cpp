@@ -23,6 +23,7 @@
 
 URollAbility::URollAbility()
 {
+	RollMontage = nullptr;
 	StaminaCost = 20.0f;
 	InvincibilityDuration = 0.5f;
 	MontageTask = nullptr;
@@ -38,38 +39,51 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		return;
 	}
 
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character || !RollMontage)
+	//노티파이 이벤트 태스크	
+	WaitInvincibleStartEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
+	);
+	
+	if (WaitInvincibleStartEventTask)
 	{
-		DEBUG_LOG(TEXT("No Character or RollMontage"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
+		WaitInvincibleStartEventTask->EventReceived.AddDynamic(this, &URollAbility::OnNotifyInvincibleStart);
+		WaitInvincibleStartEventTask->ReadyForActivation();
 	}
 
+	ExecuteMontageTask();
+}
+
+void URollAbility::ExecuteMontageTask()
+{
+	if (!RollMontage)
+	{
+		DEBUG_LOG(TEXT("No Character or RollMontage"));
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return;
+	}
+	
 	// 스태미나 소모
 	if (!ConsumeStamina())
 	{
 		DEBUG_LOG(TEXT("No Stamina for Roll"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
-	
+
+	//캐릭터 회전
+	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+	{
+		Character->RotateCharacterToInputDirection();
+	}
+
+	//태그 부착
 	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
 	{
 		FGameplayEventData EventData;
 		IBC->OnActionRecoveryStart(EventData);
 	}
 	
-	WaitInvincibleStartEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
-	);
-
-	if (WaitInvincibleStartEventTask)
-	{
-		WaitInvincibleStartEventTask->EventReceived.AddDynamic(this, &URollAbility::OnNotifyInvincibleStart);
-		WaitInvincibleStartEventTask->ReadyForActivation();
-	}
 	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
@@ -86,7 +100,7 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	else
 	{
 		DEBUG_LOG(TEXT("Failed to create Montage Task"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
 }
 

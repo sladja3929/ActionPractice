@@ -54,6 +54,11 @@ void UBaseAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         return;
     }
 
+    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+    {
+        Character->RotateCharacterToInputDirection();
+    }
+    
     if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
         FGameplayEventData EventData;

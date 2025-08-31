@@ -44,7 +44,7 @@ protected:
 
 #pragma region "Protected Functions" //================================================
 
-	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay) override;
+	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay, bool bCreateTask, bool bIsAttackMontage);
 	
 	void PlayNextChargeMontage();
 	

@@ -89,6 +89,14 @@ public:
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
 
+	// ===== Input Helper Functions =====
+	UFUNCTION(BlueprintPure, Category = "Input")
+	FVector2D GetCurrentMovementInput() const;
+
+	// ===== Character Rotation Functions =====
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	void RotateCharacterToInputDirection();
+
 
 	// ===== Weapon Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Weapon")

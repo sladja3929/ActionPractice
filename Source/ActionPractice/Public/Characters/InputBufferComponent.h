@@ -7,6 +7,7 @@
 class AActionPracticeCharacter;
 class UInputAction;
 class UActionPracticeGameplayAbility;
+class UGameplayAbility;
 struct FGameplayEventData;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))

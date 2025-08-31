@@ -177,14 +177,17 @@ bool USprintAbility::CanContinueSprinting() const
 		return false;
 	}
 
-	// 이동 입력 확인 (실제로는 Enhanced Input에서 확인해야 함)
-	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
-	if (MovementComp && MovementComp->GetCurrentAcceleration().Size() < 10.0f)
+	// Enhanced Input으로 실시간 이동 입력 확인
+	FVector2D MovementInput = Character->GetCurrentMovementInput();
+	DEBUG_LOG(TEXT("Real-time MovementInput: %f"), MovementInput.Size());
+	if (MovementInput.Size() < 0.1f)
 	{
+		DEBUG_LOG(TEXT("CanContinueSprinting Stop - No Movement Input"));
 		return false; // 이동 입력이 없으면 스프린트 중단
 	}
 
 	// 공중에 있으면 스프린트 불가
+	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
 	if (MovementComp && MovementComp->IsFalling())
 	{
 		DEBUG_LOG(TEXT("CanContinueSprinting Stop - Is Falling"));

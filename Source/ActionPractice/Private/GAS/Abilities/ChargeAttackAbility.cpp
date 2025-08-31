@@ -1,7 +1,7 @@
 #include "GAS/Abilities/ChargeAttackAbility.h"
 #include "Characters/InputBufferComponent.h"
 #include "GAS/ActionPracticeAttributeSet.h"
-#include "Items/Weapon.h"
+#include "Characters/ActionPracticeCharacter.h"
 #include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
@@ -64,7 +64,7 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     bNoCharge = GetInputBufferComponentFromActorInfo()->bBufferActionReleased;
     
     DEBUG_LOG(TEXT("Charge Ability Activated"));
-    ExecuteMontageTask(WeaponAttackData->SubAttackMontages[ComboCounter].Get());
+    ExecuteMontageTask(WeaponAttackData->SubAttackMontages[ComboCounter].Get(), true, false);
 }
 
 void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
@@ -78,8 +78,15 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }    
 }
 
-void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
+void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay, bool bCreateTask, bool bIsAttackMontage)
 {
+    if (!MontageToPlay)
+    {
+        DEBUG_LOG(TEXT("No Montage to Play"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+        return;
+    }
+    
     // 스태미나 소모
     if (!ConsumeStamina())
     {
@@ -88,38 +95,55 @@ void UChargeAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         return;
     }
 
+    //캐릭터 회전 (차지 x, 공격 o)
+    if (bIsAttackMontage)
+    {
+        if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+        {
+            Character->RotateCharacterToInputDirection();
+        }
+    }
+
+    //태그 부착
     if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
         FGameplayEventData EventData;
         IBC->OnActionRecoveryStart(EventData);
     }
     
-    // 커스텀 태스크 생성 - 차지 몽타주
-    MontageTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
-        this,
-        NAME_None,
-        MontageToPlay,
-        1.0f,
-        NAME_None,
-        1.0f
-    );
-    
-    if (MontageTask)
+    if (bCreateTask) // 커스텀 태스크 생성
     {        
-        // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
-        MontageTask->OnMontageCompleted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageCompleted);
-        MontageTask->OnMontageInterrupted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageInterrupted);
-        MontageTask->OnResetCombo.AddDynamic(this, &UChargeAttackAbility::OnNotifyResetCombo);
-        MontageTask->OnChargeStart.AddDynamic(this, &UChargeAttackAbility::OnNotifyChargeStart);
-        
-        // 태스크 활성화
-        MontageTask->ReadyForActivation();
-    }
+        MontageTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
+            this,
+            NAME_None,
+            MontageToPlay,
+            1.0f,
+            NAME_None,
+            1.0f
+        );
     
-    else
+        if (MontageTask)
+        {        
+            // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
+            MontageTask->OnMontageCompleted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageCompleted);
+            MontageTask->OnMontageInterrupted.AddDynamic(this, &UChargeAttackAbility::OnTaskMontageInterrupted);
+            MontageTask->OnResetCombo.AddDynamic(this, &UChargeAttackAbility::OnNotifyResetCombo);
+            MontageTask->OnChargeStart.AddDynamic(this, &UChargeAttackAbility::OnNotifyChargeStart);
+
+            // 태스크 활성화
+            MontageTask->ReadyForActivation();
+        }
+    
+        else
+        {
+            DEBUG_LOG(TEXT("No Montage Task"));
+            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        }
+    }
+
+    else //태스크 중간에 몽타주 바꾸기
     {
-        DEBUG_LOG(TEXT("No Montage Task"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        MontageTask->ChangeMontageAndPlay(MontageToPlay);
     }
 }
 
@@ -133,23 +157,8 @@ void UChargeAttackAbility::PlayNextChargeMontage()
     {
         ComboCounter = 0;
     }
-
-    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
-    {
-        FGameplayEventData EventData;
-        IBC->OnActionRecoveryStart(EventData);
-    }
     
-    UAnimMontage* NextMontage = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
-    if (NextMontage)
-    {
-        MontageTask->ChangeMontageAndPlay(NextMontage);
-    }
-    else
-    {
-        DEBUG_LOG(TEXT("Failed to load montage for combo (charge) %d"), ComboCounter);
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-    }
+    ExecuteMontageTask(WeaponAttackData->SubAttackMontages[ComboCounter].Get(), false, false);
 }
 
 void UChargeAttackAbility::OnTaskMontageCompleted()
@@ -159,17 +168,8 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
     {
         bMaxCharged = true;
         
-        UAnimMontage* NextMontage = WeaponAttackData->AttackMontages[ComboCounter].Get();
-        if (NextMontage)
-        {
-            DEBUG_LOG(TEXT("Montage Completed - Max Charge"));     
-            ExecuteMontageTask(NextMontage);   
-        }
-        else
-        {
-            DEBUG_LOG(TEXT("Failed to load montage for combo (attack) %d"), ComboCounter);
-            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        }
+        DEBUG_LOG(TEXT("Montage Completed - Max Charge"));     
+        ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get(), true, true);  
         
         bIsCharging = false;
     }
@@ -199,17 +199,7 @@ void UChargeAttackAbility::OnNotifyChargeStart()
       
     if (bNoCharge) //이미 뗴져 있다면 바로 공격
     {
-        UAnimMontage* NextMontage = WeaponAttackData->AttackMontages[ComboCounter].Get();
-        if (NextMontage)
-        {
-            DEBUG_LOG(TEXT("Charge Start Notify - No Charge, Next Attack: %s"), *NextMontage->GetName()); 
-            MontageTask->ChangeMontageAndPlay(NextMontage);            
-        }
-        else
-        {
-            DEBUG_LOG(TEXT("Failed to load montage for combo (attack) %d"), ComboCounter);
-            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        }
+        ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get(), false, true);
 
         bIsCharging = false;
         bNoCharge = false;
@@ -221,17 +211,7 @@ void UChargeAttackAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
     //차지를 멈췄을 때
     if (bIsCharging) //차지중이라면
     {        
-        UAnimMontage* NextMontage = WeaponAttackData->AttackMontages[ComboCounter].Get();
-        if (NextMontage)
-        {
-            DEBUG_LOG(TEXT("Input Released - Next Attack: %s"), *NextMontage->GetName());     
-            MontageTask->ChangeMontageAndPlay(NextMontage);            
-        }
-        else
-        {
-            DEBUG_LOG(TEXT("Failed to load montage for combo (attack) %d"), ComboCounter);
-            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        }
+        ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get(), false, true);
 
         bIsCharging = false;
     }
