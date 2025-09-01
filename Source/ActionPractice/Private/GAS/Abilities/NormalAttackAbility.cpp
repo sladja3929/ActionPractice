@@ -33,7 +33,7 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
-
+    
     if (!SetWeaponAttackDataFromActorInfo())
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -67,45 +67,6 @@ void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }    
 }
 
-void UNormalAttackAbility::PlayMontage()
-{
-    if (!MontageToPlay)
-    {
-        DEBUG_LOG(TEXT("No Montage to Play"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
-    // 스태미나 소모
-    if (!ConsumeStamina())
-    {
-        DEBUG_LOG(TEXT("No Stamina"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-
-    //태그 부착
-    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
-    {
-        FGameplayEventData EventData;
-        IBC->OnActionRecoveryStart(EventData);
-    }
-
-    float RotateTime = 0.1f;
-    
-    //캐릭터 회전
-    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-    {
-        Character->RotateCharacterToInputDirection(RotateTime);
-    }
-    
-    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
-    if (WaitDelayTask)
-    {
-        WaitDelayTask->OnFinish.AddDynamic(this, &UNormalAttackAbility::ExecuteMontageTask);
-        WaitDelayTask->ReadyForActivation();
-    }
-}
 
 void UNormalAttackAbility::PlayNextAttack()
 {
@@ -133,7 +94,14 @@ void UNormalAttackAbility::PlayNextAttack()
  */
 
 void UNormalAttackAbility::ExecuteMontageTask()
-{    
+{
+    if (!MontageToPlay)
+    {
+        DEBUG_LOG(TEXT("No Montage to Play"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+        return;
+    }
+    
     if (bCreateTask) // 커스텀 태스크 생성
     {        
         PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(

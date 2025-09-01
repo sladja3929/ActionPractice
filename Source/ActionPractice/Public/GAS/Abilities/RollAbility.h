@@ -1,15 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/MontageAbility.h"
 #include "RollAbility.generated.h"
 
-class UAbilityTask_WaitDelay;
 class UAbilityTask_WaitGameplayEvent;
-class UAbilityTask_PlayMontageAndWait;
 
 UCLASS()
-class ACTIONPRACTICE_API URollAbility : public UActionPracticeGameplayAbility
+class ACTIONPRACTICE_API URollAbility : public UMontageAbility
 {
 	GENERATED_BODY()
 
@@ -40,11 +38,7 @@ protected:
 
 #pragma region "Protected Functions"
 
-	UFUNCTION()
-	void PlayMontage();
-	
-	UFUNCTION()
-	void ExecuteMontageTask();
+	virtual void ExecuteMontageTask() override;
 	
 	// 애님 노티파이 이벤트 수신 시 호출
 	UFUNCTION()
@@ -57,28 +51,14 @@ protected:
 
 private:
 #pragma region "Private Variables"
-	// 몽타주 재생 태스크
-	UPROPERTY()
-	UAbilityTask_PlayMontageAndWait* PlayMontageTask;
-
 	// 무적 이벤트 대기 태스크
 	UPROPERTY()
 	UAbilityTask_WaitGameplayEvent* WaitInvincibleStartEventTask;
-
-	UPROPERTY()
-	UAbilityTask_WaitDelay* WaitDelayTask;
 
 	// 무적 이펙트 핸들
 	FActiveGameplayEffectHandle InvincibilityEffectHandle;
 #pragma endregion
 
 #pragma region "Private Functions"
-	// 몽타주 태스크 완료 콜백
-	UFUNCTION()
-	void OnMontageTaskCompleted();
-
-	// 몽타주 태스크 중단 콜백  
-	UFUNCTION()
-	void OnMontageTaskInterrupted();
 #pragma endregion
 };

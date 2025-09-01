@@ -6,13 +6,10 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
-#include "Animation/AnimInstance.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameplayEffect.h"
-#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -27,20 +24,19 @@ URollAbility::URollAbility()
 	RollMontage = nullptr;
 	StaminaCost = 20.0f;
 	InvincibilityDuration = 0.5f;
-	PlayMontageTask = nullptr;
+	RotateTime = 0.05f;
 	WaitInvincibleStartEventTask = nullptr;
-	WaitDelayTask = nullptr;
 }
 
 void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		DEBUG_LOG(TEXT("Cannot Commit Roll Ability"));
+		DEBUG_LOG(TEXT("Cannot Commit Ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	
 	//노티파이 이벤트 태스크	
 	WaitInvincibleStartEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
@@ -56,7 +52,7 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	PlayMontage();
 }
 
-void URollAbility::PlayMontage()
+void URollAbility::ExecuteMontageTask()
 {
 	if (!RollMontage)
 	{
@@ -64,40 +60,7 @@ void URollAbility::PlayMontage()
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
-	
-	// 스태미나 소모
-	if (!ConsumeStamina())
-	{
-		DEBUG_LOG(TEXT("No Stamina for Roll"));
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
 
-	//태그 부착
-	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
-	{
-		FGameplayEventData EventData;
-		IBC->OnActionRecoveryStart(EventData);
-	}
-
-	float RotateTime = 0.05f;
-	
-	//캐릭터 회전
-	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-	{
-		Character->RotateCharacterToInputDirection(RotateTime);
-	}
-
-	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
-	if (WaitDelayTask)
-	{
-		WaitDelayTask->OnFinish.AddDynamic(this, &URollAbility::ExecuteMontageTask);
-		WaitDelayTask->ReadyForActivation();
-	}
-}
-
-void URollAbility::ExecuteMontageTask()
-{
 	PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
@@ -106,8 +69,8 @@ void URollAbility::ExecuteMontageTask()
 
 	if (PlayMontageTask)
 	{
-		PlayMontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnMontageTaskCompleted);
-		PlayMontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnMontageTaskInterrupted);
+		PlayMontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnTaskMontageCompleted);
+		PlayMontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnTaskMontageInterrupted);
 		PlayMontageTask->ReadyForActivation();
 		DEBUG_LOG(TEXT("Roll Montage Task Started"));
 	}
@@ -149,17 +112,6 @@ void URollAbility::ApplyInvincibilityEffect()
 	}
 }
 
-void URollAbility::OnMontageTaskCompleted()
-{
-	DEBUG_LOG(TEXT("Roll Montage Task Completed"));
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-}
-
-void URollAbility::OnMontageTaskInterrupted()
-{
-	DEBUG_LOG(TEXT("Roll Montage Task Interrupted"));
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-}
 
 void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
 {
@@ -168,7 +120,8 @@ void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
 }
 
 void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{	
+{
+	DEBUG_LOG(TEXT("Roll Ability End"));
 	// 무적 이펙트 제거
 	if (InvincibilityEffectHandle.IsValid())
 	{
@@ -180,8 +133,8 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	//버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
+	
+	// 버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
 	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
 	{
 		FGameplayEventData EventData;

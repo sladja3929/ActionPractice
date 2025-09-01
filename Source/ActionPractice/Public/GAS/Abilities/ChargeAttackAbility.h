@@ -53,7 +53,7 @@ protected:
 	
 	virtual void ExecuteMontageTask() override;
 
-	void PlayMontage() override;
+	virtual void PlayMontage() override;
 
 	UFUNCTION()
 	void PlayNextCharge();

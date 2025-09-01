@@ -22,10 +22,10 @@
 UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
+    RotateTime = 0.1f;
     WeaponAttackData = nullptr;
     PlayMontageWithEventsTask = nullptr;
     WaitPlayBufferEventTask = nullptr;
-    WaitDelayTask = nullptr;
 }
 
 void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -36,7 +36,7 @@ void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
-
+    
     if (!SetWeaponAttackDataFromActorInfo())
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -44,11 +44,19 @@ void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
     }
 
     MontageToPlay = WeaponAttackData->AttackMontages[0].Get();
+    
     PlayMontage();
 }
 
 void UBaseAttackAbility::ExecuteMontageTask()
-{    
+{
+    if (!MontageToPlay)
+    {
+        DEBUG_LOG(TEXT("No Montage to Play"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+        return;
+    }
+    
     // 커스텀 태스크 생성
     PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
         this,
@@ -61,7 +69,7 @@ void UBaseAttackAbility::ExecuteMontageTask()
     
     if (PlayMontageWithEventsTask)
     {        
-        // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
+        // 델리게이트 바인딩 - 부모 클래스의 함수 사용
         PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
         PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
 
@@ -74,50 +82,7 @@ void UBaseAttackAbility::ExecuteMontageTask()
         DEBUG_LOG(TEXT("No Montage Task"));
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
     }
-}
-
-void UBaseAttackAbility::PlayMontage()
-{
-    // 스태미나 소모
-    if (!ConsumeStamina())
-    {
-        DEBUG_LOG(TEXT("No Stamina"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-
-    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
-    {
-        FGameplayEventData EventData;
-        IBC->OnActionRecoveryStart(EventData);
-    }
-
-    float RotateTime = 0.1f;
-    
-    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-    {
-        Character->RotateCharacterToInputDirection(RotateTime);
-    }
-    
-    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
-    if (WaitDelayTask)
-    {
-        WaitDelayTask->OnFinish.AddDynamic(this, &UBaseAttackAbility::ExecuteMontageTask);
-        WaitDelayTask->ReadyForActivation();
-    }
-}
-
-void UBaseAttackAbility::OnTaskMontageCompleted()
-{
-    DEBUG_LOG(TEXT("Task Completed - EndAbility"));
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-}
-
-void UBaseAttackAbility::OnTaskMontageInterrupted()
-{
-    DEBUG_LOG(TEXT("Task Interrupted - EndAbility"));
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-}
+}     
 
 bool UBaseAttackAbility::SetWeaponAttackDataFromActorInfo()
 {

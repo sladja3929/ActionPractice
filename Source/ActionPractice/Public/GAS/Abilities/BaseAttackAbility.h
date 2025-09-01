@@ -1,17 +1,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/MontageAbility.h"
 #include "Engine/Engine.h"
 #include "BaseAttackAbility.generated.h"
 
 class UAbilityTask_PlayMontageWithEvents;
 class UAbilityTask_WaitGameplayEvent;
-class UAbilityTask_WaitDelay;
 
 struct FAttackActionData;
 UCLASS()
-class ACTIONPRACTICE_API UBaseAttackAbility : public UActionPracticeGameplayAbility
+class ACTIONPRACTICE_API UBaseAttackAbility : public UMontageAbility
 {
 	GENERATED_BODY()
 
@@ -36,27 +35,13 @@ protected:
 	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask;
 
 	UPROPERTY()
-	UAbilityTask_WaitDelay* WaitDelayTask;
-
-	UPROPERTY()
 	UAnimMontage* MontageToPlay = nullptr;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
 	
-	UFUNCTION()
-	virtual void ExecuteMontageTask();
-
-	UFUNCTION()
-	virtual void PlayMontage();
-
-	// ===== Task Event Handler Functions =====
-	UFUNCTION()
-	virtual void OnTaskMontageCompleted();
-
-	UFUNCTION()
-	virtual void OnTaskMontageInterrupted();
+	virtual void ExecuteMontageTask() override;
 
 	UFUNCTION()
 	virtual void OnEventPlayBuffer(FGameplayEventData Payload) {}

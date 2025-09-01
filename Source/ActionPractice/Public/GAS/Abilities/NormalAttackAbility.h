@@ -40,8 +40,6 @@ protected:
 	
 	virtual void ExecuteMontageTask() override;
 
-	void PlayMontage() override;
-
 	UFUNCTION()
 	void PlayNextAttack();
 

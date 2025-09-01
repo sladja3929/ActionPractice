@@ -84,14 +84,7 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 }
 
 void UChargeAttackAbility::PlayMontage()
-{
-    if (!MontageToPlay)
-    {
-        DEBUG_LOG(TEXT("No Montage to Play"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
+{    
     // 스태미나 소모
     if (!ConsumeStamina())
     {
@@ -106,8 +99,6 @@ void UChargeAttackAbility::PlayMontage()
         FGameplayEventData EventData;
         IBC->OnActionRecoveryStart(EventData);
     }
-
-    float RotateTime = 0.1f;
     
     //캐릭터 회전 (차지 x, 공격 o)
     if (bIsAttackMontage)
@@ -144,7 +135,14 @@ void UChargeAttackAbility::PlayNextCharge()
 }
 
 void UChargeAttackAbility::ExecuteMontageTask()
-{    
+{
+    if (!MontageToPlay)
+    {
+        DEBUG_LOG(TEXT("No Montage to Play"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+        return;
+    }
+    
     if (bCreateTask) // 커스텀 태스크 생성
     {        
         PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
@@ -224,7 +222,7 @@ void UChargeAttackAbility::OnNotifyChargeStart()
     {
         MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = false;
-        bIsAttackMontage = false;
+        bIsAttackMontage = true;
         PlayMontage();
 
         bIsCharging = false;
