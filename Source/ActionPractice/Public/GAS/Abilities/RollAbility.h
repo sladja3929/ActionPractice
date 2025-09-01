@@ -4,6 +4,7 @@
 #include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "RollAbility.generated.h"
 
+class UAbilityTask_WaitDelay;
 class UAbilityTask_WaitGameplayEvent;
 class UAbilityTask_PlayMontageAndWait;
 
@@ -40,6 +41,9 @@ protected:
 #pragma region "Protected Functions"
 
 	UFUNCTION()
+	void PlayMontage();
+	
+	UFUNCTION()
 	void ExecuteMontageTask();
 	
 	// 애님 노티파이 이벤트 수신 시 호출
@@ -55,11 +59,14 @@ private:
 #pragma region "Private Variables"
 	// 몽타주 재생 태스크
 	UPROPERTY()
-	UAbilityTask_PlayMontageAndWait* MontageTask;
+	UAbilityTask_PlayMontageAndWait* PlayMontageTask;
 
 	// 무적 이벤트 대기 태스크
 	UPROPERTY()
 	UAbilityTask_WaitGameplayEvent* WaitInvincibleStartEventTask;
+
+	UPROPERTY()
+	UAbilityTask_WaitDelay* WaitDelayTask;
 
 	// 무적 이펙트 핸들
 	FActiveGameplayEffectHandle InvincibilityEffectHandle;

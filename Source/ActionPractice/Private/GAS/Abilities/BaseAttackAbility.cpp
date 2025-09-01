@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "Characters/InputBufferComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 0
@@ -22,8 +23,9 @@ UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
     WeaponAttackData = nullptr;
-    MontageTask = nullptr;
+    PlayMontageWithEventsTask = nullptr;
     WaitPlayBufferEventTask = nullptr;
+    WaitDelayTask = nullptr;
 }
 
 void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -40,11 +42,41 @@ void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
-    
-    ExecuteMontageTask(WeaponAttackData->AttackMontages[0].Get());
+
+    MontageToPlay = WeaponAttackData->AttackMontages[0].Get();
+    PlayMontage();
 }
 
-void UBaseAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
+void UBaseAttackAbility::ExecuteMontageTask()
+{    
+    // 커스텀 태스크 생성
+    PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
+        this,
+        NAME_None,
+        MontageToPlay,
+        1.0f,
+        NAME_None,
+        1.0f
+    );
+    
+    if (PlayMontageWithEventsTask)
+    {        
+        // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
+        PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
+        PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
+
+        // 태스크 활성화
+        PlayMontageWithEventsTask->ReadyForActivation();
+    }
+    
+    else
+    {
+        DEBUG_LOG(TEXT("No Montage Task"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+    }
+}
+
+void UBaseAttackAbility::PlayMontage()
 {
     // 스태미나 소모
     if (!ConsumeStamina())
@@ -54,41 +86,24 @@ void UBaseAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay)
         return;
     }
 
-    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-    {
-        Character->RotateCharacterToInputDirection();
-    }
-    
     if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
         FGameplayEventData EventData;
         IBC->OnActionRecoveryStart(EventData);
     }
-    
-    // 커스텀 태스크 생성
-    MontageTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
-        this,
-        NAME_None,
-        MontageToPlay,
-        1.0f,
-        NAME_None,
-        1.0f
-    );
-    
-    if (MontageTask)
-    {        
-        // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
-        MontageTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
-        MontageTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
 
-        // 태스크 활성화
-        MontageTask->ReadyForActivation();
+    float RotateTime = 0.1f;
+    
+    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+    {
+        Character->RotateCharacterToInputDirection(RotateTime);
     }
     
-    else
+    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
+    if (WaitDelayTask)
     {
-        DEBUG_LOG(TEXT("No Montage Task"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        WaitDelayTask->OnFinish.AddDynamic(this, &UBaseAttackAbility::ExecuteMontageTask);
+        WaitDelayTask->ReadyForActivation();
     }
 }
 
@@ -157,9 +172,9 @@ void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, con
     
     if (IsEndAbilityValid(Handle, ActorInfo))
     {
-        if (MontageTask)
+        if (PlayMontageWithEventsTask)
         {
-            MontageTask->bStopMontageWhenAbilityCancelled = bWasCancelled;
+            PlayMontageWithEventsTask->bStopMontageWhenAbilityCancelled = bWasCancelled;
         }
 
         Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

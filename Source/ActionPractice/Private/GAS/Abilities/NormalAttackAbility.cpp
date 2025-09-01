@@ -3,6 +3,7 @@
 #include "Characters/InputBufferComponent.h"
 #include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
@@ -50,8 +51,10 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     
     //차지어택에 따라 추후 변경
     ComboCounter = 0;
-    
-    ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get(), true);
+
+    MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
+    bCreateTask = true;
+    PlayMontage();
 }
 
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
@@ -59,35 +62,12 @@ void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
     if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
     {
-        PlayNextAttackCombo();
+        PlayNextAttack();
         DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
     }    
 }
 
-void UNormalAttackAbility::PlayNextAttackCombo()
-{
-    ++ComboCounter;
-    
-    if (ComboCounter >= MaxComboCount)
-    {
-        ComboCounter = 0;
-    }
-    
-    DEBUG_LOG(TEXT("NextAttack - ComboCounter: %d"),ComboCounter);    
-    ExecuteMontageTask(WeaponAttackData->AttackMontages[ComboCounter].Get(), false);
-}
-
-/* 공격 수행 메커니즘
- * 1. 몽타주 실행 (State.IsRecovering 태그 추가)
- * 2. enablecomboInput = 입력 저장 가능 구간, 다음 공격과 구르기 저장 가능 (구르기를 저장해도 다음 공격 우선 저장)
- * 3. ActionRecoveryEnd = 공격 선딜이 끝나는 지점
- * 3-1. 2~3 사이 저장한 행동이 있을 경우 CheckComboInput으로 행동 수행
- * 3-2. 2~3 사이 저장한 행동이 없을 경우 입력이 들어오면 다음 공격 가능, 이동/점프/구르기로 캔슬 가능 (State.IsRecovering 태그 제거)
- * 4. ResetCombo = 공격 콤보가 초기화되어 다음 콤보로 연계되지 않음
- * 5. 몽타주 종료 (ResetCombo와 같지 않음)
- */
-
-void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay, bool bCreateTask)
+void UNormalAttackAbility::PlayMontage()
 {
     if (!MontageToPlay)
     {
@@ -104,22 +84,59 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay, bool 
         return;
     }
 
-    //캐릭터 회전
-    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-    {
-        Character->RotateCharacterToInputDirection();
-    }
-
     //태그 부착
     if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
     {
         FGameplayEventData EventData;
         IBC->OnActionRecoveryStart(EventData);
     }
+
+    float RotateTime = 0.1f;
     
+    //캐릭터 회전
+    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+    {
+        Character->RotateCharacterToInputDirection(RotateTime);
+    }
+    
+    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
+    if (WaitDelayTask)
+    {
+        WaitDelayTask->OnFinish.AddDynamic(this, &UNormalAttackAbility::ExecuteMontageTask);
+        WaitDelayTask->ReadyForActivation();
+    }
+}
+
+void UNormalAttackAbility::PlayNextAttack()
+{
+    ++ComboCounter;
+    
+    if (ComboCounter >= MaxComboCount)
+    {
+        ComboCounter = 0;
+    }
+    
+    DEBUG_LOG(TEXT("NextAttack - ComboCounter: %d"),ComboCounter);
+    MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
+    bCreateTask = false;
+    PlayMontage();
+}
+
+/* 공격 수행 메커니즘
+ * 1. 몽타주 실행 (State.IsRecovering 태그 추가)
+ * 2. enablecomboInput = 입력 저장 가능 구간, 다음 공격과 구르기 저장 가능 (구르기를 저장해도 다음 공격 우선 저장)
+ * 3. ActionRecoveryEnd = 공격 선딜이 끝나는 지점
+ * 3-1. 2~3 사이 저장한 행동이 있을 경우 CheckComboInput으로 행동 수행
+ * 3-2. 2~3 사이 저장한 행동이 없을 경우 입력이 들어오면 다음 공격 가능, 이동/점프/구르기로 캔슬 가능 (State.IsRecovering 태그 제거)
+ * 4. ResetCombo = 공격 콤보가 초기화되어 다음 콤보로 연계되지 않음
+ * 5. 몽타주 종료 (ResetCombo와 같지 않음)
+ */
+
+void UNormalAttackAbility::ExecuteMontageTask()
+{    
     if (bCreateTask) // 커스텀 태스크 생성
     {        
-        MontageTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
+        PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
             this,
             NAME_None,
             MontageToPlay,
@@ -128,15 +145,15 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay, bool 
             1.0f
         );
     
-        if (MontageTask)
+        if (PlayMontageWithEventsTask)
         {        
             // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
-            MontageTask->OnMontageCompleted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageCompleted);
-            MontageTask->OnMontageInterrupted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageInterrupted);
-            MontageTask->OnResetCombo.AddDynamic(this, &UNormalAttackAbility::OnNotifyResetCombo);
+            PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageCompleted);
+            PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageInterrupted);
+            PlayMontageWithEventsTask->OnResetCombo.AddDynamic(this, &UNormalAttackAbility::OnNotifyResetCombo);
 
             // 태스크 활성화
-            MontageTask->ReadyForActivation();
+            PlayMontageWithEventsTask->ReadyForActivation();
         }
     
         else
@@ -148,13 +165,13 @@ void UNormalAttackAbility::ExecuteMontageTask(UAnimMontage* MontageToPlay, bool 
 
     else //태스크 중간에 몽타주 바꾸기
     {
-        MontageTask->ChangeMontageAndPlay(MontageToPlay);
+        PlayMontageWithEventsTask->ChangeMontageAndPlay(MontageToPlay);
     }
 }
 
 void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
 {
-    PlayNextAttackCombo();
+    PlayNextAttack();
     DEBUG_LOG(TEXT("Attack Recovery End - Play Next Attack"));
 }
 

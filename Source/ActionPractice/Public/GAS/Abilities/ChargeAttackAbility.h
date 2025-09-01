@@ -39,14 +39,24 @@ protected:
 
 	UPROPERTY()
 	bool bNoCharge = false;
+
+	//PlayMontage, ExecuteMontageTask 파라미터
+	UPROPERTY()
+	bool bCreateTask = false;
+
+	UPROPERTY()
+	bool bIsAttackMontage = false;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
-
-	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay, bool bCreateTask, bool bIsAttackMontage);
 	
-	void PlayNextChargeMontage();
+	virtual void ExecuteMontageTask() override;
+
+	void PlayMontage() override;
+
+	UFUNCTION()
+	void PlayNextCharge();
 	
 	// ===== Task Event Handler Functions =====
 	virtual void OnTaskMontageCompleted() override;

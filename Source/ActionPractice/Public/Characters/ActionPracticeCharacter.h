@@ -95,7 +95,7 @@ public:
 
 	// ===== Character Rotation Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Character")
-	void RotateCharacterToInputDirection();
+	void RotateCharacterToInputDirection(float RotationTime);
 
 
 	// ===== Weapon Functions =====
@@ -223,8 +223,20 @@ protected:
 #pragma endregion
 
 private:
+#pragma region "Private Variables"
+	
+	// 회전 관련 변수
+	FRotator TargetActionRotation;
+	FRotator StartActionRotation;
+	float CurrentRotationTime;
+	float TotalRotationTime;
+	bool bIsRotatingForAction;
+	
+#pragma endregion
+	
 #pragma region "Private Functions"
 
+	void UpdateActionRotation(float DeltaTime);
 	
 #pragma endregion
 };

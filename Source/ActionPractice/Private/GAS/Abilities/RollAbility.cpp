@@ -12,6 +12,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameplayEffect.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -26,8 +27,9 @@ URollAbility::URollAbility()
 	RollMontage = nullptr;
 	StaminaCost = 20.0f;
 	InvincibilityDuration = 0.5f;
-	MontageTask = nullptr;
+	PlayMontageTask = nullptr;
 	WaitInvincibleStartEventTask = nullptr;
+	WaitDelayTask = nullptr;
 }
 
 void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -51,14 +53,14 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		WaitInvincibleStartEventTask->ReadyForActivation();
 	}
 
-	ExecuteMontageTask();
+	PlayMontage();
 }
 
-void URollAbility::ExecuteMontageTask()
+void URollAbility::PlayMontage()
 {
 	if (!RollMontage)
 	{
-		DEBUG_LOG(TEXT("No Character or RollMontage"));
+		DEBUG_LOG(TEXT("No RollMontage"));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
@@ -71,30 +73,42 @@ void URollAbility::ExecuteMontageTask()
 		return;
 	}
 
-	//캐릭터 회전
-	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
-	{
-		Character->RotateCharacterToInputDirection();
-	}
-
 	//태그 부착
 	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
 	{
 		FGameplayEventData EventData;
 		IBC->OnActionRecoveryStart(EventData);
 	}
+
+	float RotateTime = 0.05f;
 	
-	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+	//캐릭터 회전
+	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+	{
+		Character->RotateCharacterToInputDirection(RotateTime);
+	}
+
+	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
+	if (WaitDelayTask)
+	{
+		WaitDelayTask->OnFinish.AddDynamic(this, &URollAbility::ExecuteMontageTask);
+		WaitDelayTask->ReadyForActivation();
+	}
+}
+
+void URollAbility::ExecuteMontageTask()
+{
+	PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
 		RollMontage
 	);
 
-	if (MontageTask)
+	if (PlayMontageTask)
 	{
-		MontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnMontageTaskCompleted);
-		MontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnMontageTaskInterrupted);
-		MontageTask->ReadyForActivation();
+		PlayMontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnMontageTaskCompleted);
+		PlayMontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnMontageTaskInterrupted);
+		PlayMontageTask->ReadyForActivation();
 		DEBUG_LOG(TEXT("Roll Montage Task Started"));
 	}
 	else

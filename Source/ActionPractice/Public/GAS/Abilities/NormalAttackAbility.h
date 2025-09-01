@@ -29,14 +29,21 @@ protected:
 
 	UPROPERTY()
 	int32 MaxComboCount = 1;
+
+	//PlayMontage, ExecuteMontageTask 파라미터
+	UPROPERTY()
+	bool bCreateTask = false;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
-
-	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay, bool bCreateTask);
 	
-	void PlayNextAttackCombo();
+	virtual void ExecuteMontageTask() override;
+
+	void PlayMontage() override;
+
+	UFUNCTION()
+	void PlayNextAttack();
 
 	// ===== Task Event Handler Functions =====
 	UFUNCTION()

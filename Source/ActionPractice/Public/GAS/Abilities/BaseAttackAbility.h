@@ -7,6 +7,8 @@
 
 class UAbilityTask_PlayMontageWithEvents;
 class UAbilityTask_WaitGameplayEvent;
+class UAbilityTask_WaitDelay;
+
 struct FAttackActionData;
 UCLASS()
 class ACTIONPRACTICE_API UBaseAttackAbility : public UActionPracticeGameplayAbility
@@ -28,17 +30,26 @@ protected:
 	const FAttackActionData* WeaponAttackData;
 
 	UPROPERTY()
-	UAbilityTask_PlayMontageWithEvents* MontageTask;
+	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask;
 
 	UPROPERTY()
 	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask;
+
+	UPROPERTY()
+	UAbilityTask_WaitDelay* WaitDelayTask;
+
+	UPROPERTY()
+	UAnimMontage* MontageToPlay = nullptr;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
+	
+	UFUNCTION()
+	virtual void ExecuteMontageTask();
 
 	UFUNCTION()
-	virtual void ExecuteMontageTask(UAnimMontage* MontageToPlay);
+	virtual void PlayMontage();
 
 	// ===== Task Event Handler Functions =====
 	UFUNCTION()
