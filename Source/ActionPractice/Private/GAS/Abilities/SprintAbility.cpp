@@ -66,26 +66,6 @@ void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	StartSprinting();
 }
 
-void USprintAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{
-	DEBUG_LOG(TEXT("Sprint Input Released - End Ability"));
-	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-}
-
-void USprintAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
-{
-	DEBUG_LOG(TEXT("sprint cancel"));
-	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
-}
-
-void USprintAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
-{
-	// 스프린트 종료
-	StopSprinting();
-	DEBUG_LOG(TEXT("sprint end"));
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
 void USprintAbility::StartSprinting()
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
@@ -214,4 +194,24 @@ void USprintAbility::CheckSprintConditions()
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
+}
+
+void USprintAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	DEBUG_LOG(TEXT("Sprint Input Released - End Ability"));
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+void USprintAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+{
+	DEBUG_LOG(TEXT("sprint cancel"));
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+}
+
+void USprintAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	// 스프린트 종료
+	StopSprinting();
+	DEBUG_LOG(TEXT("sprint end"));
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

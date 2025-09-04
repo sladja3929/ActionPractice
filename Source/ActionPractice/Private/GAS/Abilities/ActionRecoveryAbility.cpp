@@ -1,4 +1,4 @@
-#include "GAS/Abilities/MontageAbility.h"
+#include "GAS/Abilities/ActionRecoveryAbility.h"
 
 #include "Characters/InputBufferComponent.h"
 #include "Characters/ActionPracticeCharacter.h"
@@ -14,14 +14,14 @@
     #define DEBUG_LOG(Format, ...)
 #endif
 
-UMontageAbility::UMontageAbility()
+UActionRecoveryAbility::UActionRecoveryAbility()
 {
 	RotateTime = 0.1f;
 	PlayMontageTask = nullptr;
 	WaitDelayTask = nullptr;
 }
 
-void UMontageAbility::PlayMontage()
+void UActionRecoveryAbility::PlayAction()
 {
 	// 스태미나 소모
 	if (!ConsumeStamina())
@@ -47,18 +47,18 @@ void UMontageAbility::PlayMontage()
 	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
 	if (WaitDelayTask)
 	{
-		WaitDelayTask->OnFinish.AddDynamic(this, &UMontageAbility::ExecuteMontageTask);
+		WaitDelayTask->OnFinish.AddDynamic(this, &UActionRecoveryAbility::ExecuteMontageTask);
 		WaitDelayTask->ReadyForActivation();
 	}
 }
 
-void UMontageAbility::OnTaskMontageCompleted()
+void UActionRecoveryAbility::OnTaskMontageCompleted()
 {
 	DEBUG_LOG(TEXT("Montage Task Completed"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UMontageAbility::OnTaskMontageInterrupted()
+void UActionRecoveryAbility::OnTaskMontageInterrupted()
 {
 	DEBUG_LOG(TEXT("Montage Task Interrupted"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);

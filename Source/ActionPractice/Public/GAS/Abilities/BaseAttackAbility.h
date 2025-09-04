@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/MontageAbility.h"
+#include "GAS/Abilities/ActionRecoveryAbility.h"
 #include "Engine/Engine.h"
 #include "BaseAttackAbility.generated.h"
 
@@ -10,7 +10,7 @@ class UAbilityTask_WaitGameplayEvent;
 
 struct FAttackActionData;
 UCLASS()
-class ACTIONPRACTICE_API UBaseAttackAbility : public UMontageAbility
+class ACTIONPRACTICE_API UBaseAttackAbility : public UActionRecoveryAbility
 {
 	GENERATED_BODY()
 
@@ -45,14 +45,6 @@ protected:
 
 	UFUNCTION()
 	virtual void OnEventPlayBuffer(FGameplayEventData Payload) {}
-	
-	// Weapon 레퍼런스
-	UFUNCTION()
-	class AWeapon* GetWeaponClassFromActorInfo() const;
-
-	// WeaponData
-	UFUNCTION()
-	bool SetWeaponAttackDataFromActorInfo();
 	
 #pragma endregion
 

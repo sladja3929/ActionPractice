@@ -13,8 +13,8 @@ public:
 	USprintAbility();
 
 protected:
-	// 스프린트 속도 배율
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
+	// 캐릭터에서 가져옴
+	UPROPERTY()
 	float SprintSpeedMultiplier = 1.5f;
 
 	// 스프린트 중 스태미나 소모량 (초당)

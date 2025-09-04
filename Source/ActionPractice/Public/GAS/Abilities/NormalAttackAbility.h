@@ -30,7 +30,7 @@ protected:
 	UPROPERTY()
 	int32 MaxComboCount = 1;
 
-	//PlayMontage, ExecuteMontageTask 파라미터
+	//PlayAction, ExecuteMontageTask 파라미터
 	UPROPERTY()
 	bool bCreateTask = false;
 	
@@ -46,7 +46,7 @@ protected:
 	// ===== Task Event Handler Functions =====
 	UFUNCTION()
 	void OnNotifyResetCombo();
-
+	
 	virtual void OnEventPlayBuffer(FGameplayEventData Payload) override;
 	
 #pragma endregion

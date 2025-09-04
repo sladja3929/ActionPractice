@@ -40,7 +40,7 @@ protected:
 	UPROPERTY()
 	bool bNoCharge = false;
 
-	//PlayMontage, ExecuteMontageTask 파라미터
+	//PlayAction, ExecuteMontageTask 파라미터
 	UPROPERTY()
 	bool bCreateTask = false;
 
@@ -53,7 +53,7 @@ protected:
 	
 	virtual void ExecuteMontageTask() override;
 
-	virtual void PlayMontage() override;
+	virtual void PlayAction() override;
 
 	UFUNCTION()
 	void PlayNextCharge();

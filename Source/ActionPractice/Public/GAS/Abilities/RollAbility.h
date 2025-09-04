@@ -1,13 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/MontageAbility.h"
+#include "GAS/Abilities/ActionRecoveryAbility.h"
 #include "RollAbility.generated.h"
 
 class UAbilityTask_WaitGameplayEvent;
 
 UCLASS()
-class ACTIONPRACTICE_API URollAbility : public UMontageAbility
+class ACTIONPRACTICE_API URollAbility : public UActionRecoveryAbility
 {
 	GENERATED_BODY()
 

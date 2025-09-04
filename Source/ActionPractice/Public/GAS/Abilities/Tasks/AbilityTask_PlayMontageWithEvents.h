@@ -74,10 +74,11 @@ public:
     // 태스크 정리
     virtual void OnDestroy(bool AbilityEnded) override;
 
-    // 외부 정지
+    // 태스크 외부 정지
     virtual void ExternalCancel() override;
 
     //몽타주 변경
+    UFUNCTION()
     void ChangeMontageAndPlay(UAnimMontage* NewMontage);
     
 #pragma endregion
@@ -118,9 +119,10 @@ protected:
     UFUNCTION()
     void PlayMontage();
 
+    //몽타주 종료
     UFUNCTION()
     void StopPlayingMontage();
-
+    
     // 이벤트 핸들러
     UFUNCTION()
     void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);

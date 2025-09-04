@@ -9,6 +9,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "GAS/Abilities/BaseAttackAbility.h"
+#include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 1
@@ -38,8 +39,10 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         return;
     }
 
-    if (!SetWeaponAttackDataFromActorInfo())
+    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
+    if (!WeaponAttackData)
     {
+        DEBUG_LOG(TEXT("Cannot Load Charge Attack Data"));
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
@@ -69,7 +72,7 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     MontageToPlay = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
     bCreateTask = true;
     bIsAttackMontage = false;
-    PlayMontage();
+    PlayAction();
 }
 
 void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
@@ -83,7 +86,7 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }    
 }
 
-void UChargeAttackAbility::PlayMontage()
+void UChargeAttackAbility::PlayAction()
 {    
     // 스태미나 소모
     if (!ConsumeStamina())
@@ -131,7 +134,7 @@ void UChargeAttackAbility::PlayNextCharge()
     MontageToPlay = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
     bCreateTask = false;
     bIsAttackMontage = false;
-    PlayMontage();
+    PlayAction();
 }
 
 void UChargeAttackAbility::ExecuteMontageTask()
@@ -190,7 +193,7 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
         MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = true;
         bIsAttackMontage = true;
-        PlayMontage();  
+        PlayAction();  
         
         bIsCharging = false;
     }
@@ -223,7 +226,7 @@ void UChargeAttackAbility::OnNotifyChargeStart()
         MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = false;
         bIsAttackMontage = true;
-        PlayMontage();
+        PlayAction();
 
         bIsCharging = false;
         bNoCharge = false;
@@ -238,7 +241,7 @@ void UChargeAttackAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
         MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = false;
         bIsAttackMontage = true;
-        PlayMontage();
+        PlayAction();
 
         bIsCharging = false;
     }

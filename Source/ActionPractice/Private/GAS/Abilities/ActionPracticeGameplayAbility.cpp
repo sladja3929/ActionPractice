@@ -26,9 +26,9 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 	{
 		return false;
 	}
-
+	
 	// 스태미나 체크
-	if (!CheckStaminaCost())
+	if (!CheckStaminaCost(*ActorInfo))
 	{
 		return false;
 	}
@@ -36,15 +36,14 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 	return true;
 }
 
-bool UActionPracticeGameplayAbility::CheckStaminaCost() const
+bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
 {
 	if (StaminaCost <= 0.0f)
 	{
 		return true;
 	}
-
-	UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo();
-	if (AttributeSet)
+	
+	if (UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo(&ActorInfo))
 	{
 		return AttributeSet->GetStamina() >= StaminaCost;
 	}
@@ -106,9 +105,24 @@ AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeChara
 	return Cast<AActionPracticeCharacter>(GetActorInfo().AvatarActor.Get());
 }
 
+class AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	return Cast<AActionPracticeCharacter>(ActorInfo->AvatarActor.Get());
+}
+
 UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo() const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
+	if (Character)
+	{
+		return Character->GetAttributeSet();
+	}
+	return nullptr;
+}
+
+class UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo(ActorInfo);
 	if (Character)
 	{
 		return Character->GetAttributeSet();

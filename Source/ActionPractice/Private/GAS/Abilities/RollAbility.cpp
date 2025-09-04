@@ -49,7 +49,7 @@ void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		WaitInvincibleStartEventTask->ReadyForActivation();
 	}
 
-	PlayMontage();
+	PlayAction();
 }
 
 void URollAbility::ExecuteMontageTask()

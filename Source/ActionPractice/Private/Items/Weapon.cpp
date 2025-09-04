@@ -67,6 +67,10 @@ const FBlockActionData* AWeapon::GetWeaponBlockData() const
 {
     if (!WeaponData) return nullptr;
 
+    // 첫 번째 몽타주를 체크해서, 로드가 안되었으면 로드
+    const TSoftObjectPtr<UAnimMontage>& FirstMontage = WeaponData->BlockData.BlockIdleMontage;
+    if (!FirstMontage.IsNull() && !FirstMontage.IsValid()) WeaponData->PreloadAllMontages();;
+    
     return &WeaponData->BlockData;
 }
 
@@ -77,8 +81,7 @@ const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(FGameplayTag AttackTa
 
     else
     {
-        // 첫 번째 몽타주만 체크 (대표로)
-        // 첫 번째가 로드되었으면 나머지도 로드되었다고 가정
+        // 첫 번째 몽타주를 체크해서, 로드가 안되었으면 로드
         for (const auto& AttackDataPair : WeaponData->AttackDataMap)
         {
             if (AttackDataPair.Value.AttackMontages.Num() > 0)
@@ -86,7 +89,6 @@ const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(FGameplayTag AttackTa
                 const TSoftObjectPtr<UAnimMontage>& FirstMontage = AttackDataPair.Value.AttackMontages[0];
                 if (!FirstMontage.IsNull() && !FirstMontage.IsValid())
                 {
-                    // 아직 로드 안됨
                     WeaponData->PreloadAllMontages();
                     break;
                 }

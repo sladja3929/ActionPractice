@@ -1,13 +1,11 @@
 #include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/ActionPracticeAttributeSet.h"
-#include "Characters/InputBufferComponent.h"
 #include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Characters/ActionPracticeCharacter.h"
+#include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 0
@@ -33,9 +31,11 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
-    
-    if (!SetWeaponAttackDataFromActorInfo())
+
+    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
+    if (!WeaponAttackData)
     {
+        DEBUG_LOG(TEXT("Cannot Load Normal Attack Data"));
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
@@ -54,7 +54,7 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
     MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     bCreateTask = true;
-    PlayMontage();
+    PlayAction();
 }
 
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
@@ -80,7 +80,7 @@ void UNormalAttackAbility::PlayNextAttack()
     DEBUG_LOG(TEXT("NextAttack - ComboCounter: %d"),ComboCounter);
     MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     bCreateTask = false;
-    PlayMontage();
+    PlayAction();
 }
 
 /* 공격 수행 메커니즘

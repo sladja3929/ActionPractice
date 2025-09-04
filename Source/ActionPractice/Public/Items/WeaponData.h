@@ -53,7 +53,7 @@ struct FBlockActionData
     GENERATED_BODY()
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
-    TSoftObjectPtr<UAnimMontage> BlockMontage;
+    TSoftObjectPtr<UAnimMontage> BlockIdleMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     TSoftObjectPtr<UAnimMontage> BlockReactionMontage;
@@ -88,7 +88,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack Definitions")
     TMap<FGameplayTag, FAttackActionData> AttackDataMap;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack Definitions")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block Definitions")
     FBlockActionData BlockData;
 
     void PreloadAllMontages()
@@ -117,9 +117,9 @@ public:
             }
         }
         
-        if (!BlockData.BlockMontage.IsNull())
+        if (!BlockData.BlockIdleMontage.IsNull())
         {
-            AssetsToLoad.Add(BlockData.BlockMontage.ToSoftObjectPath());
+            AssetsToLoad.Add(BlockData.BlockIdleMontage.ToSoftObjectPath());
         }
         
         if (!BlockData.BlockReactionMontage.IsNull())
