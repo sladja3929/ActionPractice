@@ -79,6 +79,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Notify_InvincibleStart;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Notify_HitDetectionStart;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Notify_HitDetectionEnd;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Action_PlayBuffer;

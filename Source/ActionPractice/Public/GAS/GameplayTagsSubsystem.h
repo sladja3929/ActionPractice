@@ -41,6 +41,8 @@ public:
 	static const FGameplayTag& GetEventNotifyResetComboTag();
 	static const FGameplayTag& GetEventNotifyChargeStartTag();
 	static const FGameplayTag& GetEventNotifyInvincibleStartTag();
+	static const FGameplayTag& GetEventNotifyHitDetectionStartTag();
+	static const FGameplayTag& GetEventNotifyHitDetectionEndTag();
 	static const FGameplayTag& GetEventActionPlayBufferTag();
 	
 	// Effect Tags
@@ -76,6 +78,8 @@ private:
 	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
 	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyInvincibleStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyHitDetectionStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyHitDetectionEndTagInternal() const;
 	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
 	
 	// Effect Tags

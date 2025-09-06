@@ -8,6 +8,7 @@
 class UWeaponDataAsset;
 class UStaticMeshComponent;
 class UPrimitiveComponent;
+class UWeaponCollisionComponent;  
 struct FGameplayTag;
 struct FBlockActionData;
 struct FAttackActionData;
@@ -18,49 +19,68 @@ class AWeapon : public AActor
 	GENERATED_BODY()
 
 public:
+#pragma region "Public Variables"
+	
+#pragma endregion
+
+#pragma region "Public Functions"
 	AWeapon();
 	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 	
-	// ===== Info Getter =====
+	// ===== Getter =====
 	FORCEINLINE FString GetWeaponName() const {return WeaponName;}
-	FORCEINLINE WeaponEnums GetWeaponType() const {return WeaponType;}
+	EWeaponEnums GetWeaponType() const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
 	const UWeaponDataAsset* GetWeaponData() const { return WeaponData.Get(); }
+	
 	const FBlockActionData* GetWeaponBlockData() const;
 	const FAttackActionData* GetWeaponAttackDataByTag(FGameplayTag AttackTag) const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
+	UWeaponCollisionComponent* GetCollisionComponent() const { return CollisionComponent; }
 	
-	// 무기 사용 함수
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	virtual void EquipWeapon();
+	virtual void EquipWeapon();	
 
-	// ===== Combat Calculation Functions =====
-	/*UFUNCTION(BlueprintPure, Category = "Combat")
-	float CalculateTotalAttackPower(float PlayerStrength, float PlayerDexterity) const;
-
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	bool CheckStatRequirements(float PlayerStrength, float PlayerDexterity) const;
-
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	float GetAttackPowerPenalty(float PlayerStrength, float PlayerDexterity) const;*/
-
-	// 콜리전 이벤트 함수들
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 	
-protected:
+#pragma endregion
 
+protected:
+#pragma region "Protected Variables"
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* WeaponMesh;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Info")
-	FString WeaponName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Info")
-	WeaponEnums WeaponType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UWeaponCollisionComponent* CollisionComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Stats")
+	FString WeaponName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
 	TObjectPtr<UWeaponDataAsset> WeaponData;
+	
+#pragma endregion
+
+#pragma region "Protected Functions"
+	
+	UFUNCTION()
+	void HandleWeaponHit(AActor* HitActor, const FHitResult& HitResult, EAttackDamageType DamageType, float DamageMultiplier);
+	
+#pragma endregion
+	
+#pragma endregion
+
+private:
+#pragma region "Private Variables"
+	
+#pragma endregion
+
+#pragma region "Private Functions"
+	
+#pragma endregion
 };

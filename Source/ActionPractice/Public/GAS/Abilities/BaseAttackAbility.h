@@ -40,6 +40,8 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
+
+	virtual void PlayAction() override;
 	
 	virtual void ExecuteMontageTask() override;
 

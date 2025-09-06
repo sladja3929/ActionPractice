@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MontageAbility.h"
+#include "MontageAbilityInterface.h"
 #include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "BlockAbility.generated.h"
 
@@ -9,7 +9,7 @@ struct FBlockActionData;
 class UAbilityTask_PlayMontageWithEvents;
 
 UCLASS()
-class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeGameplayAbility, public IMontageAbility
+class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeGameplayAbility, public IMontageAbilityInterface
 {
 	GENERATED_BODY()
 	

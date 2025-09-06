@@ -17,6 +17,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Characters/InputBufferComponent.h"
 #include "Items/Weapon.h"
+#include "Items/WeaponCollisionComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -458,6 +459,12 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
 #pragma endregion
 
 #pragma region "Weapon Functions"
+
+TScriptInterface<IHitDetectionInterface> AActionPracticeCharacter::GetHitDetectionInterface() const
+{
+	return RightWeapon->GetCollisionComponent();
+}
+
 void AActionPracticeCharacter::WeaponSwitch()
 {
 }
@@ -475,23 +482,23 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 	SpawnParams.Instigator = GetInstigator();
 	
 	AWeapon* NewWeapon = GetWorld()->SpawnActor<AWeapon>(NewWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    WeaponEnums type = NewWeapon->GetWeaponType();
+    EWeaponEnums type = NewWeapon->GetWeaponType();
 	
-	if (NewWeapon)
+	if (NewWeapon && type != EWeaponEnums::None)
 	{
 		FString SocketString = bIsLeftHand ? "hand_l" : "hand_r";
 
 		switch (type)
 		{
-		case WeaponEnums::StraightSword:
+		case EWeaponEnums::StraightSword:
 			SocketString += "_sword";
 			break;
 
-		case WeaponEnums::GreatSword:
+		case EWeaponEnums::GreatSword:
 			SocketString += "_greatsword";
 			break;
 
-		case WeaponEnums::Shield:
+		case EWeaponEnums::Shield:
 			SocketString += "_shield";
 			break;
 		}

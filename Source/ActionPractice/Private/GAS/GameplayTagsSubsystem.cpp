@@ -213,6 +213,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionStartTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventNotifyHitDetectionStartTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventNotifyHitDetectionEndTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -406,6 +424,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTagInte
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Event_Notify_InvincibleStart;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionStartTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Notify_HitDetectionStart;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Notify_HitDetectionEnd;
 	}
 	return FGameplayTag::EmptyTag;
 }

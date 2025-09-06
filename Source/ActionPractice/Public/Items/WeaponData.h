@@ -3,11 +3,11 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "WeaponEnums.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
 #include "WeaponData.generated.h"
 
-// UAnimMontage 클래스를 직접 포함하는 대신 전방 선언하여 컴파일 의존성을 낮춥니다.
 class UAnimMontage;
 
 //개별 공격 데이터
@@ -15,6 +15,9 @@ USTRUCT(BlueprintType)
 struct FIndividualAttackData
 {
     GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+    EAttackDamageType DamageType = EAttackDamageType::None;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     float DamageMultiplier = 1.0f;
@@ -72,16 +75,21 @@ class UWeaponDataAsset : public UPrimaryDataAsset
     GENERATED_BODY()
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Info")
+    EWeaponEnums WeaponType = EWeaponEnums::None;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Info")
+    int32 SweepTraceSocketCount = 2;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
     float BaseDamage = 100.0f;
 
     // 근력 보정 (A, B, C, D, E 등급을 숫자로 표현: 80=A, 60=B, 40=C, 20=D, 0=E)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
     float StrengthScaling;
     
     // 기량 보정
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
     float DexterityScaling;
     
     //GameplayTag를 Key로 사용하여 각 공격 타입에 맞는 데이터를 쉽게 찾을 수 있습니다.
@@ -90,6 +98,8 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block Definitions")
     FBlockActionData BlockData;
+
+    
 
     void PreloadAllMontages()
     {

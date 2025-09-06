@@ -9,6 +9,7 @@
 #include "GameplayEffect.h"
 #include "ActionPracticeCharacter.generated.h"
 
+class IHitDetectionInterface;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
@@ -88,7 +89,8 @@ public:
 	// ===== Weapon Getter Functions =====
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
-
+	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const;
+	
 	// ===== Input Helper Functions =====
 	UFUNCTION(BlueprintPure, Category = "Input")
 	FVector2D GetCurrentMovementInput() const;

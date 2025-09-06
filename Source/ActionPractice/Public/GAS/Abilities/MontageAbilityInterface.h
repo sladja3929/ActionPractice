@@ -1,14 +1,14 @@
 ﻿#pragma once
 
-#include "MontageAbility.generated.h"
+#include "MontageAbilityInterface.generated.h"
 
 UINTERFACE()
-class UMontageAbility : public UInterface
+class UMontageAbilityInterface : public UInterface
 {
 	GENERATED_BODY()
 };
 
-class ACTIONPRACTICE_API IMontageAbility
+class ACTIONPRACTICE_API IMontageAbilityInterface
 {
 	GENERATED_BODY()
 	

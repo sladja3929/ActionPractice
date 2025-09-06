@@ -4,6 +4,8 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Characters/ActionPracticeCharacter.h"
+#include "Characters/HitDetectionInterface.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
@@ -44,6 +46,23 @@ void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
     MontageToPlay = WeaponAttackData->AttackMontages[0].Get();
     
     PlayAction();
+}
+
+
+void UBaseAttackAbility::PlayAction()
+{
+    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+    {
+        if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
+        {
+            //어빌리티 태그를 HitDetection에 제공
+            FGameplayTag MainTag = AbilityTags.First();
+            if (MainTag.IsValid()) HitDetection->PrepareHitDetection(MainTag);
+        }
+    }
+    
+    
+    Super::PlayAction();
 }
 
 void UBaseAttackAbility::ExecuteMontageTask()
