@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
 
+class AActionPracticeCharacter;
 class UWeaponDataAsset;
 class UStaticMeshComponent;
 class UPrimitiveComponent;
@@ -31,6 +32,8 @@ public:
 	// ===== Getter =====
 	FORCEINLINE FString GetWeaponName() const {return WeaponName;}
 	EWeaponEnums GetWeaponType() const;
+
+	FORCEINLINE AActionPracticeCharacter* GetOwnerCharacter() const {return OwnerCharacter;}
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
 	const UWeaponDataAsset* GetWeaponData() const { return WeaponData.Get(); }
@@ -77,6 +80,9 @@ protected:
 
 private:
 #pragma region "Private Variables"
+
+	UPROPERTY()
+	TObjectPtr<AActionPracticeCharacter> OwnerCharacter;
 	
 #pragma endregion
 

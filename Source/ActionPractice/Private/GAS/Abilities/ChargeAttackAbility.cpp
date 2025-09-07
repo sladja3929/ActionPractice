@@ -8,6 +8,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "Characters/HitDetectionInterface.h"
 #include "GAS/Abilities/BaseAttackAbility.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
@@ -23,11 +24,6 @@
 UChargeAttackAbility::UChargeAttackAbility()
 {
     StaminaCost = 15.0f;
-    ComboCounter = 0;
-    MaxComboCount = 1;
-    bMaxCharged = false;
-    bIsCharging = false;
-    bNoCharge = false;
 }
 
 void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -69,7 +65,6 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     bNoCharge = GetInputBufferComponentFromActorInfo()->bBufferActionReleased;
     
     DEBUG_LOG(TEXT("Charge Ability Activated"));
-    MontageToPlay = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
     bCreateTask = true;
     bIsAttackMontage = false;
     PlayAction();
@@ -86,23 +81,8 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }    
 }
 
-void UChargeAttackAbility::PlayAction()
-{    
-    // 스태미나 소모
-    if (!ConsumeStamina())
-    {
-        DEBUG_LOG(TEXT("No Stamina"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
-    //태그 부착
-    if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
-    {
-        FGameplayEventData EventData;
-        IBC->OnActionRecoveryStart(EventData);
-    }
-    
+void UChargeAttackAbility::RotateCharacter()
+{
     //캐릭터 회전 (차지 x, 공격 o)
     if (bIsAttackMontage)
     {
@@ -111,6 +91,13 @@ void UChargeAttackAbility::PlayAction()
             Character->RotateCharacterToInputDirection(RotateTime);
         }
     }
+}
+
+void UChargeAttackAbility::PlayAction()
+{
+    ConsumeStaminaAndAddTag();
+    SetHitDetectionConfig();
+    RotateCharacter();
     
     WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
     if (WaitDelayTask)
@@ -120,25 +107,13 @@ void UChargeAttackAbility::PlayAction()
     }
 }
 
-void UChargeAttackAbility::PlayNextCharge()
-{
-    ComboCounter++;
-    bMaxCharged = false;
-    bIsCharging = false;
-    
-    if (ComboCounter >= MaxComboCount)
-    {
-        ComboCounter = 0;
-    }
-
-    MontageToPlay = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
-    bCreateTask = false;
-    bIsAttackMontage = false;
-    PlayAction();
-}
-
 void UChargeAttackAbility::ExecuteMontageTask()
 {
+    UAnimMontage* MontageToPlay = nullptr;
+    
+    if (bIsAttackMontage) MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
+    else MontageToPlay = WeaponAttackData->SubAttackMontages[ComboCounter].Get();
+        
     if (!MontageToPlay)
     {
         DEBUG_LOG(TEXT("No Montage to Play"));
@@ -182,6 +157,22 @@ void UChargeAttackAbility::ExecuteMontageTask()
     }
 }
 
+void UChargeAttackAbility::PlayNextCharge()
+{
+    ComboCounter++;
+    bMaxCharged = false;
+    bIsCharging = false;
+    
+    if (ComboCounter >= MaxComboCount)
+    {
+        ComboCounter = 0;
+    }
+    
+    bCreateTask = false;
+    bIsAttackMontage = false;
+    PlayAction();
+}
+
 void UChargeAttackAbility::OnTaskMontageCompleted()
 {
     //차지 몽타주가 끝날 때 = 완전히 차지했을 때
@@ -190,7 +181,6 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
         bMaxCharged = true;
         
         DEBUG_LOG(TEXT("Montage Completed - Max Charge"));
-        MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = true;
         bIsAttackMontage = true;
         PlayAction();  
@@ -223,7 +213,6 @@ void UChargeAttackAbility::OnNotifyChargeStart()
       
     if (bNoCharge) //이미 뗴져 있다면 바로 공격
     {
-        MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = false;
         bIsAttackMontage = true;
         PlayAction();
@@ -238,7 +227,6 @@ void UChargeAttackAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
     //차지를 멈췄을 때
     if (bIsCharging) //차지중이라면
     {
-        MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
         bCreateTask = false;
         bIsAttackMontage = true;
         PlayAction();

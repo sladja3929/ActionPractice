@@ -19,8 +19,6 @@
 UNormalAttackAbility::UNormalAttackAbility()
 {
     StaminaCost = 15.0f;
-    ComboCounter = 0;
-    MaxComboCount = 1;
 }
 
 void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -51,8 +49,6 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     
     //차지어택에 따라 추후 변경
     ComboCounter = 0;
-
-    MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     bCreateTask = true;
     PlayAction();
 }
@@ -78,7 +74,7 @@ void UNormalAttackAbility::PlayNextAttack()
     }
     
     DEBUG_LOG(TEXT("NextAttack - ComboCounter: %d"),ComboCounter);
-    MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
+
     bCreateTask = false;
     PlayAction();
 }
@@ -95,6 +91,7 @@ void UNormalAttackAbility::PlayNextAttack()
 
 void UNormalAttackAbility::ExecuteMontageTask()
 {
+    UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     if (!MontageToPlay)
     {
         DEBUG_LOG(TEXT("No Montage to Play"));

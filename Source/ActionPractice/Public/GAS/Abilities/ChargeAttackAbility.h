@@ -26,12 +26,6 @@ protected:
 #pragma region "Protected Vriables" //================================================
 
 	UPROPERTY()
-	int32 ComboCounter = 0;
-
-	UPROPERTY()
-	int32 MaxComboCount = 1;
-
-	UPROPERTY()
 	bool bMaxCharged = false;
 
 	UPROPERTY()
@@ -50,9 +44,9 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
-	
-	virtual void ExecuteMontageTask() override;
 
+	virtual void RotateCharacter() override;
+	virtual void ExecuteMontageTask() override;
 	virtual void PlayAction() override;
 
 	UFUNCTION()

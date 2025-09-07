@@ -2,6 +2,7 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Items/WeaponData.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Characters/ActionPracticeCharacter.h"
@@ -20,10 +21,6 @@
 UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
-    RotateTime = 0.1f;
-    WeaponAttackData = nullptr;
-    PlayMontageWithEventsTask = nullptr;
-    WaitPlayBufferEventTask = nullptr;
 }
 
 void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -43,30 +40,53 @@ void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle
         return;
     }
 
-    MontageToPlay = WeaponAttackData->AttackMontages[0].Get();
-    
+    ComboCounter = 0;
     PlayAction();
 }
 
 
-void UBaseAttackAbility::PlayAction()
+void UBaseAttackAbility::SetHitDetectionConfig()
 {
-    if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
+    //캐릭터에 공격 정보 제공
+    AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
+    if (!Character)
     {
-        if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
-        {
-            //어빌리티 태그를 HitDetection에 제공
-            FGameplayTag MainTag = AbilityTags.First();
-            if (MainTag.IsValid()) HitDetection->PrepareHitDetection(MainTag);
-        }
+        DEBUG_LOG(TEXT("No Character"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+
+    if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
+    {
+        FGameplayTag MainTag = AbilityTags.First();
+        if (MainTag.IsValid()) HitDetection->PrepareHitDetection(MainTag, ComboCounter);
     }
     
-    
-    Super::PlayAction();
+    else
+    {
+        DEBUG_LOG(TEXT("Character Not Has HitDetection System"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+}
+
+void UBaseAttackAbility::PlayAction()
+{
+    ConsumeStaminaAndAddTag();
+    SetHitDetectionConfig();
+    RotateCharacter();
+
+    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
+    if (WaitDelayTask)
+    {
+        WaitDelayTask->OnFinish.AddDynamic(this, &UBaseAttackAbility::ExecuteMontageTask);
+        WaitDelayTask->ReadyForActivation();
+    }
 }
 
 void UBaseAttackAbility::ExecuteMontageTask()
 {
+    UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     if (!MontageToPlay)
     {
         DEBUG_LOG(TEXT("No Montage to Play"));

@@ -26,21 +26,27 @@ public:
 protected:
 #pragma region "Protected Vriables" //================================================
 	
-	const FAttackActionData* WeaponAttackData;
+	const FAttackActionData* WeaponAttackData = nullptr;
 
 	UPROPERTY()
-	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask;
+	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask = nullptr;
 
 	UPROPERTY()
-	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask;
+	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask = nullptr;
 
 	UPROPERTY()
-	UAnimMontage* MontageToPlay = nullptr;
+	int32 ComboCounter = 0;
+
+	UPROPERTY()
+	int32 MaxComboCount = 0;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
 
+	UFUNCTION()
+	void SetHitDetectionConfig();
+	
 	virtual void PlayAction() override;
 	
 	virtual void ExecuteMontageTask() override;

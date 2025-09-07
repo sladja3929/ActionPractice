@@ -54,7 +54,7 @@ public:
 
 protected:
 #pragma region "Protected Variables"
-
+	
 	const UInputAction* BufferedAction;
 	int32 CurrentBufferPriority;
 	TSet<const UInputAction*> BufferedHoldAction;

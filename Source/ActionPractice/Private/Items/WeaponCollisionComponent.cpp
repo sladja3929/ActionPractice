@@ -3,8 +3,12 @@
 #include "Items/WeaponData.h"
 #include "GameFramework/Character.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Characters/ActionPracticeCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
+#include "GAS/GameplayTagsSubsystem.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -30,48 +34,93 @@ void UWeaponCollisionComponent::BeginPlay()
     if (!OwnerWeapon)
     {
         DEBUG_LOG(TEXT("WeaponCollisionComponent: Owner is not a weapon!"));
+        return;
     }
+    
+    // 이벤트 리스너 설정
+    SetupEventListeners();
 }
 
-void UWeaponCollisionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UWeaponCollisionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    // 이벤트 리스너 정리
+    CleanupEventListeners();
     
-    if (!bIsTracing || !OwnerWeapon)
+    Super::EndPlay(EndPlayReason);
+}
+
+void UWeaponCollisionComponent::SetupEventListeners()
+{
+    if (!OwnerWeapon)
         return;
     
-    // 적응형 트레이스 레이트 계산
-    float AdaptiveRate = CalculateAdaptiveTraceRate();
-    CurrentTraceInterval = 1.0f / AdaptiveRate;
+    // 무기 소유자 (캐릭터) 가져오기
+    AActionPracticeCharacter* Character = OwnerWeapon->GetOwnerCharacter();
+    if (!Character)
+        return;
     
-    // 트레이스 타이머 업데이트
-    TraceAccumulator += DeltaTime;
-    
-    if (TraceAccumulator >= CurrentTraceInterval)
+    // ASC 가져오기
+    CachedASC = Character->GetAbilitySystemComponent();
+    if (!CachedASC)
     {
-        PerformTrace(TraceAccumulator);
-        TraceAccumulator = 0.0f;
+        DEBUG_LOG(TEXT("No ASC found on character"));
+        return;
     }
     
-    // 무기 위치/회전 업데이트 (속도 계산용)
-    PreviousWeaponLocation = OwnerWeapon->GetActorLocation();
-    PreviousWeaponRotation = OwnerWeapon->GetActorQuat();
+    // HitDetectionStart 이벤트 구독
+    HitDetectionStartHandle = CachedASC->GenericGameplayEventCallbacks
+    .FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyHitDetectionStartTag())
+    .AddLambda([this](const FGameplayEventData* EventData)
+    {
+        if (IsValid(this) && EventData)
+        {
+            HandleHitDetectionStart(*EventData);
+        }
+    });
+    
+    // HitDetectionEnd 이벤트 구독
+    HitDetectionEndHandle = CachedASC->GenericGameplayEventCallbacks
+    .FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTag())
+    .AddLambda([this](const FGameplayEventData* EventData)
+    {
+        if (IsValid(this) && EventData)
+        {
+            HandleHitDetectionEnd(*EventData);
+        }
+    });
 }
 
-void UWeaponCollisionComponent::StartWeaponTrace(const FGameplayTag& AttackTag, float Duration)
+void UWeaponCollisionComponent::CleanupEventListeners()
 {
-    if (bIsTracing)
+    if (CachedASC)
     {
-        DEBUG_LOG(TEXT("Already tracing, stopping previous trace"));
-        StopWeaponTrace();
+        if (HitDetectionStartHandle.IsValid())
+        {
+            if (FGameplayEventMulticastDelegate* Delegate = CachedASC->GenericGameplayEventCallbacks.Find(UGameplayTagsSubsystem::GetEventNotifyHitDetectionStartTag()))
+            {
+                Delegate->Remove(HitDetectionStartHandle);
+            }
+        }
+        
+        if (HitDetectionEndHandle.IsValid())
+        {
+            if (FGameplayEventMulticastDelegate* Delegate = CachedASC->GenericGameplayEventCallbacks.Find(UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTag()))
+            {
+                Delegate->Remove(HitDetectionEndHandle);
+            }
+        }
     }
+}
+
+void UWeaponCollisionComponent::PrepareHitDetection(const FGameplayTag& AttackTag, const int32 ComboIndex)
+{
+    DEBUG_LOG(TEXT("PrepareHitDetection - Attack: %s, Combo: %d"), *AttackTag.ToString(), ComboIndex);
     
     CurrentAttackTag = AttackTag;
-    TotalTraceDuration = Duration;
-    ElapsedTraceTime = 0.0f;
+    CurrentComboIndex = ComboIndex;
     
     // WeaponData에서 설정 로드
-    if (!LoadTraceConfigFromWeaponData(AttackTag))
+    if (!LoadTraceConfigFromWeaponData(AttackTag, ComboIndex))
     {
         DEBUG_LOG(TEXT("Failed to load trace config for attack: %s"), *AttackTag.ToString());
         return;
@@ -80,15 +129,58 @@ void UWeaponCollisionComponent::StartWeaponTrace(const FGameplayTag& AttackTag, 
     // 소켓 이름 자동 생성
     GenerateSocketNames();
     
+    // 히트 액터 리셋
+    ResetHitActors();
+    
+    // 준비 완료 표시
+    bIsPrepared = true;
+    
+    DEBUG_LOG(TEXT("HitDetection Prepared - DamageType: %d, Sockets: %d"), 
+             (int32)CurrentConfig.DamageType, CurrentConfig.SocketCount);
+}
+
+void UWeaponCollisionComponent::HandleHitDetectionStart(const FGameplayEventData& Payload)
+{
+    if (!bIsPrepared)
+    {
+        DEBUG_LOG(TEXT("HandleHitDetectionStart called but not prepared!"));
+        return;
+    }
+    
+    float Duration = Payload.EventMagnitude;
+    
+    DEBUG_LOG(TEXT("HitDetectionStart Event Received - Duration: %.2f"), Duration);
+    
+    StartWeaponTrace();
+    TotalTraceDuration = Duration;
+}
+
+void UWeaponCollisionComponent::HandleHitDetectionEnd(const FGameplayEventData& Payload)
+{
+    DEBUG_LOG(TEXT("HitDetectionEnd Event Received"));
+    
+    StopWeaponTrace();
+    bIsPrepared = false;
+}
+
+void UWeaponCollisionComponent::StartWeaponTrace()
+{
+    if (bIsTracing)
+    {
+        DEBUG_LOG(TEXT("Already tracing, stopping previous trace"));
+        StopWeaponTrace();
+    }
+    
     // 초기 소켓 위치 저장
     UpdateSocketPositions();
     SweptFrame.PreviousSocketPositions = SweptFrame.CurrentSocketPositions;
     
+    ElapsedTraceTime = 0.0f;
+    TraceAccumulator = 0.0f;
     bIsTracing = true;
     SetComponentTickEnabled(true);
     
-    DEBUG_LOG(TEXT("Started weapon trace - Attack: %s, DamageType: %d, Sockets: %d"),
-             *AttackTag.ToString(), (int32)CurrentConfig.DamageType, CurrentConfig.SocketCount);
+    DEBUG_LOG(TEXT("Started weapon trace"));
 }
 
 void UWeaponCollisionComponent::StopWeaponTrace()
@@ -100,7 +192,7 @@ void UWeaponCollisionComponent::StopWeaponTrace()
     DEBUG_LOG(TEXT("Stopped weapon trace"));
 }
 
-bool UWeaponCollisionComponent::LoadTraceConfigFromWeaponData(const FGameplayTag& AttackTag)
+bool UWeaponCollisionComponent::LoadTraceConfigFromWeaponData(const FGameplayTag& AttackTag, int32 ComboIndex)
 {
     if (!OwnerWeapon)
         return false;
@@ -110,14 +202,13 @@ bool UWeaponCollisionComponent::LoadTraceConfigFromWeaponData(const FGameplayTag
         return false;
     
     // AttackTag에 해당하는 공격 데이터 찾기
-    const FAttackActionData* AttackData = WeaponData->AttackDataMap.Find(AttackTag);
+    const FAttackActionData* AttackData = OwnerWeapon->GetWeaponAttackDataByTag(AttackTag);
     if (!AttackData || AttackData->ComboAttackData.Num() == 0)
         return false;
     
-    // 현재 콤보 인덱스에 해당하는 데이터 가져오기
-    // TODO: 콤보 시스템과 연동하여 CurrentComboIndex 설정
-    CurrentComboIndex = FMath::Clamp(CurrentComboIndex, 0, AttackData->ComboAttackData.Num() - 1);
-    const FIndividualAttackData& AttackInfo = AttackData->ComboAttackData[CurrentComboIndex];
+    // 콤보 인덱스 유효성 검사
+    ComboIndex = FMath::Clamp(ComboIndex, 0, AttackData->ComboAttackData.Num() - 1);
+    const FIndividualAttackData& AttackInfo = AttackData->ComboAttackData[ComboIndex];
     
     // 설정 로드
     CurrentConfig.DamageType = AttackInfo.DamageType;
@@ -131,36 +222,24 @@ bool UWeaponCollisionComponent::LoadTraceConfigFromWeaponData(const FGameplayTag
     // 공격 타입별 기본 트레이스 반경 설정
     switch (CurrentConfig.DamageType)
     {
-    case EAttackDamageType::Slash:
-        CurrentConfig.TraceRadius = DefaultTraceRadius;
-        break;
+        case EAttackDamageType::Slash:
+            CurrentConfig.TraceRadius = DefaultTraceRadius;
+            break;
             
-    case EAttackDamageType::Pierce:
-        CurrentConfig.TraceRadius = DefaultTraceRadius * 0.7f;  // 찌르기는 좁게
-        break;
+        case EAttackDamageType::Pierce:
+            CurrentConfig.TraceRadius = DefaultTraceRadius * 0.7f;  // 찌르기는 좁게
+            break;
             
-    case EAttackDamageType::Strike:
-        CurrentConfig.TraceRadius = DefaultTraceRadius * 1.5f;  // 타격은 넓게
-        break;
+        case EAttackDamageType::Strike:
+            CurrentConfig.TraceRadius = DefaultTraceRadius * 1.5f;  // 타격은 넓게
+            break;
             
-    default:
-        CurrentConfig.TraceRadius = DefaultTraceRadius;
-        break;
+        default:
+            CurrentConfig.TraceRadius = DefaultTraceRadius;
+            break;
     }
     
     return true;
-}
-
-void UWeaponCollisionComponent::SetTraceProfile(const FWeaponTraceProfile& NewProfile)
-{
-    CurrentProfile = NewProfile;
-    DEBUG_LOG(TEXT("Set trace profile with %d sockets"), NewProfile.SocketNames.Num());
-}
-
-void UWeaponCollisionComponent::ResetHitActors()
-{
-    HitValidationMap.Empty();
-    DEBUG_LOG(TEXT("Reset hit actors"));
 }
 
 void UWeaponCollisionComponent::GenerateSocketNames()
@@ -177,39 +256,31 @@ void UWeaponCollisionComponent::GenerateSocketNames()
     DEBUG_LOG(TEXT("Generated %d socket names"), TraceSocketNames.Num());
 }
 
-void UWeaponCollisionComponent::UpdateSocketPositions()
+void UWeaponCollisionComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
+                                             FActorComponentTickFunction* ThisTickFunction)
 {
-    if (!OwnerWeapon)
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    
+    if (!bIsTracing || !OwnerWeapon)
         return;
     
-    USkeletalMeshComponent* WeaponMesh = OwnerWeapon->FindComponentByClass<USkeletalMeshComponent>();
-    if (!WeaponMesh)
-        return;
+    // 적응형 트레이스 레이트 계산
+    float AdaptiveRate = CalculateAdaptiveTraceRate();
+    CurrentTraceInterval = 1.0f / AdaptiveRate;
     
-    SweptFrame.CurrentSocketPositions.Empty();
+    // 트레이스 타이머 업데이트
+    TraceAccumulator += DeltaTime;
+    ElapsedTraceTime += DeltaTime;
     
-    for (const FName& SocketName : TraceSocketNames)
+    if (TraceAccumulator >= CurrentTraceInterval)
     {
-        if (WeaponMesh->DoesSocketExist(SocketName))
-        {
-            FVector SocketLocation = WeaponMesh->GetSocketLocation(SocketName);
-            SweptFrame.CurrentSocketPositions.Add(SocketLocation);
-        }
-        else
-        {
-            // 소켓이 없으면 무기 위치 기준으로 추정
-            FVector WeaponLocation = OwnerWeapon->GetActorLocation();
-            FVector WeaponForward = OwnerWeapon->GetActorForwardVector();
-            
-            // 소켓 인덱스에 따라 위치 분배
-            float Alpha = (TraceSocketNames.Find(SocketName) + 1.0f) / (TraceSocketNames.Num() + 1.0f);
-            FVector EstimatedLocation = WeaponLocation + WeaponForward * (Alpha * 100.0f);
-            
-            SweptFrame.CurrentSocketPositions.Add(EstimatedLocation);
-            
-            DEBUG_LOG(TEXT("Socket %s not found, using estimated position"), *SocketName.ToString());
-        }
+        PerformTrace(TraceAccumulator);
+        TraceAccumulator = 0.0f;
     }
+    
+    // 무기 위치/회전 업데이트 (속도 계산용)
+    PreviousWeaponLocation = OwnerWeapon->GetActorLocation();
+    PreviousWeaponRotation = OwnerWeapon->GetActorQuat();
 }
 
 void UWeaponCollisionComponent::PerformTrace(float DeltaTime)
@@ -245,6 +316,67 @@ void UWeaponCollisionComponent::PerformTrace(float DeltaTime)
     
     // 현재 위치를 이전 위치로 저장
     SweptFrame.PreviousSocketPositions = SweptFrame.CurrentSocketPositions;
+}
+
+void UWeaponCollisionComponent::UpdateSocketPositions()
+{
+    if (!OwnerWeapon)
+        return;
+    
+    USkeletalMeshComponent* WeaponMesh = OwnerWeapon->FindComponentByClass<USkeletalMeshComponent>();
+    if (!WeaponMesh)
+    {
+        // 스태틱 메시인 경우 시도
+        UStaticMeshComponent* StaticWeaponMesh = OwnerWeapon->FindComponentByClass<UStaticMeshComponent>();
+        if (!StaticWeaponMesh)
+            return;
+            
+        // 스태틱 메시는 소켓이 있어도 위치만 사용
+        SweptFrame.CurrentSocketPositions.Empty();
+        for (const FName& SocketName : TraceSocketNames)
+        {
+            if (StaticWeaponMesh->DoesSocketExist(SocketName))
+            {
+                FVector SocketLocation = StaticWeaponMesh->GetSocketLocation(SocketName);
+                SweptFrame.CurrentSocketPositions.Add(SocketLocation);
+            }
+            else
+            {
+                // 소켓이 없으면 무기 위치 기준으로 추정
+                FVector WeaponLocation = OwnerWeapon->GetActorLocation();
+                FVector WeaponForward = OwnerWeapon->GetActorForwardVector();
+                
+                // 소켓 인덱스에 따라 위치 분배
+                float Alpha = (TraceSocketNames.Find(SocketName) + 1.0f) / (TraceSocketNames.Num() + 1.0f);
+                FVector EstimatedLocation = WeaponLocation + WeaponForward * (Alpha * 100.0f);
+                
+                SweptFrame.CurrentSocketPositions.Add(EstimatedLocation);
+            }
+        }
+        return;
+    }
+    
+    // 스켈레탈 메시 소켓 처리
+    SweptFrame.CurrentSocketPositions.Empty();
+    for (const FName& SocketName : TraceSocketNames)
+    {
+        if (WeaponMesh->DoesSocketExist(SocketName))
+        {
+            FVector SocketLocation = WeaponMesh->GetSocketLocation(SocketName);
+            SweptFrame.CurrentSocketPositions.Add(SocketLocation);
+        }
+        else
+        {
+            // 소켓이 없으면 무기 위치 기준으로 추정
+            FVector WeaponLocation = OwnerWeapon->GetActorLocation();
+            FVector WeaponForward = OwnerWeapon->GetActorForwardVector();
+            
+            float Alpha = (TraceSocketNames.Find(SocketName) + 1.0f) / (TraceSocketNames.Num() + 1.0f);
+            FVector EstimatedLocation = WeaponLocation + WeaponForward * (Alpha * 100.0f);
+            
+            SweptFrame.CurrentSocketPositions.Add(EstimatedLocation);
+        }
+    }
 }
 
 void UWeaponCollisionComponent::PerformSlashTrace(const FSweptFrame& Frame)
@@ -385,70 +517,6 @@ void UWeaponCollisionComponent::PerformStrikeTrace(const FSweptFrame& Frame)
     }
 }
 
-void UWeaponCollisionComponent::ProcessHit(AActor* HitActor, const FHitResult& HitResult)
-{
-    // 기본 데미지 배율
-    float FinalMultiplier = CurrentConfig.DamageMultiplier;
-    
-    // 속도 기반 데미지 보정
-    float SwingSpeed = CalculateSwingSpeed();
-    float SpeedMultiplier = FMath::GetMappedRangeValueClamped(
-        FVector2D(0.0f, SwingSpeedThreshold),
-        FVector2D(0.5f, 1.5f),
-        SwingSpeed
-    );
-    
-    FinalMultiplier *= SpeedMultiplier;
-    
-    DEBUG_LOG(TEXT("Hit %s - Type: %d, DmgMult: %.2f, SpeedMult: %.2f, Final: %.2f"),
-             *HitActor->GetName(), (int32)CurrentConfig.DamageType, 
-             CurrentConfig.DamageMultiplier, SpeedMultiplier, FinalMultiplier);
-    
-    // 델리게이트 브로드캐스트
-    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentConfig.DamageType, FinalMultiplier);
-}
-
-void UWeaponCollisionComponent::RegisterGameplayEventCallbacks()
-{
-    
-}
-
-void UWeaponCollisionComponent::UnRegisterGameplayEventCallbacks()
-{
-    
-}
-
-float UWeaponCollisionComponent::CalculateSwingSpeed() const
-{
-    if (!OwnerWeapon)
-        return 0.0f;
-    
-    // 선속도 계산
-    FVector CurrentLocation = OwnerWeapon->GetActorLocation();
-    float LinearSpeed = (CurrentLocation - PreviousWeaponLocation).Size();
-    
-    // 각속도 계산
-    FQuat CurrentRotation = OwnerWeapon->GetActorQuat();
-    float AngleDelta = CurrentRotation.AngularDistance(PreviousWeaponRotation);
-    
-    // 무기 길이 추정 (소켓 간 거리)
-    float WeaponLength = 100.0f;  // 기본값
-    if (CurrentProfile.SocketNames.Num() >= 2)
-    {
-        USkeletalMeshComponent* WeaponMesh = OwnerWeapon->FindComponentByClass<USkeletalMeshComponent>();
-        if (WeaponMesh)
-        {
-            FVector Start = WeaponMesh->GetSocketLocation(CurrentProfile.SocketNames[0]);
-            FVector End = WeaponMesh->GetSocketLocation(CurrentProfile.SocketNames.Last());
-            WeaponLength = (End - Start).Size();
-        }
-    }
-    
-    float AngularSpeed = AngleDelta * WeaponLength;
-    
-    return LinearSpeed + AngularSpeed;
-}
-
 bool UWeaponCollisionComponent::CreateSweptVolume(const FVector& StartPrev, const FVector& StartCurr,
                                                  const FVector& EndPrev, const FVector& EndCurr,
                                                  float Radius, TArray<FHitResult>& OutHits)
@@ -506,7 +574,7 @@ bool UWeaponCollisionComponent::ValidateHit(AActor* HitActor, const FHitResult& 
         return false;
     
     // 자기 자신과 소유자 제외
-    AActor* WeaponOwner = OwnerWeapon->GetOwner();
+    AActionPracticeCharacter* WeaponOwner = OwnerWeapon->GetOwnerCharacter();
     if (HitActor == OwnerWeapon || HitActor == WeaponOwner)
         return false;
     
@@ -546,6 +614,78 @@ bool UWeaponCollisionComponent::ValidateHit(AActor* HitActor, const FHitResult& 
     }
     
     return true;
+}
+
+void UWeaponCollisionComponent::ProcessHit(AActor* HitActor, const FHitResult& HitResult)
+{
+    // 기본 데미지 배율
+    float FinalMultiplier = CurrentConfig.DamageMultiplier;
+    
+    // 속도 기반 데미지 보정
+    float SwingSpeed = CalculateSwingSpeed();
+    float SpeedMultiplier = FMath::GetMappedRangeValueClamped(
+        FVector2D(0.0f, SwingSpeedThreshold),
+        FVector2D(0.5f, 1.5f),
+        SwingSpeed
+    );
+    
+    FinalMultiplier *= SpeedMultiplier;
+    
+    DEBUG_LOG(TEXT("Hit %s - Type: %d, DmgMult: %.2f, SpeedMult: %.2f, Final: %.2f"),
+             *HitActor->GetName(), (int32)CurrentConfig.DamageType, 
+             CurrentConfig.DamageMultiplier, SpeedMultiplier, FinalMultiplier);
+    
+    // 델리게이트 브로드캐스트
+    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentConfig.DamageType, FinalMultiplier);
+}
+
+void UWeaponCollisionComponent::ResetHitActors()
+{
+    HitValidationMap.Empty();
+    DEBUG_LOG(TEXT("Reset hit actors"));
+}
+
+float UWeaponCollisionComponent::CalculateSwingSpeed() const
+{
+    if (!OwnerWeapon)
+        return 0.0f;
+    
+    // 선속도 계산
+    FVector CurrentLocation = OwnerWeapon->GetActorLocation();
+    float LinearSpeed = (CurrentLocation - PreviousWeaponLocation).Size();
+    
+    // 각속도 계산
+    FQuat CurrentRotation = OwnerWeapon->GetActorQuat();
+    float AngleDelta = CurrentRotation.AngularDistance(PreviousWeaponRotation);
+    
+    // 무기 길이 추정 (소켓 간 거리)
+    float WeaponLength = 100.0f;  // 기본값
+    if (TraceSocketNames.Num() >= 2)
+    {
+        USkeletalMeshComponent* WeaponMesh = OwnerWeapon->FindComponentByClass<USkeletalMeshComponent>();
+        if (!WeaponMesh)
+        {
+            UStaticMeshComponent* StaticWeaponMesh = OwnerWeapon->FindComponentByClass<UStaticMeshComponent>();
+            if (StaticWeaponMesh && StaticWeaponMesh->DoesSocketExist(TraceSocketNames[0]) && 
+                StaticWeaponMesh->DoesSocketExist(TraceSocketNames.Last()))
+            {
+                FVector Start = StaticWeaponMesh->GetSocketLocation(TraceSocketNames[0]);
+                FVector End = StaticWeaponMesh->GetSocketLocation(TraceSocketNames.Last());
+                WeaponLength = (End - Start).Size();
+            }
+        }
+        else if (WeaponMesh->DoesSocketExist(TraceSocketNames[0]) && 
+                 WeaponMesh->DoesSocketExist(TraceSocketNames.Last()))
+        {
+            FVector Start = WeaponMesh->GetSocketLocation(TraceSocketNames[0]);
+            FVector End = WeaponMesh->GetSocketLocation(TraceSocketNames.Last());
+            WeaponLength = (End - Start).Size();
+        }
+    }
+    
+    float AngularSpeed = AngleDelta * WeaponLength;
+    
+    return LinearSpeed + AngularSpeed;
 }
 
 float UWeaponCollisionComponent::CalculateAdaptiveTraceRate() const
@@ -594,7 +734,7 @@ FCollisionQueryParams UWeaponCollisionComponent::GetCollisionQueryParams() const
     {
         Params.AddIgnoredActor(OwnerWeapon);
         
-        if (AActor* WeaponOwner = OwnerWeapon->GetOwner())
+        if (AActionPracticeCharacter* WeaponOwner = OwnerWeapon->GetOwnerCharacter())
         {
             Params.AddIgnoredActor(WeaponOwner);
         }

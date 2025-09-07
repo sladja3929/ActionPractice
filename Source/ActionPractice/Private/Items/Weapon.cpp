@@ -6,6 +6,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
+#include "Characters/ActionPracticeCharacter.h"
 #include "Items/WeaponCollisionComponent.h"
 
 #define ENABLE_DEBUG_LOG 1
@@ -35,63 +36,18 @@ AWeapon::AWeapon()
 void AWeapon::BeginPlay()
 {
    Super::BeginPlay();
+
+    OwnerCharacter = Cast<AActionPracticeCharacter>(GetOwner());
+    if (!OwnerCharacter)
+    {
+        DEBUG_LOG(TEXT("No Owner Character In Weapon"));
+        return;
+    }
     
     // 콜리전 컴포넌트 델리게이트 바인딩
     if (CollisionComponent)
     {
         CollisionComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
-        
-        // WeaponData에서 기본 프로파일 설정
-        if (WeaponData)
-        {
-            // 기본 소켓 설정 (WeaponData에 있다면)
-            FWeaponTraceProfile DefaultProfile;
-            
-            // 무기 타입에 따른 기본 소켓 설정
-            switch (WeaponType)
-            {
-                case WeaponEnums::Sword:
-                case WeaponEnums::GreatSword:
-                    DefaultProfile.SocketNames = {TEXT("WeaponStart"), TEXT("WeaponEnd")};
-                    DefaultProfile.DamageType = EAttackDamageType::Slash;
-                    DefaultProfile.TraceRadius = 15.0f;
-                    break;
-                    
-                case WeaponEnums::Spear:
-                    DefaultProfile.SocketNames = {TEXT("WeaponTip")};
-                    DefaultProfile.DamageType = EAttackDamageType::Pierce;
-                    DefaultProfile.TraceRadius = 10.0f;
-                    break;
-                    
-                case WeaponEnums::Hammer:
-                    DefaultProfile.SocketNames = {TEXT("WeaponHead")};
-                    DefaultProfile.DamageType = EAttackDamageType::Blunt;
-                    DefaultProfile.TraceRadius = 20.0f;
-                    break;
-                    
-                default:
-                    DefaultProfile.SocketNames = {TEXT("WeaponStart"), TEXT("WeaponEnd")};
-                    DefaultProfile.DamageType = EAttackDamageType::Slash;
-                    DefaultProfile.TraceRadius = 10.0f;
-                    break;
-            }
-            
-            // 소켓별 데미지 배율 설정
-            if (DefaultProfile.SocketNames.Num() >= 2)
-            {
-                DefaultProfile.SocketDamageMultipliers.Add(DefaultProfile.SocketNames[0], 0.8f);  // 손잡이 쪽
-                DefaultProfile.SocketDamageMultipliers.Add(DefaultProfile.SocketNames[1], 1.2f);  // 끝 쪽
-            }
-            else if (DefaultProfile.SocketNames.Num() == 1)
-            {
-                DefaultProfile.SocketDamageMultipliers.Add(DefaultProfile.SocketNames[0], 1.0f);
-            }
-            
-            CollisionComponent->SetTraceProfile(DefaultProfile);
-            
-            DEBUG_LOG(TEXT("Weapon initialized with %d sockets, DamageType: %d"),
-                     DefaultProfile.SocketNames.Num(), (int32)DefaultProfile.DamageType);
-        }
     }
 }
 
@@ -161,4 +117,9 @@ void AWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitive
         // 여기에 히트 처리 로직 추가
         // 예: 데미지 처리, 이펙트 재생 등
     }
+}
+
+void AWeapon::HandleWeaponHit(AActor* HitActor, const FHitResult& HitResult, EAttackDamageType DamageType, float DamageMultiplier)
+{
+    
 }

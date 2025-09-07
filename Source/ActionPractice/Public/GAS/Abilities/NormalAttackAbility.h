@@ -24,12 +24,6 @@ public:
 protected:
 #pragma region "Protected Vriables" //================================================
 
-	UPROPERTY()
-	int32 ComboCounter = 0;
-
-	UPROPERTY()
-	int32 MaxComboCount = 1;
-
 	//PlayAction, ExecuteMontageTask 파라미터
 	UPROPERTY()
 	bool bCreateTask = false;

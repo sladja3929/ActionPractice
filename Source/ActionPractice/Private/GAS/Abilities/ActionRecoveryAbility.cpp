@@ -16,12 +16,10 @@
 
 UActionRecoveryAbility::UActionRecoveryAbility()
 {
-	RotateTime = 0.1f;
-	PlayMontageTask = nullptr;
-	WaitDelayTask = nullptr;
+	
 }
 
-void UActionRecoveryAbility::PlayAction()
+void UActionRecoveryAbility::ConsumeStaminaAndAddTag()
 {
 	// 스태미나 소모
 	if (!ConsumeStamina())
@@ -37,12 +35,21 @@ void UActionRecoveryAbility::PlayAction()
 		FGameplayEventData EventData;
 		IBC->OnActionRecoveryStart(EventData);
 	}
+}
 
+void UActionRecoveryAbility::RotateCharacter()
+{
 	// 캐릭터 회전
 	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
 	{
 		Character->RotateCharacterToInputDirection(RotateTime);
 	}
+}
+
+void UActionRecoveryAbility::PlayAction()
+{
+	ConsumeStaminaAndAddTag();
+	RotateCharacter();
 
 	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
 	if (WaitDelayTask)

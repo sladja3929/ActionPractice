@@ -14,5 +14,5 @@ class ACTIONPRACTICE_API IHitDetectionInterface
 	
 public:
 
-	virtual void PrepareHitDetection(const FGameplayTag& AttackTag) = 0;
+	virtual void PrepareHitDetection(const FGameplayTag& AttackTag, const int32 ComboIndex) = 0;
 };

@@ -26,18 +26,25 @@ protected:
 #pragma region "Protected Variables"
 	// 캐릭터 회전 시간
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Montage")
-	float RotateTime;
+	float RotateTime = 0.1f;
 
 	// 몽타주 재생 태스크
 	UPROPERTY()
-	UAbilityTask_PlayMontageAndWait* PlayMontageTask;
+	UAbilityTask_PlayMontageAndWait* PlayMontageTask = nullptr;
 
 	// 딜레이 태스크
 	UPROPERTY()
-	UAbilityTask_WaitDelay* WaitDelayTask;
+	UAbilityTask_WaitDelay* WaitDelayTask = nullptr;
 #pragma endregion
 
 #pragma region "Protected Functions"
+
+	UFUNCTION()
+	virtual void ConsumeStaminaAndAddTag();
+
+	UFUNCTION()
+	virtual void RotateCharacter();
+	
 	UFUNCTION()
 	virtual void PlayAction() override;
 
