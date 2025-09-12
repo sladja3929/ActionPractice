@@ -4,9 +4,9 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "WeaponEnums.h"
-#include "Characters/HitDetectionInterface.h"
+#include "Items/HitDetectionInterface.h"
 #include "GameplayAbilities/Public/GameplayEffectTypes.h"
-#include "WeaponCollisionComponent.generated.h"
+#include "WeaponAttackTraceComponent.generated.h"
 
 class UAbilitySystemComponent;
 class AWeapon;
@@ -14,18 +14,6 @@ struct FWeaponDataAsset;
 struct FAttackActionData;
 struct FIndividualAttackData;
 
-// 스윕 프레임 데이터
-USTRUCT()
-struct FSweptFrame
-{
-    GENERATED_BODY()
-    
-    TArray<FVector> PreviousSocketPositions;
-    TArray<FVector> CurrentSocketPositions;
-    float DeltaTime = 0.0f;
-};
-
-// 히트 검증 데이터
 USTRUCT()
 struct FHitValidationData
 {
@@ -41,7 +29,6 @@ struct FHitValidationData
     int32 HitCount = 0;
 };
 
-// 공격별 트레이스 설정
 USTRUCT()
 struct FTraceConfig
 {
@@ -51,14 +38,30 @@ struct FTraceConfig
     int32 SocketCount = 2;
     float TraceRadius = 10.0f;
     float DamageMultiplier = 1.0f;
-    float StaminaCost = 10.0f;
     float StaminaDamage = 10.0f;
+};
+
+USTRUCT(BlueprintType)
+struct FAdaptiveTraceConfig
+{
+    GENERATED_BODY()
+    
+    //트레이스 실행 주기 (초)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
+    float SecondsPerTrace;
+
+    //프레임 별 트레이스 보간 횟수 (추가)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
+    int32 InterpolationPerFrame;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
+    float SpeedThreshold;
 };
 
 DECLARE_MULTICAST_DELEGATE_FourParams(FOnWeaponHit, AActor*, const FHitResult&, EAttackDamageType, float);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class ACTIONPRACTICE_API UWeaponCollisionComponent : public UActorComponent, public IHitDetectionInterface
+class ACTIONPRACTICE_API UWeaponAttackTraceComponent : public UActorComponent, public IHitDetectionInterface
 {
     GENERATED_BODY()
 
@@ -66,89 +69,40 @@ public:
 #pragma region "Public Variables"
 
     FOnWeaponHit OnWeaponHit;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace Settings")
-    float BaseTraceRate = 60.0f;  // 초당 트레이스 횟수
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace Settings")
-    float MaxTraceRate = 120.0f;  // 최대 트레이스 횟수
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace Settings")
-    float SwingSpeedThreshold = 500.0f;  // 속도 임계값
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trace Settings")
+    FName SocketNamePrefix = FName(TEXT("trace_socket_"));
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace Settings")
     float DefaultTraceRadius = 10.0f;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hit Settings")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Trace Settings")
     float HitCooldownTime = 0.1f; 
 
-    // 디버그 설정
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    bool bDrawDebugTrace = false;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    float DebugTraceDuration = 2.0f;
 #pragma endregion
 
 #pragma region "Public Functions"
-    UWeaponCollisionComponent();
+    UWeaponAttackTraceComponent();
     
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, 
                                FActorComponentTickFunction* ThisTickFunction) override;
     
-    // IHitDetectionInterface 구현
-    virtual void PrepareHitDetection(const FGameplayTag& AttackTag, const int32 ComboIndex) override;
+    virtual void PrepareHitDetection(const FGameplayTagContainer& AttackTags, const int32 ComboIndex) override;
+    UFUNCTION()
+    virtual void HandleHitDetectionStart(const FGameplayEventData& Payload) override;
+    UFUNCTION()
+    virtual void HandleHitDetectionEnd(const FGameplayEventData& Payload) override;
     
     UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
     void ResetHitActors();
 
-    float CalculateSwingSpeed() const;
+    UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
+    void SetWeaponStaticMesh();
 #pragma endregion
 
 protected:
-#pragma region "Protected Functions"
-
-    //이벤트 관련 함수
-    void BindEventCallbacks();
-    void UnbindEventCallbacks();
-    
-    UFUNCTION()
-    void HandleHitDetectionStart(const FGameplayEventData& Payload);
-    
-    UFUNCTION()
-    void HandleHitDetectionEnd(const FGameplayEventData& Payload);
-    
-    void StartWeaponTrace();
-    void StopWeaponTrace();
-    bool LoadTraceConfigFromWeaponData(const FGameplayTag& AttackTag, int32 ComboIndex);
-    void GenerateSocketNames();
-    
-    void PerformTrace(float DeltaTime);
-    void PerformSlashTrace(const FSweptFrame& Frame);
-    void PerformPierceTrace(const FSweptFrame& Frame);
-    void PerformStrikeTrace(const FSweptFrame& Frame);
-    
-    bool CreateSweptVolume(const FVector& StartPrev, const FVector& StartCurr,
-                          const FVector& EndPrev, const FVector& EndCurr,
-                          float Radius, TArray<FHitResult>& OutHits);
-    
-    bool ValidateHit(AActor* HitActor, const FHitResult& HitResult);
-    
-    void ProcessHit(AActor* HitActor, const FHitResult& HitResult);
-    
-    bool UpdateSocketPositions();
-    
-    // 트레이스 레이트 계산
-    float CalculateAdaptiveTraceRate() const;
-    
-    // 디버그
-    void DrawDebugSweptVolume(const FVector& StartPrev, const FVector& StartCurr,
-                             const FVector& EndPrev, const FVector& EndCurr,
-                             float Radius, const FColor& Color);
-#pragma endregion
-
 #pragma region "Protected Variables"
 
     UPROPERTY()
@@ -157,35 +111,90 @@ protected:
     UPROPERTY()
     TObjectPtr<AWeapon> OwnerWeapon = nullptr;
 
-    // 이벤트 핸들
-    FDelegateHandle HitDetectionStartHandle;
-    FDelegateHandle HitDetectionEndHandle;
+    UPROPERTY()
+    TObjectPtr<UStaticMeshComponent> WeaponStaticMesh = nullptr;
     
-    // 현재 설정
+    //Trace Config Variables
     FTraceConfig CurrentConfig;
-    FGameplayTag CurrentAttackTag;
-    int32 CurrentComboIndex = 0;
     TArray<FName> TraceSocketNames;
+
+    UPROPERTY()
+    TArray<FVector> PreviousSocketPositions;
+
+    UPROPERTY()
+    TArray<FVector> CurrentSocketPositions;;
     
-    // 스윕 프레임 데이터
-    FSweptFrame SweptFrame;
-    
-    // 히트 검증 데이터
     UPROPERTY()
     TMap<AActor*, FHitValidationData> HitValidationMap;
     
-    // 트레이스 상태
     bool bIsTracing = false;
-    bool bIsPrepared = false;  // PrepareHitDetection이 호출되었는지
+    bool bIsPrepared = false;
     
-    // 트레이스 타이머
+    //Adaptive Trace Sweep Variables
     float TraceAccumulator = 0.0f;
-    float CurrentTraceInterval = 0.016f;  // 60fps 기본값
-    float TotalTraceDuration = 0.0f;
-    float ElapsedTraceTime = 0.0f;
-#pragma endregion
+    float CurrentSecondsPerTrace = 1.0f;
+    int32 CurrentInterpolationPerFrame = 1;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
+    TArray<FAdaptiveTraceConfig> AdaptiveConfigs = {
+        {0.05f, 1, 0.0f},
+        {0.04f, 2, 500.0f},
+        {0.033f, 2, 1500.0f},
+        {0.025f, 3, 2500.0f},
+        {0.020f, 3, 3000.0f},
+        {0.016f, 3, 5000.0f},
+        {0.016f, 4, 6000.0f},
+        {0.016f, 5, 10000.0f}
+    };
+
+    //Event Delegate
+    FDelegateHandle HitDetectionStartHandle;
+    FDelegateHandle HitDetectionEndHandle;
+
+#pragma endregion
+    
+#pragma region "Protected Functions"
+
+    //Event (DetectionEnd가 RecoveryEnd보다 뒤에 일어나면 InputBuffer로 제대로 작동하지 않는 문제, 나중에 해결)
+    void BindEventCallbacks();
+    void UnbindEventCallbacks();
+
+    //Trace Config
+    void StartWeaponTrace();
+    void StopWeaponTrace();
+    bool LoadTraceConfigFromWeaponData(const FGameplayTagContainer& AttackTags, int32 ComboIndex);
+    void GenerateSocketNames();
+
+
+    //Main Trace
+    void PerformTrace(float DeltaTime);
+    void PerformSlashTrace();
+    void PerformPierceTrace();
+    void PerformStrikeTrace();
+    bool UpdateSocketPositions();
+    void PerformInterpolationTrace(
+        const FVector& StartPrev, const FVector& StartCurr,
+        const FVector& EndPrev, const FVector& EndCurr,
+        float Radius, TArray<FHitResult>& OutHits);
+
+    //Hit
+    bool ValidateHit(AActor* HitActor, const FHitResult& HitResult);
+    void ProcessHit(AActor* HitActor, const FHitResult& HitResult);
+    
+    //Adaptive Trace Sweep
+    float CalculateSwingSpeed() const;
+    void UpdateAdaptiveTraceSettings();
+    
+    
+#pragma endregion
 private:
+#pragma region "Private Variables"
+    //속도 계산용 무기 끝 소켓 정보
+    FVector PrevTipSocketLocation;
+    FName TipSocketName;
+
+#pragma endregion
+    
 #pragma region "Private Functions"
     // 콜리전 채널 가져오기
     ECollisionChannel GetTraceChannel() const;
@@ -194,11 +203,19 @@ private:
     FCollisionQueryParams GetCollisionQueryParams() const;
 #pragma endregion
 
-#pragma region "Private Variables"
-    // 이전 프레임 무기 위치 (속도 계산용)
-    FVector PreviousWeaponLocation;
+#pragma region "Debug And Profiling"
+public:
+    // 디버그 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    bool bDrawDebugTrace = false;
     
-    // 이전 프레임 무기 회전 (각속도 계산용)
-    FQuat PreviousWeaponRotation;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    float DebugTraceDuration = 4.0f;
+    
+    int32 DebugSweepTraceCounter = 0;
+    
+    void DrawDebugSweepTrace(const FVector& StartPrev, const FVector& StartCurr,
+                             const FVector& EndPrev, const FVector& EndCurr,
+                             float Radius, const FColor& Color);
 #pragma endregion
 };

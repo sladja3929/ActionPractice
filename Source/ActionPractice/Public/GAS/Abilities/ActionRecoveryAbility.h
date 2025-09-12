@@ -7,6 +7,7 @@
 
 class UAbilityTask_WaitDelay;
 class UAbilityTask_PlayMontageAndWait;
+class UAbilityTask_WaitGameplayEvent;
 
 /***
  * 몽타주를 사용하며 ActionRecovery와 RotateCharacter가 있는 어빌리티.
@@ -35,6 +36,9 @@ protected:
 	// 딜레이 태스크
 	UPROPERTY()
 	UAbilityTask_WaitDelay* WaitDelayTask = nullptr;
+	
+	UPROPERTY()
+	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask = nullptr;
 #pragma endregion
 
 #pragma region "Protected Functions"
@@ -51,6 +55,9 @@ protected:
 	UFUNCTION()
 	virtual void ExecuteMontageTask() override PURE_VIRTUAL(UMontageAbility::ExecuteMontageTask);
 
+	UFUNCTION()
+	virtual void BindAndReadyPlayBufferEvent();
+
 	// 몽타주 태스크 완료 콜백
 	UFUNCTION()
 	virtual void OnTaskMontageCompleted() override;
@@ -58,6 +65,10 @@ protected:
 	// 몽타주 태스크 중단 콜백
 	UFUNCTION()
 	virtual void OnTaskMontageInterrupted() override;
+
+	//입력 버퍼 실행 콜백
+	UFUNCTION()
+	virtual void OnEventPlayBuffer(FGameplayEventData Payload) {}
 #pragma endregion
 
 private:

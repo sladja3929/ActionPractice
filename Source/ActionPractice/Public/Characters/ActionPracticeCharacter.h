@@ -9,6 +9,7 @@
 #include "GameplayEffect.h"
 #include "ActionPracticeCharacter.generated.h"
 
+class UInputActionDataAsset;
 class IHitDetectionInterface;
 class USpringArmComponent;
 class UCameraComponent;
@@ -27,6 +28,7 @@ class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterfa
 {
 	GENERATED_BODY()
 
+protected:
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -81,7 +83,7 @@ public:
 	// ===== GAS Interface =====
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return AttributeSet; }
-	FORCEINLINE const TMap<UInputAction*, TSubclassOf<UGameplayAbility>>& GetStartInputAbilities() const { return StartInputAbilities; }
+	FORCEINLINE const UInputActionDataAsset* GetInputActionData() const { return InputActionData; }
 	
 	// ===== Input Buffer Interface =====
 	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
@@ -119,10 +121,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void GASInputPressed(const UInputAction* InputAction);
-
+	
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void GASInputReleased(const UInputAction* InputAction);
-	
+
+	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
 #pragma endregion
 
 protected:
@@ -161,6 +164,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	UInputAction* IA_ChargeAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputActionDataAsset> InputActionData;
 	
 	// ===== State Variables =====
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
@@ -186,10 +192,7 @@ protected:
 	// ===== GAS Properties =====
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TMap<UInputAction*, TSubclassOf<UGameplayAbility>> StartInputAbilities;
-	
+		
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
 	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
 	
@@ -219,8 +222,6 @@ protected:
 	void OnBlockInputReleased();
 	void OnChargeAttackInput();
 	void OnChargeAttackReleased();
-	
-	// ===== Utility Functions =====
 	
 #pragma endregion
 

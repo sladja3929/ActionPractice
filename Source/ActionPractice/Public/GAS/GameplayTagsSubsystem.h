@@ -21,19 +21,24 @@ public:
 	static const FGameplayTag& GetAbilityAttackTag();
 	static const FGameplayTag& GetAbilityAttackNormalTag();
 	static const FGameplayTag& GetAbilityAttackChargeTag();
+	static const FGameplayTag& GetAbilityAttackRollTag();
+	static const FGameplayTag& GetAbilityAttackSprintTag();
+	static const FGameplayTag& GetAbilityAttackJumpTag();
 	static const FGameplayTag& GetAbilityRollTag();
 	static const FGameplayTag& GetAbilitySprintTag();
 	static const FGameplayTag& GetAbilityJumpTag();
 	static const FGameplayTag& GetAbilityBlockTag();
 	
 	// State Tags
-	static const FGameplayTag& GetStateAttackingTag();
-	static const FGameplayTag& GetStateBlockingTag();
+	static const FGameplayTag& GetStateAbilityAttackingTag();
+	static const FGameplayTag& GetStateAbilityBlockingTag();
+	static const FGameplayTag& GetStateAbilityJumpingTag();
+	static const FGameplayTag& GetStateAbilitySprintingTag();
+	static const FGameplayTag& GetStateAbilityRollingTag();
+	static const FGameplayTag& GetStateAbilityJustRolledTag();
 	static const FGameplayTag& GetStateRecoveringTag();
 	static const FGameplayTag& GetStateStunnedTag();
 	static const FGameplayTag& GetStateInvincibleTag();
-	static const FGameplayTag& GetStateJumpingTag();
-	static const FGameplayTag& GetStateSprintingTag();
 	
 	// Event Tags
 	static const FGameplayTag& GetEventNotifyEnableBufferInputTag();
@@ -58,19 +63,24 @@ private:
 	const FGameplayTag& GetAbilityAttackTagInternal() const;
 	const FGameplayTag& GetAbilityAttackNormalTagInternal() const;
 	const FGameplayTag& GetAbilityAttackChargeTagInternal() const;
+	const FGameplayTag& GetAbilityAttackRollTagInternal() const;
+	const FGameplayTag& GetAbilityAttackSprintTagInternal() const;
+	const FGameplayTag& GetAbilityAttackJumpTagInternal() const;
 	const FGameplayTag& GetAbilityRollTagInternal() const;
 	const FGameplayTag& GetAbilitySprintTagInternal() const;
 	const FGameplayTag& GetAbilityJumpTagInternal() const;
 	const FGameplayTag& GetAbilityBlockTagInternal() const;
 	
 	// State Tags
-	const FGameplayTag& GetStateAttackingTagInternal() const;
-	const FGameplayTag& GetStateBlockingTagInternal() const;
+	const FGameplayTag& GetStateAbilityAttackingTagInternal() const;
+	const FGameplayTag& GetStateAbilityBlockingTagInternal() const;
+	const FGameplayTag& GetStateAbilityJumpingTagInternal() const;
+	const FGameplayTag& GetStateAbilitySprintingTagInternal() const;
+	const FGameplayTag& GetStateAbilityRollingTagInternal() const;
+	const FGameplayTag& GetStateAbilityJustRolledTagInternal() const;
 	const FGameplayTag& GetStateRecoveringTagInternal() const;
 	const FGameplayTag& GetStateStunnedTagInternal() const;
 	const FGameplayTag& GetStateInvincibleTagInternal() const;
-	const FGameplayTag& GetStateJumpingTagInternal() const;
-	const FGameplayTag& GetStateSprintingTagInternal() const;
 	
 	// Event Tags
 	const FGameplayTag& GetEventNotifyEnableBufferInputTagInternal() const;

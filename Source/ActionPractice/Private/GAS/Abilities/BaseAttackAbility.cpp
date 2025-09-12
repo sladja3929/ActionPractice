@@ -1,12 +1,11 @@
 #include "GAS/Abilities/BaseAttackAbility.h"
 #include "GAS/ActionPracticeAttributeSet.h"
-#include "Items/WeaponData.h"
+#include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
-#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Characters/HitDetectionInterface.h"
+#include "Items/HitDetectionInterface.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
@@ -58,15 +57,19 @@ void UBaseAttackAbility::SetHitDetectionConfig()
 
     if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
     {
-        FGameplayTag MainTag = AbilityTags.First();
-        if (MainTag.IsValid()) HitDetection->PrepareHitDetection(MainTag, ComboCounter);
+        DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
+        FGameplayTagContainer AssetTag = GetAssetTags();
+        if (!AssetTag.IsEmpty()) 
+        {
+            HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
+        }
     }
     
     else
     {
         DEBUG_LOG(TEXT("Character Not Has HitDetection System"));
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-        return;
+        return; 
     }
 }
 

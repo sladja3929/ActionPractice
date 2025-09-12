@@ -4,7 +4,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameplayTagContainer.h"
 #include "WeaponEnums.h"
-#include "Characters/HitDetectionInterface.h"
+#include "Items/HitDetectionInterface.h"
 #include "GameplayAbilities/Public/GameplayEffectTypes.h"
 #include "Items/WeaponEnums.h"
 #include "WeaponCCDComponent.generated.h"
@@ -36,28 +36,18 @@ public:
 #pragma region "Public Variables"
     FOnWeaponCCDHit OnWeaponHit;
     
-    //디버그 설정
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    bool bDrawDebugCapsule = true;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    float DebugDuration = 2.0f;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    FColor DebugColor = FColor::Red;
-    
     //히트 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hit Settings")
     float HitCooldownTime = 0.1f;
     
     //캡슐 크기 조정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Capsule Settings")
-    float DefaultCapsuleRadius = 15.0f;
+    float DefaultCapsuleRadius = 10.0f;
     
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Capsule Settings")
     float DefaultCapsuleHalfHeight = 50.0f;
 #pragma endregion
-
+ 
 #pragma region "Public Functions"
     UWeaponCCDComponent();
     
@@ -67,8 +57,10 @@ public:
                                FActorComponentTickFunction* ThisTickFunction) override;
     
     //IHitDetectionInterface 구현
-    virtual void PrepareHitDetection(const FGameplayTag& AttackTag, const int32 ComboIndex) override;
+    virtual void PrepareHitDetection(const FGameplayTagContainer& AttackTags, const int32 ComboIndex) override;
+    UFUNCTION()
     virtual void HandleHitDetectionStart(const FGameplayEventData& Payload) override;
+    UFUNCTION()
     virtual void HandleHitDetectionEnd(const FGameplayEventData& Payload) override;
     
     UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
@@ -84,7 +76,6 @@ protected:
     TObjectPtr<UAbilitySystemComponent> CachedASC = nullptr;
     
     //현재 공격 정보
-    FGameplayTag CurrentAttackTag;
     int32 CurrentComboIndex = 0;
     EAttackDamageType CurrentDamageType = EAttackDamageType::None;
     float CurrentDamageMultiplier = 1.0f;
@@ -122,9 +113,21 @@ protected:
     
     //캡슐 설정
     void UpdateCapsuleSize(EAttackDamageType DamageType);
-    bool LoadAttackConfig(const FGameplayTag& AttackTag, int32 ComboIndex);
+    bool LoadAttackConfig(const FGameplayTagContainer& AttackTags, int32 ComboIndex);
+#pragma endregion
+
+#pragma region "Debug And Profiling"
+public:
+    //디버그 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    bool bDrawDebugCapsule = true;
     
-    //디버그
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    float DebugDuration = 2.0f;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    FColor DebugColor = FColor::Red;
+
     void DrawDebugCCDTrajectory();
 #pragma endregion
 };

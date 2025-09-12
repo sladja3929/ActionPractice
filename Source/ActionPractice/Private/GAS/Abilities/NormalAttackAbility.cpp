@@ -1,6 +1,6 @@
 #include "GAS/Abilities/NormalAttackAbility.h"
 #include "GAS/ActionPracticeAttributeSet.h"
-#include "Items/WeaponData.h"
+#include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
@@ -38,11 +38,7 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         return;
     }
 
-    //이벤트 태스크 실행
-    WaitPlayBufferEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-        this, UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), nullptr, false, true);
-    WaitPlayBufferEventTask->EventReceived.AddDynamic(this, &UNormalAttackAbility::OnEventPlayBuffer);
-    WaitPlayBufferEventTask->ReadyForActivation();
+    BindAndReadyPlayBufferEvent();
     
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
@@ -55,7 +51,7 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {     
-    // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
+    //ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
     if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
     {
         PlayNextAttack();
@@ -94,7 +90,7 @@ void UNormalAttackAbility::ExecuteMontageTask()
     UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
     if (!MontageToPlay)
     {
-        DEBUG_LOG(TEXT("No Montage to Play"));
+        DEBUG_LOG(TEXT("No Montage to Play %d"), ComboCounter);
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
         return;
     }
@@ -136,6 +132,8 @@ void UNormalAttackAbility::ExecuteMontageTask()
 
 void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
 {
+    if (Payload.OptionalObject && Payload.OptionalObject != this) return;
+    
     PlayNextAttack();
     DEBUG_LOG(TEXT("Attack Recovery End - Play Next Attack"));
 }

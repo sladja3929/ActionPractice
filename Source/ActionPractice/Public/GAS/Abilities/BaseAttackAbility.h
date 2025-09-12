@@ -32,9 +32,6 @@ protected:
 	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask = nullptr;
 
 	UPROPERTY()
-	UAbilityTask_WaitGameplayEvent* WaitPlayBufferEventTask = nullptr;
-
-	UPROPERTY()
 	int32 ComboCounter = 0;
 
 	UPROPERTY()
@@ -51,8 +48,7 @@ protected:
 	
 	virtual void ExecuteMontageTask() override;
 
-	UFUNCTION()
-	virtual void OnEventPlayBuffer(FGameplayEventData Payload) {}
+	
 	
 #pragma endregion
 

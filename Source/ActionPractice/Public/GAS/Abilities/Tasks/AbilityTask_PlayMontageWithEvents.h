@@ -143,8 +143,8 @@ protected:
     void HandleChargeStartEvent(const FGameplayEventData& Payload);
 
     // 이벤트 핸들 등록/해제
-    void RegisterGameplayEventCallbacks();
-    void UnregisterGameplayEventCallbacks();
+    void BindEventCallbacks();
+    void UnbindEventCallbacks();
 
     // 몽타주 델리게이트 바인딩/해제
     void BindMontageCallbacks();

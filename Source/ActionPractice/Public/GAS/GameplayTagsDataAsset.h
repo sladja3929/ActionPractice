@@ -25,6 +25,15 @@ public:
 	FGameplayTag Ability_Attack_Charge;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
+	FGameplayTag Ability_Attack_Roll;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
+	FGameplayTag Ability_Attack_Sprint;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
+	FGameplayTag Ability_Attack_Jump;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
 	FGameplayTag Ability_Roll;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
@@ -40,17 +49,23 @@ public:
 #pragma region "State Tags"
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
-	FGameplayTag State_Attacking;
+	FGameplayTag State_Ability_Attacking;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
-	FGameplayTag State_Blocking;
+	FGameplayTag State_Ability_Blocking;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
-	FGameplayTag State_Sprinting;
+	FGameplayTag State_Ability_Sprinting;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
-	FGameplayTag State_Jumping;
+	FGameplayTag State_Ability_Jumping;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
+	FGameplayTag State_Ability_Rolling;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
+	FGameplayTag State_Ability_JustRolled;
+	
 	//주의! 이 태그는 어빌리티의 블루프린트 소유로 넣지 말 것. 오로지 GAS 코드에서만 관리
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
 	FGameplayTag State_Recovering;

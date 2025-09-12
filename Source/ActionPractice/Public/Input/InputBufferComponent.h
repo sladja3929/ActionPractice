@@ -19,10 +19,10 @@ public:
 #pragma region "Public Variables"
 
 	UPROPERTY()
-	bool bCanBufferInput;
+	bool bCanBufferInput = false;
 
 	UPROPERTY()
-	bool bBufferActionReleased;
+	bool bBufferActionReleased = false;
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -54,9 +54,14 @@ public:
 
 protected:
 #pragma region "Protected Variables"
-	
-	const UInputAction* BufferedAction;
-	int32 CurrentBufferPriority;
+
+	UPROPERTY()
+	const UInputAction* BufferedAction = nullptr;
+
+	UPROPERTY()
+	int32 CurrentBufferPriority = -1;
+
+	UPROPERTY()
 	TSet<const UInputAction*> BufferedHoldAction;
 
 	FDelegateHandle EnableBufferInputHandle;
@@ -79,19 +84,14 @@ private:
 #pragma region "Private Variables"
 	
 	UPROPERTY()
-	TObjectPtr<AActionPracticeCharacter> OwnerCharacter;
+	TObjectPtr<AActionPracticeCharacter> OwnerCharacter = nullptr;
 	
 #pragma endregion
 	
 #pragma region "Private Functions"
-
 	// 인풋액션으로 해당 어빌리티의 버퍼 가능 여부와 우선순위 확인
 	UFUNCTION()
 	bool CanBufferAction(const UInputAction* InputAction, int32& OutPriority, bool& bIsHoldAction) const;
-	
-	// 어빌리티 클래스 가져오기
-	UFUNCTION()
-	TSubclassOf<UGameplayAbility> GetAbilityFromInputAction(const UInputAction* InputAction) const;
 
 	UFUNCTION()
 	void ActivateAbility(const UInputAction* InputAction);

@@ -8,7 +8,7 @@
 #include "TimerManager.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
-#include "Items/WeaponData.h"
+#include "Items/WeaponDataAsset.h"
 
 #define ENABLE_DEBUG_LOG 1
 

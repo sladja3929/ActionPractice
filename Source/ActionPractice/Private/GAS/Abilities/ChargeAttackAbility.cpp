@@ -1,19 +1,19 @@
 #include "GAS/Abilities/ChargeAttackAbility.h"
-#include "Characters/InputBufferComponent.h"
+#include "Input/InputBufferComponent.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Items/WeaponData.h"
+#include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
-#include "Characters/HitDetectionInterface.h"
+#include "Items/HitDetectionInterface.h"
 #include "GAS/Abilities/BaseAttackAbility.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
@@ -50,11 +50,7 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
         return;
     }
 
-    //이벤트 태스크 실행
-    WaitPlayBufferEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-        this, UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), nullptr, false, true);
-    WaitPlayBufferEventTask->EventReceived.AddDynamic(this, &UChargeAttackAbility::OnEventPlayBuffer);
-    WaitPlayBufferEventTask->ReadyForActivation();
+    BindAndReadyPlayBufferEvent();
     
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
@@ -72,7 +68,7 @@ void UChargeAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {    
-    // 3-2. ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
+    //ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
     if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
     {
         bNoCharge = false;
@@ -196,6 +192,8 @@ void UChargeAttackAbility::OnTaskMontageCompleted()
 
 void UChargeAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
 {
+    if (Payload.OptionalObject && Payload.OptionalObject != this) return;
+    
     bNoCharge = GetInputBufferComponentFromActorInfo()->bBufferActionReleased;
     PlayNextCharge();
     DEBUG_LOG(TEXT("Attack Recovery End - Play Next Charge"));

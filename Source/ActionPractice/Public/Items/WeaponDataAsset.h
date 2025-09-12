@@ -6,9 +6,20 @@
 #include "WeaponEnums.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
-#include "WeaponData.generated.h"
+#include "WeaponDataAsset.generated.h"
 
 class UAnimMontage;
+
+// FGameplayTagContainer를 TMap 키로 사용하기 위한 해시 함수
+FORCEINLINE uint32 GetTypeHash(const FGameplayTagContainer& TagContainer)
+{
+    uint32 Hash = 0;
+    for (const FGameplayTag& Tag : TagContainer)
+    {
+        Hash = HashCombine(Hash, GetTypeHash(Tag));
+    }
+    return Hash;
+}
 
 //개별 공격 데이터
 USTRUCT(BlueprintType)
@@ -47,6 +58,19 @@ struct FAttackActionData
     // 콤보별 공격 데이터 (AttackMontages와 배열 크기가 같아야 함)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     TArray<FIndividualAttackData> ComboAttackData;
+};
+
+// TMap 대신 사용할 구조체
+USTRUCT(BlueprintType)
+struct FTaggedAttackData
+{
+    GENERATED_BODY()
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Tags")
+    FGameplayTagContainer AttackTags;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Data")
+    FAttackActionData AttackData;
 };
 
 //방어 정보
@@ -92,23 +116,21 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
     float DexterityScaling;
     
-    //GameplayTag를 Key로 사용하여 각 공격 타입에 맞는 데이터를 쉽게 찾을 수 있습니다.
+    //GameplayTagContainer를 Key로 사용하여 각 공격 타입에 맞는 데이터를 쉽게 찾을 수 있습니다.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack Definitions")
-    TMap<FGameplayTag, FAttackActionData> AttackDataMap;
+    TArray<FTaggedAttackData> AttackDataArray;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block Definitions")
     FBlockActionData BlockData;
-
     
-
     void PreloadAllMontages()
     {
         TArray<FSoftObjectPath> AssetsToLoad;
         
         // 모든 몽타주 경로 수집
-        for (auto& AttackDataPair : AttackDataMap)
+        for (FTaggedAttackData& TaggedData : AttackDataArray)
         {
-            FAttackActionData& AttackData = AttackDataPair.Value;
+            FAttackActionData& AttackData = TaggedData.AttackData;
             
             for (TSoftObjectPtr<UAnimMontage>& Montage : AttackData.AttackMontages)
             {

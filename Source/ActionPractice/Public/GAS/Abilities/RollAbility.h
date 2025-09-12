@@ -15,32 +15,35 @@ public:
 #pragma region "Public Functions"
 	URollAbility();
 
-	// 어빌리티 활성화
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-
-	// 어빌리티 종료
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables"
-	// 구르기 몽타주
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
 	class UAnimMontage* RollMontage;
 
-	// 무적 상태 Gameplay Effect
+	//무적 상태 Gameplay Effect
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
 	TSubclassOf<class UGameplayEffect> InvincibilityEffect;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
-	float InvincibilityDuration;
+	float InvincibilityDuration = 0.5f;
+
+	//JustRolled 태그 부여용 Effect
+	UPROPERTY(EditDefaultsOnly, Category="Roll")
+	TSubclassOf<UGameplayEffect> JustRolledWindowEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
+	float JustRolledWindowDuration = 0.1f;
 #pragma endregion
 
 #pragma region "Protected Functions"
 
 	virtual void ExecuteMontageTask() override;
 	
-	// 애님 노티파이 이벤트 수신 시 호출
 	UFUNCTION()
 	virtual void OnNotifyInvincibleStart(FGameplayEventData Payload);
 

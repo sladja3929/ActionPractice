@@ -1,5 +1,5 @@
 #include "Public/Items/Weapon.h"
-#include "Public/Items/WeaponData.h"
+#include "Public/Items/WeaponDataAsset.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
 #include "Engine/StaticMesh.h"
@@ -7,7 +7,8 @@
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Items/WeaponCollisionComponent.h"
+#include "Items/WeaponAttackTraceComponent.h"
+#include "Items/WeaponCCDComponent.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -26,7 +27,8 @@ AWeapon::AWeapon()
     RootComponent = WeaponMesh;
     
     // 콜리전 컴포넌트 추가
-    CollisionComponent = CreateDefaultSubobject<UWeaponCollisionComponent>(TEXT("CollisionComponent"));
+    AttackTraceComponent = CreateDefaultSubobject<UWeaponAttackTraceComponent>(TEXT("TraceComponent"));
+    CCDComponent = CreateDefaultSubobject<UWeaponCCDComponent>(TEXT("CCDComponent"));
     
     // 기본 콜리전 설정
     WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -35,20 +37,26 @@ AWeapon::AWeapon()
 
 void AWeapon::BeginPlay()
 {
-   Super::BeginPlay();
-
     OwnerCharacter = Cast<AActionPracticeCharacter>(GetOwner());
     if (!OwnerCharacter)
     {
         DEBUG_LOG(TEXT("No Owner Character In Weapon"));
         return;
     }
-    
+
+    Super::BeginPlay();
+
     // 콜리전 컴포넌트 델리게이트 바인딩
-    if (CollisionComponent)
+    if (AttackTraceComponent)
     {
-        CollisionComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
+        AttackTraceComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
     }
+
+    if (CCDComponent)
+    {
+        CCDComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
+    }
+
 }
 
 
@@ -70,35 +78,46 @@ const FBlockActionData* AWeapon::GetWeaponBlockData() const
 
     // 첫 번째 몽타주를 체크해서, 로드가 안되었으면 로드
     const TSoftObjectPtr<UAnimMontage>& FirstMontage = WeaponData->BlockData.BlockIdleMontage;
-    if (!FirstMontage.IsNull() && !FirstMontage.IsValid()) WeaponData->PreloadAllMontages();;
+    if (!FirstMontage.IsNull() && !FirstMontage.IsValid()) WeaponData->PreloadAllMontages();
     
     return &WeaponData->BlockData;
 }
 
 
-const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(FGameplayTag AttackTag) const
+const FAttackActionData* AWeapon::GetWeaponAttackDataByTag(const FGameplayTagContainer& AttackTags) const
 {
     if (!WeaponData) return nullptr;
 
-    else
+    // 첫 번째 몽타주를 체크해서, 로드가 안되었으면 로드
+    for (const FTaggedAttackData& TaggedData : WeaponData->AttackDataArray)
     {
-        // 첫 번째 몽타주를 체크해서, 로드가 안되었으면 로드
-        for (const auto& AttackDataPair : WeaponData->AttackDataMap)
+        if (TaggedData.AttackData.AttackMontages.Num() > 0)
         {
-            if (AttackDataPair.Value.AttackMontages.Num() > 0)
+            const TSoftObjectPtr<UAnimMontage>& FirstMontage = TaggedData.AttackData.AttackMontages[0];
+            if (!FirstMontage.IsNull() && !FirstMontage.IsValid())
             {
-                const TSoftObjectPtr<UAnimMontage>& FirstMontage = AttackDataPair.Value.AttackMontages[0];
-                if (!FirstMontage.IsNull() && !FirstMontage.IsValid())
-                {
-                    WeaponData->PreloadAllMontages();
-                    break;
-                }
-                break;  // 첫 번째만 체크
+                WeaponData->PreloadAllMontages();
+                break;
             }
         }
     }
     
-    return WeaponData->AttackDataMap.Find(AttackTag);
+    // 정확한 매칭: 전달받은 태그 컨테이너와 정확히 일치하는 키를 찾음
+    for (const FTaggedAttackData& TaggedData : WeaponData->AttackDataArray)
+    {
+        if (TaggedData.AttackTags == AttackTags)
+        {
+            return &TaggedData.AttackData;
+        }
+    }
+    
+    return nullptr;
+}
+
+TScriptInterface<IHitDetectionInterface> AWeapon::GetHitDetectionComponent() const
+{
+    if (bIsTraceDetectionOrNot) return AttackTraceComponent;
+    return CCDComponent;
 }
 
 

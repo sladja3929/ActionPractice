@@ -15,9 +15,11 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
-#include "Characters/InputBufferComponent.h"
+#include "Input/InputBufferComponent.h"
+#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
-#include "Items/WeaponCollisionComponent.h"
+#include "Items/WeaponAttackTraceComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -188,7 +190,7 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 	
 	if (Controller != nullptr && !bIsRecovering)
 	{
-		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateSprintingTag());
+		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilitySprintingTag());
 		
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
 		{
@@ -338,7 +340,7 @@ void AActionPracticeCharacter::CancelActionForMove()
 	}
     
 	// Attack 어빌리티가 활성화되어 있는지 확인
-	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAttackingTag());
+	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilityAttackingTag());
 	
 	if (bHasActiveAttackAbility)
 	{
@@ -462,7 +464,7 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
 
 TScriptInterface<IHitDetectionInterface> AActionPracticeCharacter::GetHitDetectionInterface() const
 {
-	return RightWeapon->GetCollisionComponent();
+	return RightWeapon->GetHitDetectionComponent();
 }
 
 void AActionPracticeCharacter::WeaponSwitch()
@@ -504,7 +506,7 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 		}
 		
 		FName SocketName = FName(*SocketString);
-		UE_LOG(LogTemp, Warning, TEXT("Equiped Weapon: %s"), *SocketString);
+		DEBUG_LOG(TEXT("Equiped Weapon: %s"), *SocketString);
 		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 		if(bIsTwoHanded)
@@ -549,7 +551,7 @@ TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FStri
 		return TSubclassOf<AWeapon>(LoadedClass);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Failed to load weapon class from path: %s"), *BlueprintPath);
+	DEBUG_LOG(TEXT("Failed to load weapon class from path: %s"), *BlueprintPath);
 	return nullptr;
 }
 #pragma endregion
@@ -621,25 +623,17 @@ void AActionPracticeCharacter::InitializeAbilitySystem()
 {
 	if (AbilitySystemComponent)
 	{
-		// Initialize the Ability System Component on the owning actor (this character)
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		
-		// Set up the Attribute Set
 		if (AttributeSet)
 		{
 			// Attributes are automatically initialized in the AttributeSet constructor
 			// Additional setup can be done here if needed
 		}
 		
-		// Grant startup abilities
 		for (const auto& StartAbility : StartAbilities)
 		{
 			GiveAbility(StartAbility);
-		}
-
-		for (const auto& StartInputAbility : StartInputAbilities)
-		{
-			GiveAbility(StartInputAbility.Value);
 		}
 
 		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
@@ -671,30 +665,31 @@ void AActionPracticeCharacter::GiveAbility(TSubclassOf<UGameplayAbility> Ability
 void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 {
 	if (!AbilitySystemComponent || !InputAction) return;
-	
-	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
+
+	TArray<FGameplayAbilitySpec*> TryActivateSpecs = FindAbilitySpecsWithInputAction(InputAction);
+	if (TryActivateSpecs.IsEmpty()) return;
 	
 	InputBufferComponent->bBufferActionReleased = false;
-	
-	if (Spec)
+	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
+	if (InputBufferComponent->bCanBufferInput)
 	{
-		if (InputBufferComponent->bCanBufferInput) //다른 어빌리티가 수행중이고 입력 버퍼 가능할 때
-		{
-			InputBufferComponent->BufferNextAction(InputAction);
-		}
+		UE_LOG(LogTemp, Warning, TEXT("Character: Buffer"));
+		InputBufferComponent->BufferNextAction(InputAction);
+	}
 
-		else
+	else
+	{
+		for (auto& Spec : TryActivateSpecs)
 		{
-			Spec->InputPressed = true;
-			
 			if (Spec->IsActive())
 			{
+				Spec->InputPressed = true;
 				AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
 			}
 
 			else
-			{				
+			{
+				Spec->InputPressed = true;
 				AbilitySystemComponent->TryActivateAbility(Spec->Handle);
 			}
 		}
@@ -704,23 +699,61 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 {
 	if (!AbilitySystemComponent || !InputAction) return;
-	
-	TSubclassOf<UGameplayAbility>* AbilityClass = StartInputAbilities.Find(InputAction);
-	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromClass(*AbilityClass);
 
-	if (Spec)
-	{	
-		
-		if (InputBufferComponent->bCanBufferInput) //다른 어빌리티가 수행중이고 입력 버퍼 가능할 때
+	TArray<FGameplayAbilitySpec*> TryActivateSpecs = FindAbilitySpecsWithInputAction(InputAction);
+	if (TryActivateSpecs.IsEmpty()) return;
+	
+	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
+	if (InputBufferComponent->bCanBufferInput)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Character: UnBuffer"));
+		InputBufferComponent->UnBufferHoldAction(InputAction);
+	}
+	
+	else
+	{
+		for (auto& Spec : TryActivateSpecs)
 		{
-			InputBufferComponent->UnBufferHoldAction(InputAction);
-		}
-		
-		else if (Spec->IsActive())
-		{
-			Spec->InputPressed = false;
-			AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
+			if (Spec->IsActive())
+			{
+				Spec->InputPressed = false;
+				AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
+			}
 		}
 	}
 }
+
+TArray<FGameplayAbilitySpec*> AActionPracticeCharacter::FindAbilitySpecsWithInputAction(const UInputAction* InputAction)
+{
+	TArray<FGameplayAbilitySpec*> SameAssetSpecs;
+	if (!AbilitySystemComponent) return SameAssetSpecs;
+	
+	const FInputActionAbilityRule* Rule = InputActionData->FindRuleByAction(InputAction);
+	if (!Rule)
+	{
+		DEBUG_LOG(TEXT("FindAbilitySpecsWithInputAction: No Rule"));
+		return SameAssetSpecs;
+	}
+	
+	const FGameplayTagContainer* InputAssetTags = &Rule->AbilityAssetTags;
+	if (!InputAssetTags)
+	{
+		DEBUG_LOG(TEXT("FindAbilitySpecsWithInputAction: No InputAssetTags"));
+		return SameAssetSpecs;
+	}
+    
+	for (auto& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (Spec.Ability)
+		{  
+			if (Spec.Ability->GetAssetTags().HasAll(*InputAssetTags) || Spec.GetDynamicSpecSourceTags().HasAll(*InputAssetTags))
+			{
+				SameAssetSpecs.Add(&Spec);
+			}
+		}
+	}
+
+	return SameAssetSpecs;
+}
 #pragma endregion
+

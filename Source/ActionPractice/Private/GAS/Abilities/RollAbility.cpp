@@ -1,6 +1,6 @@
 #include "GAS/Abilities/RollAbility.h"
 
-#include <Characters/InputBufferComponent.h>
+#include <Input/InputBufferComponent.h>
 
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/ActionPracticeAttributeSet.h"
@@ -11,7 +11,7 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameplayEffect.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
@@ -23,7 +23,6 @@ URollAbility::URollAbility()
 {
 	RollMontage = nullptr;
 	StaminaCost = 20.0f;
-	InvincibilityDuration = 0.5f;
 	RotateTime = 0.05f;
 	WaitInvincibleStartEventTask = nullptr;
 }
@@ -112,7 +111,6 @@ void URollAbility::ApplyInvincibilityEffect()
 	}
 }
 
-
 void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
 {
 	DEBUG_LOG(TEXT("Invincible Start - Event Received"));
@@ -131,9 +129,31 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 			InvincibilityEffectHandle = FActiveGameplayEffectHandle();
 		}
 	}
+
+	//취소가 아니라면 JustRolled 부여
+	if (!bWasCancelled)
+	{
+		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		{
+			if (JustRolledWindowEffect)
+			{
+				FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+				EffectContext.AddSourceObject(this);
+
+				FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, 1.f, EffectContext);
+				if (EffectSpec.IsValid())
+				{
+					// Has Duration 효과일 때만 의미. 에셋 Duration을 코드로 오버라이드
+					EffectSpec.Data->SetDuration(JustRolledWindowDuration, true);
+					ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+					DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
+				}
+			}
+		}
+	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-	
+
 	// 버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
 	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
 	{

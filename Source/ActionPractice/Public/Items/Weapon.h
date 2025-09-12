@@ -3,13 +3,15 @@
 #include "Public/Items/WeaponEnums.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GameplayTagContainer.h"
 #include "Weapon.generated.h"
 
+class UWeaponCCDComponent;
 class AActionPracticeCharacter;
 class UWeaponDataAsset;
 class UStaticMeshComponent;
 class UPrimitiveComponent;
-class UWeaponCollisionComponent;  
+class UWeaponAttackTraceComponent;  
 struct FGameplayTag;
 struct FBlockActionData;
 struct FAttackActionData;
@@ -21,6 +23,9 @@ class AWeapon : public AActor
 
 public:
 #pragma region "Public Variables"
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Debug")
+	bool bIsTraceDetectionOrNot = true;
 	
 #pragma endregion
 
@@ -39,10 +44,10 @@ public:
 	const UWeaponDataAsset* GetWeaponData() const { return WeaponData.Get(); }
 	
 	const FBlockActionData* GetWeaponBlockData() const;
-	const FAttackActionData* GetWeaponAttackDataByTag(FGameplayTag AttackTag) const;
+	const FAttackActionData* GetWeaponAttackDataByTag(const FGameplayTagContainer& AttackTags) const;
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
-	UWeaponCollisionComponent* GetCollisionComponent() const { return CollisionComponent; }
+	TScriptInterface<IHitDetectionInterface> GetHitDetectionComponent() const;
 	
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void EquipWeapon();	
@@ -59,7 +64,10 @@ protected:
 	UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UWeaponCollisionComponent* CollisionComponent;
+	UWeaponAttackTraceComponent* AttackTraceComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UWeaponCCDComponent* CCDComponent;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Stats")
 	FString WeaponName;

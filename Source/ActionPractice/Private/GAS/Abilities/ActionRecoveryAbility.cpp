@@ -1,12 +1,12 @@
 #include "GAS/Abilities/ActionRecoveryAbility.h"
-
-#include "Characters/InputBufferComponent.h"
+#include "Input/InputBufferComponent.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
@@ -57,6 +57,15 @@ void UActionRecoveryAbility::PlayAction()
 		WaitDelayTask->OnFinish.AddDynamic(this, &UActionRecoveryAbility::ExecuteMontageTask);
 		WaitDelayTask->ReadyForActivation();
 	}
+}
+
+void UActionRecoveryAbility::BindAndReadyPlayBufferEvent()
+{
+	//이벤트 태스크 실행
+	WaitPlayBufferEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), nullptr, false, true);
+	WaitPlayBufferEventTask->EventReceived.AddDynamic(this, &UActionRecoveryAbility::OnEventPlayBuffer);
+	WaitPlayBufferEventTask->ReadyForActivation();
 }
 
 void UActionRecoveryAbility::OnTaskMontageCompleted()

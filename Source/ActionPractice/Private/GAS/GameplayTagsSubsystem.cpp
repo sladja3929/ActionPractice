@@ -67,6 +67,33 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackChargeTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackRollTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityAttackRollTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackSprintTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityAttackSprintTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackJumpTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityAttackJumpTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityRollTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -104,20 +131,56 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTag()
 }
 
 // State Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetStateAttackingTag()
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityAttackingTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
-		return Subsystem->GetStateAttackingTagInternal();
+		return Subsystem->GetStateAbilityAttackingTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
 
-const FGameplayTag& UGameplayTagsSubsystem::GetStateBlockingTag()
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityBlockingTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
-		return Subsystem->GetStateBlockingTagInternal();
+		return Subsystem->GetStateAbilityBlockingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityJumpingTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateAbilityJumpingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilitySprintingTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateAbilitySprintingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityRollingTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateAbilityRollingTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityJustRolledTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateAbilityJustRolledTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -145,24 +208,6 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTag()
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
 		return Subsystem->GetStateInvincibleTagInternal();
-	}
-	return FGameplayTag::EmptyTag;
-}
-
-const FGameplayTag& UGameplayTagsSubsystem::GetStateJumpingTag()
-{
-	if (UGameplayTagsSubsystem* Subsystem = Get())
-	{
-		return Subsystem->GetStateJumpingTagInternal();
-	}
-	return FGameplayTag::EmptyTag;
-}
-
-const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTag()
-{
-	if (UGameplayTagsSubsystem* Subsystem = Get())
-	{
-		return Subsystem->GetStateSprintingTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -282,6 +327,33 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackChargeTagInternal() 
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackRollTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_Attack_Roll;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackSprintTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_Attack_Sprint;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackJumpTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_Attack_Jump;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityRollTagInternal() const
 {
 	if (GameplayTagsDataAsset)
@@ -319,20 +391,56 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTagInternal() const
 }
 
 // State Tags
-const FGameplayTag& UGameplayTagsSubsystem::GetStateAttackingTagInternal() const
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityAttackingTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
-		return GameplayTagsDataAsset->State_Attacking;
+		return GameplayTagsDataAsset->State_Ability_Attacking;
 	}
 	return FGameplayTag::EmptyTag;
 }
 
-const FGameplayTag& UGameplayTagsSubsystem::GetStateBlockingTagInternal() const
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityBlockingTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
-		return GameplayTagsDataAsset->State_Blocking;
+		return GameplayTagsDataAsset->State_Ability_Blocking;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityJumpingTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Ability_Jumping;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilitySprintingTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Ability_Sprinting;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityRollingTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Ability_Rolling;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityJustRolledTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_Ability_JustRolled;
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -360,24 +468,6 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTagInternal() cons
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->State_Invincible;
-	}
-	return FGameplayTag::EmptyTag;
-}
-
-const FGameplayTag& UGameplayTagsSubsystem::GetStateJumpingTagInternal() const
-{
-	if (GameplayTagsDataAsset)
-	{
-		return GameplayTagsDataAsset->State_Jumping;
-	}
-	return FGameplayTag::EmptyTag;
-}
-
-const FGameplayTag& UGameplayTagsSubsystem::GetStateSprintingTagInternal() const
-{
-	if (GameplayTagsDataAsset)
-	{
-		return GameplayTagsDataAsset->State_Sprinting;
 	}
 	return FGameplayTag::EmptyTag;
 }

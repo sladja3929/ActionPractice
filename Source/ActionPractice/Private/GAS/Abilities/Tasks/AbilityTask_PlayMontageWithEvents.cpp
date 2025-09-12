@@ -62,7 +62,7 @@ void UAbilityTask_PlayMontageWithEvents::Activate()
         if (AnimInstance != nullptr)
         {
             // 이벤트 콜백 등록
-            RegisterGameplayEventCallbacks();
+            BindEventCallbacks();
             
             // 몽타주 실행
             PlayMontage();
@@ -241,11 +241,10 @@ void UAbilityTask_PlayMontageWithEvents::HandleChargeStartEvent(const FGameplayE
 #pragma endregion
 
 #pragma region "Delegate Binding Functions"
-void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
+void UAbilityTask_PlayMontageWithEvents::BindEventCallbacks()
 {
     if (AbilitySystemComponent.IsValid() && Ability)
     {
-        // EnableComboInput 이벤트 - Lambda 사용
         EnableBufferInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
@@ -255,7 +254,6 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
                 }
             });
 
-        // ActionRecoveryEnd 이벤트 - Lambda 사용
         ActionRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
@@ -265,7 +263,6 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
                 }
             });
 
-        // ResetCombo 이벤트 - Lambda 사용
         ResetComboHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
@@ -275,7 +272,6 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
                 }
             });
 
-        // ChargeStart 이벤트 - Lambda 사용
         ChargeStartHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyChargeStartTag())
             .AddLambda([this](const FGameplayEventData* EventData)
             {
@@ -287,7 +283,7 @@ void UAbilityTask_PlayMontageWithEvents::RegisterGameplayEventCallbacks()
     }
 }
 
-void UAbilityTask_PlayMontageWithEvents::UnregisterGameplayEventCallbacks()
+void UAbilityTask_PlayMontageWithEvents::UnbindEventCallbacks()
 {
     if (AbilitySystemComponent.IsValid())
     {
@@ -379,7 +375,7 @@ void UAbilityTask_PlayMontageWithEvents::OnDestroy(bool AbilityEnded)
     }
     
     // 이벤트 콜백 해제
-    UnregisterGameplayEventCallbacks();
+    UnbindEventCallbacks();
     
     // 몽타주 델리게이트 해제
     UnbindMontageCallbacks();
