@@ -1,0 +1,102 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Subsystems/GameInstanceSubsystem.h"
+#include "GameplayTagContainer.h"
+#include "GameplayTagsSubsystem.generated.h"
+
+class UGameplayTagsDataAsset;
+
+UCLASS()
+class ACTIONPRACTICE_API UGameplayTagsSubsystem : public UGameInstanceSubsystem
+{
+	GENERATED_BODY()
+
+public:
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
+	// Static 게임플레이 태그 접근 함수들
+	
+	// Ability Tags
+	static const FGameplayTag& GetAbilityAttackTag();
+	static const FGameplayTag& GetAbilityAttackNormalTag();
+	static const FGameplayTag& GetAbilityAttackChargeTag();
+	static const FGameplayTag& GetAbilityAttackRollTag();
+	static const FGameplayTag& GetAbilityAttackSprintTag();
+	static const FGameplayTag& GetAbilityAttackJumpTag();
+	static const FGameplayTag& GetAbilityRollTag();
+	static const FGameplayTag& GetAbilitySprintTag();
+	static const FGameplayTag& GetAbilityJumpTag();
+	static const FGameplayTag& GetAbilityBlockTag();
+	
+	// State Tags
+	static const FGameplayTag& GetStateAbilityAttackingTag();
+	static const FGameplayTag& GetStateAbilityBlockingTag();
+	static const FGameplayTag& GetStateAbilityJumpingTag();
+	static const FGameplayTag& GetStateAbilitySprintingTag();
+	static const FGameplayTag& GetStateAbilityRollingTag();
+	static const FGameplayTag& GetStateAbilityJustRolledTag();
+	static const FGameplayTag& GetStateRecoveringTag();
+	static const FGameplayTag& GetStateStunnedTag();
+	static const FGameplayTag& GetStateInvincibleTag();
+	
+	// Event Tags
+	static const FGameplayTag& GetEventNotifyEnableBufferInputTag();
+	static const FGameplayTag& GetEventNotifyActionRecoveryEndTag();
+	static const FGameplayTag& GetEventNotifyResetComboTag();
+	static const FGameplayTag& GetEventNotifyChargeStartTag();
+	static const FGameplayTag& GetEventNotifyInvincibleStartTag();
+	static const FGameplayTag& GetEventNotifyHitDetectionStartTag();
+	static const FGameplayTag& GetEventNotifyHitDetectionEndTag();
+	static const FGameplayTag& GetEventActionPlayBufferTag();
+	
+	// Effect Tags
+	static const FGameplayTag& GetEffectInvincibilityDurationTag();
+
+private:
+	// Internal helper function
+	static UGameplayTagsSubsystem* Get();
+
+	// 게임플레이 태그 접근 함수들 (인스턴스 버전)
+	
+	// Ability Tags
+	const FGameplayTag& GetAbilityAttackTagInternal() const;
+	const FGameplayTag& GetAbilityAttackNormalTagInternal() const;
+	const FGameplayTag& GetAbilityAttackChargeTagInternal() const;
+	const FGameplayTag& GetAbilityAttackRollTagInternal() const;
+	const FGameplayTag& GetAbilityAttackSprintTagInternal() const;
+	const FGameplayTag& GetAbilityAttackJumpTagInternal() const;
+	const FGameplayTag& GetAbilityRollTagInternal() const;
+	const FGameplayTag& GetAbilitySprintTagInternal() const;
+	const FGameplayTag& GetAbilityJumpTagInternal() const;
+	const FGameplayTag& GetAbilityBlockTagInternal() const;
+	
+	// State Tags
+	const FGameplayTag& GetStateAbilityAttackingTagInternal() const;
+	const FGameplayTag& GetStateAbilityBlockingTagInternal() const;
+	const FGameplayTag& GetStateAbilityJumpingTagInternal() const;
+	const FGameplayTag& GetStateAbilitySprintingTagInternal() const;
+	const FGameplayTag& GetStateAbilityRollingTagInternal() const;
+	const FGameplayTag& GetStateAbilityJustRolledTagInternal() const;
+	const FGameplayTag& GetStateRecoveringTagInternal() const;
+	const FGameplayTag& GetStateStunnedTagInternal() const;
+	const FGameplayTag& GetStateInvincibleTagInternal() const;
+	
+	// Event Tags
+	const FGameplayTag& GetEventNotifyEnableBufferInputTagInternal() const;
+	const FGameplayTag& GetEventNotifyActionRecoveryEndTagInternal() const;
+	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
+	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyInvincibleStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyHitDetectionStartTagInternal() const;
+	const FGameplayTag& GetEventNotifyHitDetectionEndTagInternal() const;
+	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
+	
+	// Effect Tags
+	const FGameplayTag& GetEffectInvincibilityDurationTagInternal() const;
+
+protected:
+	// 태그 데이터 에셋
+	UPROPERTY()
+	TObjectPtr<UGameplayTagsDataAsset> GameplayTagsDataAsset;
+};

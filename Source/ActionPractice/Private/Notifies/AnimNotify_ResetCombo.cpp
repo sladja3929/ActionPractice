@@ -1,13 +1,21 @@
 ﻿#include "Notifies/AnimNotify_ResetCombo.h"
 #include "Characters/ActionPracticeCharacter.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GameplayTagContainer.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 void UAnimNotify_ResetCombo::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	if (MeshComp && MeshComp->GetOwner())
 	{
-		if (AActionPracticeCharacter* Character = Cast<AActionPracticeCharacter>(MeshComp->GetOwner()))
+		// AbilitySystemComponent가 있는 액터에서만 이벤트 전송 (애니메이션 에디터 프리뷰 액터 제외)
+		if (UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(MeshComp->GetOwner()))
 		{
-			Character->ResetCombo();
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				MeshComp->GetOwner(), 
+				UGameplayTagsSubsystem::GetEventNotifyResetComboTag(), 
+				FGameplayEventData()
+			);
 		}
 	}
 }

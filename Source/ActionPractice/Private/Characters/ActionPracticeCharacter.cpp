@@ -10,10 +10,27 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "Interfaces/IHttpResponse.h"
 #include "Kismet/GameplayStatics.h"
+#include "AbilitySystemComponent.h"
+#include "GAS/ActionPracticeAttributeSet.h"
+#include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
+#include "GAS/GameplayTagsSubsystem.h"
+#include "Input/InputBufferComponent.h"
+#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "Input/InputActionDataAsset.h"
+#include "Items/Weapon.h"
+#include "Items/WeaponAttackTraceComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
+
+// 디버그 로그 활성화/비활성화 (0: 비활성화, 1: 활성화)
+#define ENABLE_DEBUG_LOG 0
+
+#if ENABLE_DEBUG_LOG
+#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+#else
+#define DEBUG_LOG(Format, ...)
+#endif
 
 AActionPracticeCharacter::AActionPracticeCharacter()
 {
@@ -47,6 +64,17 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	// Create Ability System Component
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// Create Attribute Set
+	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
+
+	// Create Input Buffer Component
+	InputBufferComponent = CreateDefaultSubobject<UInputBufferComponent>(TEXT("InputBufferComponent"));
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -55,13 +83,10 @@ void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 몽타주 종료 델리게이트 바인딩
-	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-	{
-		AnimInstance->OnMontageEnded.AddDynamic(this, &AActionPracticeCharacter::OnMontageEnded);
-	}
+	// Initialize GAS
+	InitializeAbilitySystem();
 
-	EquipWeapon(LoadWeaponClassByName("BP_OneHandedSword"), false, false);
+	EquipWeapon(LoadWeaponClassByName("BP_StraightSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
 }
 
@@ -69,6 +94,11 @@ void AActionPracticeCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	UpdateLockOnCamera();
+	
+	if (bIsRotatingForAction)
+	{
+		UpdateActionRotation(DeltaSeconds);
+	}
 }
 
 void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -76,7 +106,7 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
-		// Movement
+		// ===== Basic Input Actions (Direct Function Binding) =====
 		if (IA_Move)
 		{
 			EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AActionPracticeCharacter::Move);
@@ -85,41 +115,6 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		if (IA_Look)
 		{
 			EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AActionPracticeCharacter::Look);
-		}
-        
-		// Actions
-		if (IA_Jump)
-		{
-			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartJump);
-			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopJump);
-		}
-        
-		if (IA_Sprint)
-		{
-			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartSprint);
-			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopSprint);
-		}
-        
-		if (IA_Crouch)
-		{
-			EnhancedInputComponent->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AActionPracticeCharacter::ToggleCrouch);
-		}
-        
-		// Combat
-		if (IA_Attack)
-		{
-			EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionPracticeCharacter::Attack);
-		}
-        
-		if (IA_Block)
-		{
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::StartBlock);
-			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::StopBlock);
-		}
-        
-		if (IA_Roll)
-		{
-			EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionPracticeCharacter::Roll);
 		}
 
 		if(IA_LockOn)
@@ -131,20 +126,72 @@ void AActionPracticeCharacter::SetupPlayerInputComponent(UInputComponent* Player
 		{
 			EnhancedInputComponent->BindAction(IA_WeaponSwitch, ETriggerEvent::Started, this, &AActionPracticeCharacter::WeaponSwitch);
 		}
-	}
-	else
-	{
-		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
+
+		// ===== GAS Ability Input Actions =====
+		// Jump
+		if (IA_Jump)
+		{
+			EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnJumpInput);
+		}
+        
+		// Sprint (Hold)
+		if (IA_Sprint)
+		{
+			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnSprintInput);
+			EnhancedInputComponent->BindAction(IA_Sprint, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnSprintInputReleased);
+		}
+        
+		// Crouch
+		if (IA_Crouch)
+		{
+			EnhancedInputComponent->BindAction(IA_Crouch, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnCrouchInput);
+		}
+        
+		// Roll
+		if (IA_Roll)
+		{
+			EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnRollInput);
+		}
+        
+		// Attack
+		if (IA_Attack)
+		{
+			EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnAttackInput);
+		}
+
+		//Hold
+		if (IA_ChargeAttack)
+		{
+			EnhancedInputComponent->BindAction(IA_ChargeAttack, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnChargeAttackInput);
+			EnhancedInputComponent->BindAction(IA_ChargeAttack, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnChargeAttackReleased);
+		}
+		
+		// Block (Hold)
+		if (IA_Block)
+		{
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Started, this, &AActionPracticeCharacter::OnBlockInput);
+			EnhancedInputComponent->BindAction(IA_Block, ETriggerEvent::Completed, this, &AActionPracticeCharacter::OnBlockInputReleased);
+		}
+    }
 }
 
 #pragma region "Move Functions"
 void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 {
-	MovementInputVector = Value.Get<FVector2D>();
-    
-	if (Controller != nullptr && !bIsRolling && !bIsAttacking)
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+
+	//공격 어빌리티 중단
+	if (MovementVector.Size() > 0.1f)
 	{
+		CancelActionForMove();
+	}
+
+	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
+	
+	if (Controller != nullptr && !bIsRecovering)
+	{
+		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilitySprintingTag());
+		
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
 		{
 			const FVector TargetLocation = LockedOnTarget->GetActorLocation();
@@ -161,10 +208,10 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			const FVector BackwardDirection = -DirectionToTarget; // 타겟 반대 방향
             
 			// Strafe 이동 (좌우 이동)
-			AddMovementInput(RightDirection, MovementInputVector.X);
+			AddMovementInput(RightDirection, MovementVector.X);
             
 			// 전후 이동 (타겟을 기준으로)
-			AddMovementInput(BackwardDirection, -MovementInputVector.Y);
+			AddMovementInput(BackwardDirection, -MovementVector.Y);
             
 			// 캐릭터가 타겟을 바라보도록 회전
 			SetActorRotation(TargetRotation);
@@ -178,163 +225,139 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
         
-			AddMovementInput(ForwardDirection, MovementInputVector.Y);
-			AddMovementInput(RightDirection, MovementInputVector.X);
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
 		}		
 	}
 }
 
-void AActionPracticeCharacter::StartSprint()
+FVector2D AActionPracticeCharacter::GetCurrentMovementInput() const
 {
-    // 달리기 가능 조건 체크
-    if (bIsCrouching || bIsAttacking || bIsRolling || bIsBlocking)
-    {
-        return;
-    }
-    
-    // 공중에서는 달리기 시작 불가
-    if (GetCharacterMovement()->IsFalling())
-    {
-        return;
-    }
-    
-    bIsSprinting = true;
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
+	// PlayerController를 통해 어디서든 접근 가능
+	APlayerController* PC = GetController<APlayerController>();
+	if (PC && IA_Move)
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = 
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			// 특정 액션의 현재 값 조회
+			FInputActionValue ActionValue = Subsystem->GetPlayerInput()->GetActionValue(IA_Move);
+			return ActionValue.Get<FVector2D>();
+		}
+	}
+	return FVector2D::ZeroVector;
 }
 
-void AActionPracticeCharacter::StopSprint()
+void AActionPracticeCharacter::RotateCharacterToInputDirection(float RotateTime)
 {
-    bIsSprinting = false;
+	// 현재 입력 값 가져오기
+	FVector2D MovementInput = GetCurrentMovementInput();
     
-    // 앉아있는 상태면 앉기 속도로, 아니면 걷기 속도로
-    if (bIsCrouching)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
-    else if (bIsBlocking)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-    }
-    else
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    }
+	// 입력이 없으면 회전하지 않음
+	if (MovementInput.IsZero())
+	{
+		return;
+	}
+    
+	// 카메라의 Yaw 회전만 가져오기
+	FRotator CameraRotation = FollowCamera->GetComponentRotation();
+	FRotator CameraYaw = FRotator(0.0f, CameraRotation.Yaw, 0.0f);
+    
+	// 입력 벡터를 3D로 변환
+	FVector InputDirection = FVector(MovementInput.Y, MovementInput.X, 0.0f);
+    
+	// 카메라 기준으로 입력 방향 변환
+	FVector WorldDirection = CameraYaw.RotateVector(InputDirection);
+	WorldDirection.Normalize();
+    
+	// 목표 회전 설정
+	TargetActionRotation = FRotator(0.0f, WorldDirection.Rotation().Yaw, 0.0f);
+    
+	// 회전 시간이 0 이하면 즉시 회전
+	if (RotateTime <= 0.0f)
+	{
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		return;
+	}
+    
+	// 회전 각도 차이 계산
+	float YawDifference = FMath::Abs(FMath::FindDeltaAngleDegrees(
+		GetActorRotation().Yaw, 
+		TargetActionRotation.Yaw
+	));
+    
+	// 회전 차이가 매우 작으면 즉시 완료
+	if (YawDifference < 1.0f)
+	{
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		return;
+	}
+    
+	// 스무스 회전 시작
+	StartActionRotation = GetActorRotation();
+	CurrentRotationTime = 0.0f;
+	TotalRotationTime = RotateTime;
+	bIsRotatingForAction = true;
 }
 
-void AActionPracticeCharacter::ToggleCrouch()
+void AActionPracticeCharacter::UpdateActionRotation(float DeltaTime)
 {
-    // 액션 중에는 앉기 불가
-    if (bIsAttacking || bIsRolling)
-    {
-        return;
-    }
+	if (!bIsRotatingForAction)
+	{
+		return;
+	}
     
-    if (bIsCrouching)
-    {
-        // 일어서기
-        UnCrouch();
-        bIsCrouching = false;
-        
-        // 달리고 있었다면 달리기 속도로, 아니면 걷기 속도로
-        if (bIsSprinting)
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
-        }
-        else if (bIsBlocking)
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-        }
-        else
-        {
-            GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-        }
-    }
-    else
-    {
-        // 앉기
-        Crouch();
-        bIsCrouching = true;
-        
-        // 달리기 중이었다면 달리기 해제
-        if (bIsSprinting)
-        {
-            bIsSprinting = false;
-        }
-        
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
+	// 경과 시간 업데이트
+	CurrentRotationTime += DeltaTime;
+    
+	// 회전 진행도 계산 (0~1)
+	float Alpha = FMath::Clamp(CurrentRotationTime / TotalRotationTime, 0.0f, 1.0f);
+    
+	// 부드러운 커브 적용 (EaseInOut)
+	Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, 2.0f);
+    
+	// 회전 보간
+	FRotator NewRotation = FMath::Lerp(StartActionRotation, TargetActionRotation, Alpha);
+	SetActorRotation(NewRotation);
+    
+	// 회전 완료 체크
+	if (CurrentRotationTime >= TotalRotationTime)
+	{
+		// 정확한 목표 회전으로 설정
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		CurrentRotationTime = 0.0f;
+	}
 }
 
-void AActionPracticeCharacter::StartJump()
+void AActionPracticeCharacter::CancelActionForMove()
 {
-    // 점프 가능 조건 체크
-    if (bIsAttacking || bIsRolling || bIsBlocking)
-    {
-        return;
-    }
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
     
-    // 앉아있는 상태에서는 점프 대신 일어서기
-    if (bIsCrouching)
-    {
-        ToggleCrouch();
-        return;
-    }
-    
-    // 기본 점프 함수 호출
-    Jump();
-}
-
-void AActionPracticeCharacter::StopJump()
-{
-    // 기본 점프 중지 함수 호출
-    StopJumping();
-}
-
-// Roll 함수 구현
-void AActionPracticeCharacter::Roll()
-{
-    if (!CanPerformAction() || !RollMontage)
-    {
-        return;
-    }
-    
-    // 추가 조건 체크
-    if (bIsAttacking || bIsBlocking || bIsCrouching)
-    {
-        return;
-    }
-    
-    bIsRolling = true;
-    
-    // 달리기 중이었다면 해제
-    if (bIsSprinting)
-    {
-        bIsSprinting = false;
-    }
-    
-    // 입력 방향으로 캐릭터 회전
-    if (MovementInputVector.Size() > 0.1f)
-    {
-        const FRotator ControlRotation = GetControlRotation();
-        const FRotator YawRotation(0, ControlRotation.Yaw, 0);
-        
-        const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-        const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-        
-        const FVector RollDirection = 
-            (ForwardDirection * MovementInputVector.Y + RightDirection * MovementInputVector.X).GetSafeNormal();
-        
-        if (RollDirection.Size() > 0.1f)
-        {
-            SetActorRotation(RollDirection.Rotation());
-        }
-    }
-    
-    // 몽타주 재생
-    PlayAnimMontage(RollMontage);
-    
-    // 블루프린트 이벤트
-    OnRollStart();
+	// Attack 어빌리티가 활성화되어 있는지 확인
+	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilityAttackingTag());
+	
+	if (bHasActiveAttackAbility)
+	{
+		// State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
+		if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+		{
+			// Ability.Attack 태그를 가진 어빌리티 취소
+			FGameplayTagContainer CancelTags;
+			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
+			AbilitySystemComponent->CancelAbilities(&CancelTags);
+			DEBUG_LOG(TEXT("Attack Ability Cancelled by Move Input"));
+		}
+		else
+		{
+			DEBUG_LOG(TEXT("Attack Ability is in Recovering state - cannot cancel"));
+		}
+	}
 }
 #pragma endregion
 
@@ -437,168 +460,13 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
 }
 #pragma endregion
 
-#pragma region "Attack Functions"
-/* 몽타주에 노티파이 넣는 순서 (수행 매커니즘)
- * 1. 몽타주 실행
- *		bIsAttacking = true
- * 2. enablecomboInput = 입력으로 다음공격, 구르기 저장가능 지점 (구르기 저장중이어도 다음공격 우선)
- *		bCanComboSave = true (bCanRollSave = false로) / bCanRollSave = true (bCanComboSave = true면 X)
- * 3. AttackRecoveryEnd / CheckComboInput = 공격 선딜이 끝나는 지점, 저장했으면 자동으로 다음공격 수행 (끝나고 이동, 구르기 가능)
- *		bIsAttacking = false
- * 4. ResetCombo = 공격 콤보 끝남 (2-3 사이 공격하면 다음 콤보)
- *
- */
-void AActionPracticeCharacter::Attack()
-{
-	if (!bIsAttacking) //공격 가능 구간일때
-	{
-		if (!bCanComboSave) //첫 공격
-		{
-			ComboCounter = 0;
-			PlayAttackMontage();
-		}
-
-		else if (ComboCounter < MaxComboCount) //선딜 이후 공격
-		{
-			PlayAttackMontage();
-		}
-	}
-	
-	else //공격 선딜일때 저장
-	{
-		SaveComboInput();
-	}
-}
-
-void AActionPracticeCharacter::SaveComboInput() 
-{
-	if (bCanComboSave && ComboCounter < MaxComboCount && !bComboInputSaved)
-	{
-		bComboInputSaved = true;
-		UE_LOG(LogTemp, Warning, TEXT("Combo Input Saved! Next combo will be: Attack%d"), ComboCounter + 2);
-	}
-}
-
-void AActionPracticeCharacter::PlayAttackMontage()
-{
-	bIsAttacking = true;
-	bComboInputSaved = false;
-	bCanABPInterruptMontage = false;
-	ComboCounter++;
-
-	FName SectionName = FName(*FString::Printf(TEXT("Attack%d"), ComboCounter));
-	
-	if (ComboCounter == 1)
-	{
-		PlayAnimMontage(AttackMontage, 1.0f, SectionName);
-	}
-
-	else if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
-	{
-		AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
-	}
-
-	// 블루프린트 이벤트
-	OnAttackStart(ComboCounter);
-		
-	UE_LOG(LogTemp, Warning, TEXT("Combo Continued: %s"), *SectionName.ToString());
-}
-
-void AActionPracticeCharacter::CheckComboInput()
-{
-	if (bComboInputSaved && ComboCounter < MaxComboCount)
-	{
-		PlayAttackMontage();
-	}
-	
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No combo input saved or max combo reached"));
-	}
-}
-
-void AActionPracticeCharacter::EnableComboInput()
-{
-	bCanComboSave = true;
-	UE_LOG(LogTemp, Warning, TEXT("Combo Input Enabled"));
-}
-
-void AActionPracticeCharacter::AttackRecoveryEnd()
-{
-	bIsAttacking = false;
-	bCanComboSave = true;
-}
-
-void AActionPracticeCharacter::ResetCombo()
-{
-	ComboCounter = 0;
-	bComboInputSaved = false;
-	bCanComboSave = false;
-	
-	UE_LOG(LogTemp, Warning, TEXT("Combo Reset"));
-}
-#pragma endregion
-
-#pragma region "Block Functions"
-// StartBlock 함수 구현
-void AActionPracticeCharacter::StartBlock()
-{
-    if (!CanPerformAction() || bIsAttacking || bIsRolling)
-    {
-        return;
-    }
-    
-    bIsBlocking = true;
-    
-    // 달리기 중이었다면 해제
-    if (bIsSprinting)
-    {
-        bIsSprinting = false;
-    }
-    
-    // 이동 속도 감소
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * BlockingSpeedMultiplier;
-    
-    // 시작 몽타주가 있다면 재생
-    if (BlockStartMontage)
-    {
-        PlayAnimMontage(BlockStartMontage);
-    }
-}
-
-// StopBlock 함수 구현  
-void AActionPracticeCharacter::StopBlock()
-{
-    if (!bIsBlocking)
-    {
-        return;
-    }
-    
-    bIsBlocking = false;
-    
-    // 속도 복구
-    if (bIsCrouching)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * CrouchSpeedMultiplier;
-    }
-    else if (bIsSprinting)
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed * SprintSpeedMultiplier;
-    }
-    else
-    {
-        GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-    }
-    
-    // 종료 몽타주가 있다면 재생
-    if (BlockEndMontage)
-    {
-        PlayAnimMontage(BlockEndMontage);
-    }
-}
-#pragma endregion
-
 #pragma region "Weapon Functions"
+
+TScriptInterface<IHitDetectionInterface> AActionPracticeCharacter::GetHitDetectionInterface() const
+{
+	return RightWeapon->GetHitDetectionComponent();
+}
+
 void AActionPracticeCharacter::WeaponSwitch()
 {
 }
@@ -616,29 +484,29 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 	SpawnParams.Instigator = GetInstigator();
 	
 	AWeapon* NewWeapon = GetWorld()->SpawnActor<AWeapon>(NewWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-    WeaponEnums type = NewWeapon->GetWeaponType();
+    EWeaponEnums type = NewWeapon->GetWeaponType();
 	
-	if (NewWeapon)
+	if (NewWeapon && type != EWeaponEnums::None)
 	{
 		FString SocketString = bIsLeftHand ? "hand_l" : "hand_r";
 
 		switch (type)
 		{
-		case WeaponEnums::StraightSword:
+		case EWeaponEnums::StraightSword:
 			SocketString += "_sword";
 			break;
 
-		case WeaponEnums::GreatSword:
+		case EWeaponEnums::GreatSword:
 			SocketString += "_greatsword";
 			break;
 
-		case WeaponEnums::Shield:
+		case EWeaponEnums::Shield:
 			SocketString += "_shield";
 			break;
 		}
 		
 		FName SocketName = FName(*SocketString);
-		UE_LOG(LogTemp, Warning, TEXT("asdasdasda%s"), *SocketString);
+		DEBUG_LOG(TEXT("Equiped Weapon: %s"), *SocketString);
 		NewWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 		if(bIsTwoHanded)
@@ -683,31 +551,209 @@ TSubclassOf<AWeapon> AActionPracticeCharacter::LoadWeaponClassByName(const FStri
 		return TSubclassOf<AWeapon>(LoadedClass);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Failed to load weapon class from path: %s"), *BlueprintPath);
+	DEBUG_LOG(TEXT("Failed to load weapon class from path: %s"), *BlueprintPath);
 	return nullptr;
 }
 #pragma endregion
 
-void AActionPracticeCharacter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+#pragma region "Attack Combo Functions"
+
+#pragma endregion
+
+#pragma region "GAS Input Functions"
+void AActionPracticeCharacter::OnJumpInput()
 {
-	if (Montage == AttackMontage)
+	GASInputPressed(IA_Jump);
+}
+
+void AActionPracticeCharacter::OnSprintInput()
+{
+	GASInputPressed(IA_Sprint);
+}
+
+void AActionPracticeCharacter::OnSprintInputReleased()
+{
+	GASInputReleased(IA_Sprint);
+}
+
+void AActionPracticeCharacter::OnCrouchInput()
+{
+	GASInputPressed(IA_Crouch);
+}
+
+void AActionPracticeCharacter::OnRollInput()
+{
+	GASInputPressed(IA_Roll);
+}
+
+void AActionPracticeCharacter::OnAttackInput()
+{
+	GASInputPressed(IA_Attack);
+}
+
+void AActionPracticeCharacter::OnBlockInput()
+{
+	GASInputPressed(IA_Block);
+}
+
+void AActionPracticeCharacter::OnBlockInputReleased()
+{
+	GASInputReleased(IA_Block);
+}
+
+void AActionPracticeCharacter::OnChargeAttackInput()
+{
+	GASInputPressed(IA_ChargeAttack);
+}
+
+void AActionPracticeCharacter::OnChargeAttackReleased()
+{
+	GASInputReleased(IA_ChargeAttack);
+}
+
+#pragma endregion
+
+#pragma region "GAS Functions"
+UAbilitySystemComponent* AActionPracticeCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void AActionPracticeCharacter::InitializeAbilitySystem()
+{
+	if (AbilitySystemComponent)
 	{
-		bIsAttacking = false;
-		bCanComboSave = false;
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		
-		// 인터럽트된 경우 또는 정상 종료 시 콤보 리셋
-		ResetCombo();
+		if (AttributeSet)
+		{
+			// Attributes are automatically initialized in the AttributeSet constructor
+			// Additional setup can be done here if needed
+		}
 		
-		UE_LOG(LogTemp, Warning, TEXT("Attack Montage Ended. Interrupted: %s"), bInterrupted ? TEXT("True") : TEXT("False"));
-	}
-	else if (Montage == RollMontage)
-	{
-		bIsRolling = false;
-		OnRollEnd();
+		for (const auto& StartAbility : StartAbilities)
+		{
+			GiveAbility(StartAbility);
+		}
+
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+		
+		for (const auto& StartEffect : StartEffects)
+		{
+			if (StartEffect)
+			{
+				FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(StartEffect, 1, EffectContext);
+				if (SpecHandle.IsValid())
+				{
+					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				}
+			}
+		}
 	}
 }
 
-bool AActionPracticeCharacter::CanPerformAction() const
+void AActionPracticeCharacter::GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass)
 {
-	return !bIsRolling && !GetCharacterMovement()->IsFalling();
+	if (AbilitySystemComponent && AbilityClass)
+	{
+		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+		AbilitySystemComponent->GiveAbility(AbilitySpec);
+	}
 }
+
+void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
+{
+	if (!AbilitySystemComponent || !InputAction) return;
+
+	TArray<FGameplayAbilitySpec*> TryActivateSpecs = FindAbilitySpecsWithInputAction(InputAction);
+	if (TryActivateSpecs.IsEmpty()) return;
+	
+	InputBufferComponent->bBufferActionReleased = false;
+	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
+	if (InputBufferComponent->bCanBufferInput)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Character: Buffer"));
+		InputBufferComponent->BufferNextAction(InputAction);
+	}
+
+	else
+	{
+		for (auto& Spec : TryActivateSpecs)
+		{
+			if (Spec->IsActive())
+			{
+				Spec->InputPressed = true;
+				AbilitySystemComponent->AbilitySpecInputPressed(*Spec);
+			}
+
+			else
+			{
+				Spec->InputPressed = true;
+				AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+			}
+		}
+	}
+}
+
+void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
+{
+	if (!AbilitySystemComponent || !InputAction) return;
+
+	TArray<FGameplayAbilitySpec*> TryActivateSpecs = FindAbilitySpecsWithInputAction(InputAction);
+	if (TryActivateSpecs.IsEmpty()) return;
+	
+	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
+	if (InputBufferComponent->bCanBufferInput)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Character: UnBuffer"));
+		InputBufferComponent->UnBufferHoldAction(InputAction);
+	}
+	
+	else
+	{
+		for (auto& Spec : TryActivateSpecs)
+		{
+			if (Spec->IsActive())
+			{
+				Spec->InputPressed = false;
+				AbilitySystemComponent->AbilitySpecInputReleased(*Spec);
+			}
+		}
+	}
+}
+
+TArray<FGameplayAbilitySpec*> AActionPracticeCharacter::FindAbilitySpecsWithInputAction(const UInputAction* InputAction)
+{
+	TArray<FGameplayAbilitySpec*> SameAssetSpecs;
+	if (!AbilitySystemComponent) return SameAssetSpecs;
+	
+	const FInputActionAbilityRule* Rule = InputActionData->FindRuleByAction(InputAction);
+	if (!Rule)
+	{
+		DEBUG_LOG(TEXT("FindAbilitySpecsWithInputAction: No Rule"));
+		return SameAssetSpecs;
+	}
+	
+	const FGameplayTagContainer* InputAssetTags = &Rule->AbilityAssetTags;
+	if (!InputAssetTags)
+	{
+		DEBUG_LOG(TEXT("FindAbilitySpecsWithInputAction: No InputAssetTags"));
+		return SameAssetSpecs;
+	}
+    
+	for (auto& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (Spec.Ability)
+		{  
+			if (Spec.Ability->GetAssetTags().HasAll(*InputAssetTags) || Spec.GetDynamicSpecSourceTags().HasAll(*InputAssetTags))
+			{
+				SameAssetSpecs.Add(&Spec);
+			}
+		}
+	}
+
+	return SameAssetSpecs;
+}
+#pragma endregion
+
