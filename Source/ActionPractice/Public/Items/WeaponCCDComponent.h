@@ -119,14 +119,14 @@ protected:
 #pragma region "Debug And Profiling"
 public:
     //디버그 설정
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugCCD")
     bool bDrawDebugCapsule = true;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    float DebugDuration = 2.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugCCD")
+    float DebugCCDDuration = 2.0f;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    FColor DebugColor = FColor::Red;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugCCD")
+    FColor DebugCCDColor = FColor::Red;
 
     void DrawDebugCCDTrajectory();
 #pragma endregion

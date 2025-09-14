@@ -439,7 +439,7 @@ float UWeaponAttackTraceComponent::CalculateSwingSpeed() const
 
     FVector CurTipSocketLocation = WeaponStaticMesh->GetSocketTransform(TipSocketName).GetLocation();
 
-    // --- 3. 속도 (cm/s) 계산 ---
+    //속도 (cm/s) 계산
     const float DistanceTraveled = FVector::Dist(CurTipSocketLocation, PrevTipSocketLocation);
     const float SpeedInCmPerSecond = DistanceTraveled / DeltaTime;
 
@@ -466,9 +466,9 @@ void UWeaponAttackTraceComponent::UpdateAdaptiveTraceSettings()
     }
     
     CurrentSecondsPerTrace = SelectedConfig.SecondsPerTrace;
-    CurrentInterpolationPerFrame = SelectedConfig.InterpolationPerFrame;
+    CurrentInterpolationPerTrace = SelectedConfig.InterpolationPerTrace;
     
-    DEBUG_LOG(TEXT("Adaptive Trace - Speed: %.1f, Interval: %.3f, Subdivisions: %d, level: %d"), SwingSpeed, CurrentSecondsPerTrace, CurrentInterpolationPerFrame, i - 1);
+    DEBUG_LOG(TEXT("Adaptive Trace - Speed: %.1f, Interval: %.3f, Subdivisions: %d, level: %d"), SwingSpeed, CurrentSecondsPerTrace, CurrentInterpolationPerTrace, i - 1);
 }
 
 void UWeaponAttackTraceComponent::PerformInterpolationTrace(
@@ -479,12 +479,12 @@ void UWeaponAttackTraceComponent::PerformInterpolationTrace(
     //이전 프레임 소켓 위치와 현재 프레임 소켓 위치 사이의 간극이 큰 것을 방지하기 위해
     //보간으로 프레임 간 중간 지점을 찾아 스윕 포인트 추가
     
-    const int32 InterpolationPerFrame = CurrentInterpolationPerFrame;  //보간 세분화 수
+    const int32 InterpolationPerTrace = CurrentInterpolationPerTrace;  //보간 세분화 수
     FCollisionQueryParams Params = GetCollisionQueryParams();
     
-    for (int32 i = 0; i <= InterpolationPerFrame; ++i)
+    for (int32 i = 0; i <= InterpolationPerTrace; ++i)
     {
-        float Alpha = (float)i / (float)InterpolationPerFrame;
+        float Alpha = (float)i / (float)InterpolationPerTrace;
         
         FVector InterpStart = FMath::Lerp(StartPrev, StartCurr, Alpha);
         FVector InterpEnd = FMath::Lerp(EndPrev, EndCurr, Alpha);
@@ -511,7 +511,7 @@ void UWeaponAttackTraceComponent::PerformInterpolationTrace(
                            (InterpEnd - InterpStart).Size() * 0.5f,
                            Radius,
                            FQuat::FindBetweenNormals(FVector::UpVector, (InterpEnd - InterpStart).GetSafeNormal()),
-                           FColor::Red,
+                           DebugTraceColor,
                            false,
                            DebugTraceDuration);
         }

@@ -48,14 +48,14 @@ struct FAdaptiveTraceConfig
     
     //트레이스 실행 주기 (초)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
-    float SecondsPerTrace;
+    float SecondsPerTrace = 0.16;
 
     //프레임 별 트레이스 보간 횟수 (추가)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
-    int32 InterpolationPerFrame;
+    int32 InterpolationPerTrace = 1;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
-    float SpeedThreshold;
+    float SpeedThreshold = 0;
 };
 
 DECLARE_MULTICAST_DELEGATE_FourParams(FOnWeaponHit, AActor*, const FHitResult&, EAttackDamageType, float);
@@ -133,7 +133,7 @@ protected:
     //Adaptive Trace Sweep Variables
     float TraceAccumulator = 0.0f;
     float CurrentSecondsPerTrace = 1.0f;
-    int32 CurrentInterpolationPerFrame = 1;
+    int32 CurrentInterpolationPerTrace = 1;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Adaptive Trace")
     TArray<FAdaptiveTraceConfig> AdaptiveConfigs = {
@@ -206,11 +206,14 @@ private:
 #pragma region "Debug And Profiling"
 public:
     // 디버그 설정
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugTrace")
     bool bDrawDebugTrace = false;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugTrace")
     float DebugTraceDuration = 4.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DebugTrace")
+    FColor DebugTraceColor = FColor::Red;
     
     int32 DebugSweepTraceCounter = 0;
     

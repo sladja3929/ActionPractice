@@ -384,9 +384,9 @@ void UWeaponCCDComponent::DrawDebugCCDTrajectory()
                     GetScaledCapsuleHalfHeight(),
                     GetScaledCapsuleRadius(),
                     CurrentRotation,
-                    DebugColor,
+                    DebugCCDColor,
                     false,
-                    DebugDuration);
+                    DebugCCDDuration);
     
     //CCD 궤적 (이전 위치에서 현재 위치까지)
     if (!PreviousCapsuleLocation.IsZero())
@@ -404,9 +404,9 @@ void UWeaponCCDComponent::DrawDebugCCDTrajectory()
                            GetScaledCapsuleHalfHeight(),
                            GetScaledCapsuleRadius(),
                            InterpRotation,
-                           FColor(DebugColor.R, DebugColor.G, DebugColor.B, 50), //반투명
+                           FColor(DebugCCDColor.R, DebugCCDColor.G, DebugCCDColor.B, 50), //반투명
                            false,
-                           DebugDuration);
+                           DebugCCDDuration);
         }
         
         //궤적 선
@@ -415,7 +415,7 @@ void UWeaponCCDComponent::DrawDebugCCDTrajectory()
                      CurrentLocation,
                      FColor::Yellow,
                      false,
-                     DebugDuration,
+                     DebugCCDDuration,
                      0,
                      2.0f);
     }

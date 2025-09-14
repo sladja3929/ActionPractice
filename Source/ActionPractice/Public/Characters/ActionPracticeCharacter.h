@@ -31,23 +31,23 @@ class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterfa
 protected:
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
+	USpringArmComponent* CameraBoom = nullptr;
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera;
+	UCameraComponent* FollowCamera = nullptr;
 
 	/** Ability System Component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UAbilitySystemComponent* AbilitySystemComponent;
+	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
 
 	/** Attribute Set */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UActionPracticeAttributeSet* AttributeSet;
+	UActionPracticeAttributeSet* AttributeSet = nullptr;
 
 	/** Input Buffer Component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
-	UInputBufferComponent* InputBufferComponent;
+	UInputBufferComponent* InputBufferComponent = nullptr;
 
 public:
 #pragma region "Public Variables"
@@ -133,40 +133,40 @@ protected:
 	
 	// ====== Input Actions ======
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Jump;
+	UInputAction* IA_Jump = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Move;
+	UInputAction* IA_Move = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Look;
+	UInputAction* IA_Look = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_LockOn;
+	UInputAction* IA_LockOn = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Sprint;
+	UInputAction* IA_Sprint = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Crouch;
+	UInputAction* IA_Crouch = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Roll;
+	UInputAction* IA_Roll = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Attack;
+	UInputAction* IA_Attack = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Block;
+	UInputAction* IA_Block = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_WeaponSwitch;
+	UInputAction* IA_WeaponSwitch = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_ChargeAttack;
+	UInputAction* IA_ChargeAttack = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputActionDataAsset> InputActionData;
+	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
 	
 	// ===== State Variables =====
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
@@ -228,12 +228,12 @@ protected:
 private:
 #pragma region "Private Variables"
 	
-	// 회전 관련 변수
+	//회전 관련 변수
 	FRotator TargetActionRotation;
 	FRotator StartActionRotation;
-	float CurrentRotationTime;
-	float TotalRotationTime;
-	bool bIsRotatingForAction;
+	float CurrentRotationTime = 0;
+	float TotalRotationTime = 0;
+	bool bIsRotatingForAction = false;
 	
 #pragma endregion
 	
