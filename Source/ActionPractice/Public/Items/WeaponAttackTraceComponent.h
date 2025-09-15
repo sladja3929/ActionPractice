@@ -178,7 +178,7 @@ protected:
         float Radius, TArray<FHitResult>& OutHits);
 
     //Hit
-    bool ValidateHit(AActor* HitActor, const FHitResult& HitResult);
+    bool ValidateHit(AActor* HitActor, const FHitResult& HitResult, bool bIsMultiHit);
     void ProcessHit(AActor* HitActor, const FHitResult& HitResult);
     
     //Adaptive Trace Sweep
@@ -220,5 +220,7 @@ public:
     void DrawDebugSweepTrace(const FVector& StartPrev, const FVector& StartCurr,
                              const FVector& EndPrev, const FVector& EndCurr,
                              float Radius, const FColor& Color);
+
+    void ToggleWeaponDebugTrace();
 #pragma endregion
 };

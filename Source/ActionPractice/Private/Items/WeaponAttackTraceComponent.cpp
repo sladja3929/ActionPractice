@@ -8,7 +8,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
     #define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponCollision, Warning, Format, ##__VA_ARGS__)
@@ -35,6 +35,17 @@ void UWeaponAttackTraceComponent::BeginPlay()
 
     SetWeaponStaticMesh();
     
+    //디버그용 1번 키 바인딩
+    if (GetWorld())
+    {
+        if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+        {
+            if (PC->InputComponent)
+            {
+                PC->InputComponent->BindKey(EKeys::One, IE_Pressed, this, &UWeaponAttackTraceComponent::ToggleWeaponDebugTrace);
+            }
+        }
+    }
     Super::BeginPlay();
 }
 
@@ -360,7 +371,8 @@ void UWeaponAttackTraceComponent::PerformSlashTrace()
     
     for (const FHitResult& Hit : AllHits)
     {
-        if (ValidateHit(Hit.GetActor(), Hit))
+        //일단 다단히트가 아닌 일반 공격으로 호출
+        if (ValidateHit(Hit.GetActor(), Hit, false))
         {
             ProcessHit(Hit.GetActor(), Hit);
         }
@@ -369,7 +381,7 @@ void UWeaponAttackTraceComponent::PerformSlashTrace()
 #pragma endregion
 
 #pragma region "Hit Functions"
-bool UWeaponAttackTraceComponent::ValidateHit(AActor* HitActor, const FHitResult& HitResult)
+bool UWeaponAttackTraceComponent::ValidateHit(AActor* HitActor, const FHitResult& HitResult, bool bIsMultiHit)
 {
     if (!HitActor || !OwnerWeapon)
         return false;
@@ -378,25 +390,26 @@ bool UWeaponAttackTraceComponent::ValidateHit(AActor* HitActor, const FHitResult
     AActionPracticeCharacter* WeaponOwner = OwnerWeapon->GetOwnerCharacter();
     if (HitActor == OwnerWeapon || HitActor == WeaponOwner) return false;
     
-    // 필요 시 아군 제외 구현해야 함
+    //필요 시 아군 제외 구현해야 함
     
     //중복 체크
     float CurrentTime = GetWorld()->GetTimeSeconds();
     if (FHitValidationData* ValidationData = HitValidationMap.Find(HitActor))
     {
+        //다단히트가 아닐 경우, 이미 있으면 리턴
+        if (!bIsMultiHit) return false;
+        
         if (CurrentTime - ValidationData->LastHitTime < HitCooldownTime)
         {
             DEBUG_LOG(TEXT("Hit rejected: Cooldown (%.2f < %.2f)"), CurrentTime - ValidationData->LastHitTime, HitCooldownTime);
             return false;
         }
         
-        //쿨다운 지났으면 업데이트
         ValidationData->LastHitTime = CurrentTime;
         ValidationData->HitCount++;
     }
     else
     {
-        //새로운 액터 추가
         FHitValidationData NewData;
         NewData.HitActor = HitActor;
         NewData.LastHitTime = CurrentTime;
@@ -411,9 +424,26 @@ void UWeaponAttackTraceComponent::ProcessHit(AActor* HitActor, const FHitResult&
 {
     float FinalMultiplier = CurrentConfig.DamageMultiplier;
     
-    DEBUG_LOG(TEXT("Hit %s - Type: %d, DmgMult: %.2f"), *HitActor->GetName(), (int32)CurrentConfig.DamageType, FinalMultiplier);
+    DEBUG_LOG(TEXT("Hit %s, DmgMult: %.2f"), *HitActor->GetName(), FinalMultiplier);
+
+    //화면에 디버그 메시지 표시
+    if (GEngine)
+    {
+        //데미지 타입별 색상 설정
+        FColor MessageColor = FColor::Green;
+        FString DamageTypeName = TEXT("Unknown");
+        
+        //히트 메시지 출력
+        GEngine->AddOnScreenDebugMessage(
+            -1,  //키 (-1은 중복 허용)
+            2.0f,  //표시 시간 (초)
+            MessageColor,  //색상
+            FString::Printf(TEXT("HIT %s, Damage x%.2f"), 
+                *HitActor->GetName(), 
+                FinalMultiplier)
+        );
+    }
     
-    //온힛 이벤트
     OnWeaponHit.Broadcast(HitActor, HitResult, CurrentConfig.DamageType, FinalMultiplier);
 }
 
@@ -468,7 +498,7 @@ void UWeaponAttackTraceComponent::UpdateAdaptiveTraceSettings()
     CurrentSecondsPerTrace = SelectedConfig.SecondsPerTrace;
     CurrentInterpolationPerTrace = SelectedConfig.InterpolationPerTrace;
     
-    DEBUG_LOG(TEXT("Adaptive Trace - Speed: %.1f, Interval: %.3f, Subdivisions: %d, level: %d"), SwingSpeed, CurrentSecondsPerTrace, CurrentInterpolationPerTrace, i - 1);
+    //DEBUG_LOG(TEXT("Adaptive Trace - Speed: %.1f, Interval: %.3f, Subdivisions: %d, level: %d"), SwingSpeed, CurrentSecondsPerTrace, CurrentInterpolationPerTrace, i - 1);
 }
 
 void UWeaponAttackTraceComponent::PerformInterpolationTrace(
@@ -583,5 +613,16 @@ void UWeaponAttackTraceComponent::DrawDebugSweepTrace(
     DrawDebugSphere(GetWorld(), StartCurr, Radius, 8, Color, false, DebugTraceDuration);
     DrawDebugSphere(GetWorld(), EndPrev, Radius, 8, Color, false, DebugTraceDuration);
     DrawDebugSphere(GetWorld(), EndCurr, Radius, 8, Color, false, DebugTraceDuration);
+}
+
+void UWeaponAttackTraceComponent::ToggleWeaponDebugTrace()
+{
+    bDrawDebugTrace = !bDrawDebugTrace;
+    
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(100, 2.0f, bDrawDebugTrace ? FColor::Green : FColor::Red,
+            FString::Printf(TEXT("Debug: %s"), bDrawDebugTrace ? TEXT("ON") : TEXT("OFF")));
+    }
 }
 #pragma endregion
