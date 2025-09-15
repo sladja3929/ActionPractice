@@ -31,7 +31,6 @@ public:
     UPROPERTY(BlueprintAssignable)
     FMontageWithEventsDelegate OnTaskCancelled;
 
-    // 노티파이 이벤트 델리게이트들
     UPROPERTY(BlueprintAssignable)
     FMontageWithEventsDelegate OnEnableBufferInput;
 
@@ -44,12 +43,11 @@ public:
     UPROPERTY(BlueprintAssignable)
     FMontageWithEventsDelegate OnChargeStart;
     
-    // 어빌리티가 취소되면 몽타주 정지
     UPROPERTY()
-    bool bStopMontageWhenAbilityCancelled;
+    bool bStopMontageWhenAbilityCancelled = false;
 
     UPROPERTY()
-    bool bStopBroadCastMontageEvents;
+    bool bStopBroadCastMontageEvents = false;
     
 #pragma endregion
 
@@ -57,7 +55,7 @@ public:
 
     UAbilityTask_PlayMontageWithEvents(const FObjectInitializer& ObjectInitializer);
 
-    // 태스크 생성 함수
+    //태스크 생성 함수
     UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (DisplayName = "PlayMontageWithEvents",
         HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
     static UAbilityTask_PlayMontageWithEvents* CreatePlayMontageWithEventsProxy(
@@ -68,16 +66,12 @@ public:
         FName StartSection = NAME_None,
         float AnimRootMotionTranslationScale = 1.0f);
 
-    // 태스크 활성화
     virtual void Activate() override;
 
-    // 태스크 정리
     virtual void OnDestroy(bool AbilityEnded) override;
 
-    // 태스크 외부 정지
     virtual void ExternalCancel() override;
 
-    //몽타주 변경
     UFUNCTION()
     void ChangeMontageAndPlay(UAnimMontage* NewMontage);
     
@@ -86,27 +80,21 @@ public:
 protected:
 #pragma region "Protected Variables" //=============================================================
 
-    // 재생할 몽타주
     UPROPERTY()
     TObjectPtr<UAnimMontage> MontageToPlay;
 
-    // 재생 속도
     UPROPERTY()
-    float Rate;
+    float Rate = 0.0f;
 
-    // 시작 섹션
     UPROPERTY()
     FName StartSectionName;
 
-    // 루트 모션 스케일
     UPROPERTY()
-    float AnimRootMotionTranslationScale;
+    float AnimRootMotionTranslationScale = 0.0f;
 
-    // 몽타주 델리게이트 핸들
-    FOnMontageBlendingOutStarted BlendingOutDelegate;
-    FOnMontageEnded MontageEndedDelegate;
+    FOnMontageBlendingOutStarted BlendingOutDelegate = nullptr;
+    FOnMontageEnded MontageEndedDelegate = nullptr;;
 
-    // 이벤트 핸들
     FDelegateHandle EnableBufferInputHandle;
     FDelegateHandle ActionRecoveryEndHandle;
     FDelegateHandle ResetComboHandle;
@@ -119,11 +107,10 @@ protected:
     UFUNCTION()
     void PlayMontage();
 
-    //몽타주 종료
     UFUNCTION()
     void StopPlayingMontage();
     
-    // 이벤트 핸들러
+    //이벤트 핸들러
     UFUNCTION()
     void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
 
@@ -142,11 +129,11 @@ protected:
     UFUNCTION()
     void HandleChargeStartEvent(const FGameplayEventData& Payload);
 
-    // 이벤트 핸들 등록/해제
+    //이벤트 핸들 등록/해제
     void BindEventCallbacks();
     void UnbindEventCallbacks();
 
-    // 몽타주 델리게이트 바인딩/해제
+    //몽타주 델리게이트 바인딩/해제
     void BindMontageCallbacks();
     void UnbindMontageCallbacks();
     

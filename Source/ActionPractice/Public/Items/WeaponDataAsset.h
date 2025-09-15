@@ -10,17 +10,6 @@
 
 class UAnimMontage;
 
-// FGameplayTagContainer를 TMap 키로 사용하기 위한 해시 함수
-FORCEINLINE uint32 GetTypeHash(const FGameplayTagContainer& TagContainer)
-{
-    uint32 Hash = 0;
-    for (const FGameplayTag& Tag : TagContainer)
-    {
-        Hash = HashCombine(Hash, GetTypeHash(Tag));
-    }
-    return Hash;
-}
-
 //개별 공격 데이터
 USTRUCT(BlueprintType)
 struct FIndividualAttackData
@@ -38,7 +27,7 @@ struct FIndividualAttackData
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     float StaminaCost = 10.0f;
-    // 필요에 따라 경직도, 사운드, 파티클 이펙트 등의 데이터를 여기에 추가할 수 있습니다.
+    //필요에 따라 경직도, 사운드, 파티클 이펙트 등의 데이터를 여기에 추가
 };
 
 //공격 유형 하나에 대한 정보
@@ -47,20 +36,20 @@ struct FAttackActionData
 {
     GENERATED_BODY()
     
-    // 콤보별 몽타주 배열
+    //콤보별 몽타주 배열
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     TArray<TSoftObjectPtr<UAnimMontage>> AttackMontages;
 
-    // 보조 몽타주 배열 - 추가 액션이 필요할 때만 사용 (차지 액션 등)
+    //보조 몽타주 배열 - 추가 액션이 필요할 때만 사용 (차지 액션 등)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
     TArray<TSoftObjectPtr<UAnimMontage>> SubAttackMontages;
     
-    // 콤보별 공격 데이터 (AttackMontages와 배열 크기가 같아야 함)
+    //콤보별 공격 데이터 (AttackMontages와 배열 크기가 같아야 함)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     TArray<FIndividualAttackData> ComboAttackData;
 };
 
-// TMap 대신 사용할 구조체
+//TMap 대신 사용할 구조체
 USTRUCT(BlueprintType)
 struct FTaggedAttackData
 {
@@ -87,7 +76,7 @@ struct FBlockActionData
 
     //방어 데미지 감소량
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block", meta = (ClampMin = "0.0", ClampMax = "100.0"))
-    float DamageReduction;
+    float DamageReduction = 50.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block")
     float StaminaCost = 10.0f;
@@ -108,15 +97,14 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
     float BaseDamage = 100.0f;
 
-    // 근력 보정 (A, B, C, D, E 등급을 숫자로 표현: 80=A, 60=B, 40=C, 20=D, 0=E)
+    //근력 보정
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
-    float StrengthScaling;
+    float StrengthScaling = 60.0f;
     
-    // 기량 보정
+    //기량 보정
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = "0.0", ClampMax = "100.0"))
-    float DexterityScaling;
+    float DexterityScaling = 60.0f;
     
-    //GameplayTagContainer를 Key로 사용하여 각 공격 타입에 맞는 데이터를 쉽게 찾을 수 있습니다.
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack Definitions")
     TArray<FTaggedAttackData> AttackDataArray;
 
@@ -127,7 +115,6 @@ public:
     {
         TArray<FSoftObjectPath> AssetsToLoad;
         
-        // 모든 몽타주 경로 수집
         for (FTaggedAttackData& TaggedData : AttackDataArray)
         {
             FAttackActionData& AttackData = TaggedData.AttackData;
@@ -159,13 +146,13 @@ public:
             AssetsToLoad.Add(BlockData.BlockReactionMontage.ToSoftObjectPath());
         }
         
-        // Asset Manager를 통한 로딩
+        //Asset Manager를 통한 로딩
         if (AssetsToLoad.Num() > 0 && UAssetManager::IsInitialized())
         {
             UAssetManager& AssetManager = UAssetManager::Get();
             FStreamableManager& StreamableManager = AssetManager.GetStreamableManager();
             
-            // 동기 로딩 (즉시 사용 필요)
+            //동기 로딩
             for (const FSoftObjectPath& AssetPath : AssetsToLoad)
             {
                 StreamableManager.LoadSynchronous(AssetPath);

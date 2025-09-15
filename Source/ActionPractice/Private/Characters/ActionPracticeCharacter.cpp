@@ -377,32 +377,31 @@ void AActionPracticeCharacter::ToggleLockOn()
 {
 	if (bIsLockOn)
 	{
-		// 락온 해제
 		bIsLockOn = false;
 		LockedOnTarget = nullptr;
         
-		// Spring Arm 설정 복원
+		//Spring Arm 설정 복원
 		if (CameraBoom)
 		{
-			//CameraBoom->bUsePawnControlRotation = true;
+			CameraBoom->TargetArmLength = 400.0f;
+			CameraBoom->SocketOffset = FVector::ZeroVector;
+			CameraBoom->bUsePawnControlRotation = true;
 		}
+        
+		DEBUG_LOG(TEXT("Lock-On Released"));
 	}
 	else
 	{
-		// 가장 가까운 적 찾기
 		AActor* NearestTarget = FindNearestTarget();
 		if (NearestTarget)
 		{
 			bIsLockOn = true;
 			LockedOnTarget = NearestTarget;
-            
-			// 현재 Spring Arm 설정 저장
-			if (CameraBoom)
-			{                
-				// 락온 시 카메라 설정 (필요시 조정 가능)
-				// CameraBoom->TargetArmLength = 500.0f; // 원하는 거리로 조정
-				// CameraBoom->SocketOffset = FVector(0.0f, 0.0f, 100.0f); // 원하는 높이로 조정
-			}
+			DEBUG_LOG(TEXT("Lock-On Target: %s"), *NearestTarget->GetName());
+		}
+		else
+		{
+			DEBUG_LOG(TEXT("No valid target found for Lock-On"));
 		}
 	}
 }
@@ -418,7 +417,7 @@ AActor* AActionPracticeCharacter::FindNearestTarget()
 	for (AActor* PotentialTarget : FoundTargets)
 	{
 		float Distance = FVector::Dist(GetActorLocation(), PotentialTarget->GetActorLocation());
-		if (Distance < NearestDistance && Distance < 2000.0f) // 20미터 이내
+		if (Distance < NearestDistance && Distance < 2000.0f)
 		{
 			NearestDistance = Distance;
 			NearestTarget = PotentialTarget;
@@ -430,33 +429,58 @@ AActor* AActionPracticeCharacter::FindNearestTarget()
 
 void AActionPracticeCharacter::UpdateLockOnCamera()
 {
-	if (bIsLockOn && LockedOnTarget && Controller && CameraBoom)
-	{
-		// 타겟과 캐릭터 위치
-		const FVector TargetLocation = LockedOnTarget->GetActorLocation();
-		const FVector CharacterLocation = GetActorLocation();
+    if (bIsLockOn && LockedOnTarget && Controller && CameraBoom)
+    {
+        const FVector TargetLocation = LockedOnTarget->GetActorLocation();
+        const FVector CharacterLocation = GetActorLocation();
         
-		// 캐릭터에서 타겟으로의 방향
-		FVector DirectionToTarget = TargetLocation - CharacterLocation;
-		DirectionToTarget.Normalize();
+        FVector DirectionToTarget = (TargetLocation - CharacterLocation).GetSafeNormal();
         
-		// 카메라가 타겟과 캐릭터를 모두 볼 수 있는 각도 계산
-		// 캐릭터 뒤에서 타겟을 바라보는 위치
-		FVector CameraDirection = -DirectionToTarget;
+        //카메라 오프셋 설정
+        const float CameraHorizontalOffset = 0.0f; //우측 오프셋
+        const float CameraVerticalOffset = 100.0f; //추가 높이
+        const float CameraBackOffset = 150.0f; //뒤로 물러나는 거리
         
-		// 현재 Spring Arm의 길이를 사용하여 카메라 위치 계산
-		FVector IdealCameraLocation = CharacterLocation + (CameraDirection * CameraBoom->TargetArmLength);
-		IdealCameraLocation.Z += CameraBoom->SocketOffset.Z;
+        FVector RightVector = FVector::CrossProduct(FVector::UpVector, DirectionToTarget);
+        RightVector.Normalize();
         
-		// 카메라가 타겟을 바라보도록 회전 설정
-		FRotator LookAtRotation = (TargetLocation - IdealCameraLocation).Rotation();
+        //카메라 기본 위치 계산
+        FVector MidPoint = CharacterLocation + (DirectionToTarget * FVector::Dist(CharacterLocation, TargetLocation) * 0.3f);
+    	
+        FVector CameraOffset = (-DirectionToTarget * CameraBackOffset) + 
+                              (RightVector * CameraHorizontalOffset) + 
+                              (FVector::UpVector * CameraVerticalOffset);
+    	
+        CameraBoom->TargetArmLength = 450.0f;
+        CameraBoom->SocketOffset = FVector(0.0f, CameraHorizontalOffset, CameraVerticalOffset);
         
-		// 컨트롤러 회전 설정
-		Controller->SetControlRotation(LookAtRotation);
+
+        FVector AdjustedTargetLocation = TargetLocation;
+        AdjustedTargetLocation.Z += 50.0f;
+  
+        FVector LookAtPoint = (CharacterLocation + AdjustedTargetLocation) * 0.5f;
+        LookAtPoint.Z = FMath::Max(CharacterLocation.Z, TargetLocation.Z) + 30.0f;
+    	
+        FRotator LookAtRotation = (LookAtPoint - CharacterLocation).Rotation();
+    	
+        LookAtRotation.Pitch = FMath::Clamp(LookAtRotation.Pitch, -25.0f, 15.0f);
         
-		// Spring Arm이 캐릭터 회전을 따르지 않도록 설정
-		//CameraBoom->bInheritRoll = false;
-	}
+        //부드러운 카메라
+        FRotator CurrentRotation = Controller->GetControlRotation();
+        FRotator SmoothedRotation = FMath::RInterpTo(CurrentRotation, LookAtRotation, 
+                                                     GetWorld()->GetDeltaSeconds(), 5.0f);
+    	
+        Controller->SetControlRotation(SmoothedRotation);
+
+        CameraBoom->bUsePawnControlRotation = true;
+        CameraBoom->bInheritPitch = true;
+        CameraBoom->bInheritYaw = true;
+        CameraBoom->bInheritRoll = false;
+
+        CameraBoom->bDoCollisionTest = true;
+        CameraBoom->ProbeSize = 12.0f;
+        CameraBoom->ProbeChannel = ECollisionChannel::ECC_Camera;
+    }
 }
 #pragma endregion
 
@@ -673,7 +697,7 @@ void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
 	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
 	if (InputBufferComponent->bCanBufferInput)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Character: Buffer"));
+		DEBUG_LOG(TEXT("Character: Buffer"));
 		InputBufferComponent->BufferNextAction(InputAction);
 	}
 
@@ -706,7 +730,7 @@ void AActionPracticeCharacter::GASInputReleased(const UInputAction* InputAction)
 	//다른 어빌리티가 수행중이고 입력 저장 가능할 때는 버퍼로 전달, Ability->InputPressed는 버퍼 이외의 구간에서만 사용
 	if (InputBufferComponent->bCanBufferInput)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Character: UnBuffer"));
+		DEBUG_LOG(TEXT("Character: UnBuffer"));
 		InputBufferComponent->UnBufferHoldAction(InputAction);
 	}
 	

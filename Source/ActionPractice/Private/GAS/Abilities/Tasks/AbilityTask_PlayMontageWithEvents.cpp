@@ -18,10 +18,7 @@
 UAbilityTask_PlayMontageWithEvents::UAbilityTask_PlayMontageWithEvents(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    Rate = 1.0f;
-    bStopMontageWhenAbilityCancelled = false;
-    bStopBroadCastMontageEvents = false;
-    MontageToPlay = nullptr;
+    
 }
 
 UAbilityTask_PlayMontageWithEvents* UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
@@ -61,10 +58,7 @@ void UAbilityTask_PlayMontageWithEvents::Activate()
 
         if (AnimInstance != nullptr)
         {
-            // 이벤트 콜백 등록
-            BindEventCallbacks();
-            
-            // 몽타주 실행
+            BindEventCallbacks();            
             PlayMontage();
             bPlayedMontage = true;
         }
@@ -100,7 +94,6 @@ void UAbilityTask_PlayMontageWithEvents::PlayMontage()
     float PlayLength = AnimInstance->Montage_Play(MontageToPlay, Rate);
     DEBUG_LOG(TEXT("Montage Play Result: %f, Montage Name: %s"), PlayLength, MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
 
-    // 몽타주 델리게이트 바인딩
     BindMontageCallbacks();
 
     ACharacter* Character = Cast<ACharacter>(GetAvatarActor());
@@ -131,7 +124,7 @@ void UAbilityTask_PlayMontageWithEvents::ChangeMontageAndPlay(UAnimMontage* NewM
     
     if (PlayLength > 0.0f)
     {
-        // 새 콜백 바인딩
+        //새 콜백 바인딩
         BindMontageCallbacks();
         bStopBroadCastMontageEvents = false;
     }
@@ -323,12 +316,10 @@ void UAbilityTask_PlayMontageWithEvents::BindMontageCallbacks()
         return;
     }
 
-    // 블렌드 아웃 델리게이트 바인딩
     BlendingOutDelegate = FOnMontageBlendingOutStarted::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageBlendingOut);
     AnimInstance->Montage_SetBlendingOutDelegate(BlendingOutDelegate, MontageToPlay);
     DEBUG_LOG(TEXT("BlendingOutDelegate Bound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
 
-    // 몽타주 종료 델리게이트 바인딩
     MontageEndedDelegate = FOnMontageEnded::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageEnded);
     AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
     DEBUG_LOG(TEXT("MontageEndedDelegate Bound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
@@ -368,21 +359,19 @@ void UAbilityTask_PlayMontageWithEvents::OnDestroy(bool AbilityEnded)
 {
     DEBUG_LOG(TEXT("Montage With Events Task Destroyed"));
 
-    // 몽타주 정지
     if (bStopMontageWhenAbilityCancelled)
     {
         StopPlayingMontage();
     }
     
-    // 이벤트 콜백 해제
+    //이벤트 콜백 해제
     UnbindEventCallbacks();
     
-    // 몽타주 델리게이트 해제
+    //몽타주 델리게이트 해제
     UnbindMontageCallbacks();
     
     bStopMontageWhenAbilityCancelled = false;
     
-    // 포인터 정리
     MontageToPlay = nullptr;
 
     Super::OnDestroy(AbilityEnded);
