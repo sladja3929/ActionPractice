@@ -20,7 +20,7 @@ struct FHitValidationData
     GENERATED_BODY()
     
     UPROPERTY()
-    AActor* HitActor = nullptr;
+    TObjectPtr<AActor> HitActor = nullptr;
     
     UPROPERTY()
     float LastHitTime = 0.0f;

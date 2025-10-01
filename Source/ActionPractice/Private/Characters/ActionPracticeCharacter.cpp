@@ -16,7 +16,8 @@
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Input/InputBufferComponent.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "Blueprint/UserWidget.h"
+#include "UI/PlayerStatsWidget.h"
 #include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponAttackTraceComponent.h"
@@ -83,11 +84,42 @@ void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Initialize GAS
 	InitializeAbilitySystem();
 
 	EquipWeapon(LoadWeaponClassByName("BP_StraightSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
+
+	if (PlayerStatsWidgetClass)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (PC)
+		{
+			PlayerStatsWidget = CreateWidget<UPlayerStatsWidget>(PC, PlayerStatsWidgetClass);
+			if (PlayerStatsWidget)
+			{
+				PlayerStatsWidget->AddToViewport();
+				
+				//AttributeSet 연결
+				if (AttributeSet)
+				{
+					PlayerStatsWidget->SetAttributeSet(AttributeSet);
+					DEBUG_LOG(TEXT("PlayerStatsWidget created and AttributeSet connected"));
+				}
+				else
+				{
+					DEBUG_LOG(TEXT("AttributeSet is nullptr!"));
+				}
+			}
+		}
+		else
+		{
+			DEBUG_LOG(TEXT("PlayerController is nullptr!"));
+		}
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("PlayerStatsWidgetClass is not set!"));
+	}
 }
 
 void AActionPracticeCharacter::Tick(float DeltaSeconds)
@@ -552,12 +584,12 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 
 void AActionPracticeCharacter::UnequipWeapon(bool bIsLeftHand)
 {
-	AWeapon** WeaponToRemove = bIsLeftHand ? &LeftWeapon : &RightWeapon;
-    
-	if (*WeaponToRemove)
+	TObjectPtr<AWeapon>& WeaponToRemove = bIsLeftHand ? LeftWeapon : RightWeapon;
+
+	if (WeaponToRemove)
 	{
-		(*WeaponToRemove)->Destroy();
-		*WeaponToRemove = nullptr;
+		WeaponToRemove->Destroy();
+		WeaponToRemove = nullptr;
 	}
 }
 

@@ -20,6 +20,7 @@ class UActionPracticeAttributeSet;
 class UGameplayAbility;
 class UInputBufferComponent;
 class AWeapon;
+class UPlayerStatsWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
@@ -27,27 +28,6 @@ UCLASS(abstract)
 class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
-
-protected:
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom = nullptr;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera = nullptr;
-
-	/** Ability System Component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
-
-	/** Attribute Set */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UActionPracticeAttributeSet* AttributeSet = nullptr;
-
-	/** Input Buffer Component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
-	UInputBufferComponent* InputBufferComponent = nullptr;
 
 public:
 #pragma region "Public Variables"
@@ -130,40 +110,83 @@ public:
 
 protected:
 #pragma region "Protected Variables"
+	/** Camera boom positioning the camera behind the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> CameraBoom = nullptr;
+
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> FollowCamera = nullptr;
+
+	/** Ability System Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent = nullptr;
+
+	/** Attribute Set */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UActionPracticeAttributeSet> AttributeSet = nullptr;
+
+	/** Input Buffer Component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputBufferComponent> InputBufferComponent = nullptr;
+
+	// ===== Stats UI Properties =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UPlayerStatsWidget> PlayerStatsWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UPlayerStatsWidget> PlayerStatsWidget;
+
+	// ===== Weapon Properties =====
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AWeapon> WeaponClass = nullptr;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<AWeapon> LeftWeapon = nullptr;
+    
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<AWeapon> RightWeapon = nullptr;
+
+	// ===== GAS Properties =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
+		
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
 	
 	// ====== Input Actions ======
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Jump = nullptr;
+	TObjectPtr<UInputAction> IA_Jump = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Move = nullptr;
+	TObjectPtr<UInputAction> IA_Move = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Look = nullptr;
+	TObjectPtr<UInputAction> IA_Look = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_LockOn = nullptr;
+	TObjectPtr<UInputAction> IA_LockOn = nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Sprint = nullptr;
+	TObjectPtr<UInputAction> IA_Sprint = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Crouch = nullptr;
+	TObjectPtr<UInputAction> IA_Crouch = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Roll = nullptr;
+	TObjectPtr<UInputAction> IA_Roll = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Attack = nullptr;
+	TObjectPtr<UInputAction> IA_Attack = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Block = nullptr;
+	TObjectPtr<UInputAction> IA_Block = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_WeaponSwitch = nullptr;
+	TObjectPtr<UInputAction> IA_WeaponSwitch = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_ChargeAttack = nullptr;
+	TObjectPtr<UInputAction> IA_ChargeAttack = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
@@ -177,24 +200,7 @@ protected:
 
 	// ===== LockOn =====
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	AActor* LockedOnTarget = nullptr;
-	
-	// ===== Weapon Properties =====
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AWeapon> WeaponClass = nullptr;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	AWeapon* LeftWeapon = nullptr;
-    
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	AWeapon* RightWeapon = nullptr;
-
-	// ===== GAS Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
-		
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
+	TObjectPtr<AActor> LockedOnTarget = nullptr;
 	
 #pragma endregion
 

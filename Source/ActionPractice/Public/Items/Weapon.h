@@ -61,13 +61,13 @@ protected:
 #pragma region "Protected Variables"
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UStaticMeshComponent* WeaponMesh;
+	TObjectPtr<UStaticMeshComponent> WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UWeaponAttackTraceComponent* AttackTraceComponent;
+	TObjectPtr<UWeaponAttackTraceComponent> AttackTraceComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UWeaponCCDComponent* CCDComponent;
+	TObjectPtr<UWeaponCCDComponent> CCDComponent;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon Stats")
 	FString WeaponName;
@@ -81,8 +81,6 @@ protected:
 	
 	UFUNCTION()
 	void HandleWeaponHit(AActor* HitActor, const FHitResult& HitResult, EAttackDamageType DamageType, float DamageMultiplier);
-	
-#pragma endregion
 	
 #pragma endregion
 

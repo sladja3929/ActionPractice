@@ -29,7 +29,7 @@ protected:
 	const FAttackActionData* WeaponAttackData = nullptr;
 
 	UPROPERTY()
-	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask = nullptr;
+	TObjectPtr<UAbilityTask_PlayMontageWithEvents> PlayMontageWithEventsTask = nullptr;
 
 	UPROPERTY()
 	int32 ComboCounter = 0;

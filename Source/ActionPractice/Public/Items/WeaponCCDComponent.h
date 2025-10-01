@@ -19,7 +19,7 @@ struct FHitRecord
     GENERATED_BODY()
     
     UPROPERTY()
-    AActor* HitActor = nullptr;
+    TObjectPtr<AActor> HitActor = nullptr;
     
     UPROPERTY()
     float HitTime = 0.0f;
