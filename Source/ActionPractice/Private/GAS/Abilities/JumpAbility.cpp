@@ -1,9 +1,10 @@
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogJumpAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogJumpAbility, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 #include "GAS/Abilities/JumpAbility.h"
@@ -53,7 +54,7 @@ void UJumpAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	}
 
 	// 스태미나 소모
-	if (!ConsumeStamina())
+	if (!ApplyStaminaCost())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;

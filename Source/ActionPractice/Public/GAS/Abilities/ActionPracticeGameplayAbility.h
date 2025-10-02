@@ -11,25 +11,14 @@ class ACTIONPRACTICE_API UActionPracticeGameplayAbility : public UGameplayAbilit
 	GENERATED_BODY()
 
 public:
-	UActionPracticeGameplayAbility();
-
-protected:
-	// 기본 클래스의 태그들을 사용하므로 여기서는 제거
-
-	// 스태미나 비용
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
-	float StaminaCost = 0.0f;
-
-	// 쿨다운 시간
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
-	float CooldownDuration = 0.0f;
-
-	// 어빌리티 레벨
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
-	int32 AbilityLevel = 1;
+#pragma region "Public Variables"
 	
-public:
-	// 어빌리티 초기화
+#pragma endregion
+
+#pragma region "Public Functions"
+	
+	UActionPracticeGameplayAbility();
+	
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 
 	// 어빌리티 활성화 가능 여부 확인 (이 함수에서 호출하는 함수는 무조건 파라미터 ActorInfo를 넘겨받아 사용해야 함, Instance Policing에 따라 에러날 수 있음)
@@ -39,25 +28,42 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	virtual bool CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const;
 
-	// 스태미나 소모
 	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool ConsumeStamina();
-
-	// 어빌리티 활성화
+	virtual bool ApplyStaminaCost();
+	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-
-	// 어빌리티 종료
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+#pragma endregion
+	
 protected:
-	// 캐릭터 레퍼런스 가져오기
+#pragma region "Protected Variables"
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
+	float StaminaCost = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
+	float CooldownDuration = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
+	int32 AbilityLevel = 1;
+
+	//스테미나 사용 관련
+	UPROPERTY(EditDefaultsOnly, Category="Cost")
+	TSubclassOf<class UGameplayEffect> StaminaCostEffect;
+	
+	FGameplayTag EffectStaminaCostTag;
+	
+#pragma endregion
+	
+#pragma region "Protected Functions"
+	
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	class AActionPracticeCharacter* GetActionPracticeCharacterFromActorInfo() const;
 
 	//멤버변수 Actor Info 활성화 전 사용 (CanActivateAbility 등)
 	class AActionPracticeCharacter* GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const;
 	
-	// AttributeSet 레퍼런스 가져오기
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	class UActionPracticeAttributeSet* GetActionPracticeAttributeSetFromActorInfo() const;
 
@@ -66,4 +72,6 @@ protected:
 
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	class UInputBufferComponent* GetInputBufferComponentFromActorInfo() const;
+	
+#pragma endregion
 };

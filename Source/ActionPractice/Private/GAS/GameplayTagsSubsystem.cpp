@@ -37,9 +37,7 @@ UGameplayTagsSubsystem* UGameplayTagsSubsystem::Get()
 	return nullptr;
 }
 
-#pragma region "Static Accessor Functions"
-
-// Ability Tags
+#pragma region "Static Ability Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -129,8 +127,9 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTag()
 	}
 	return FGameplayTag::EmptyTag;
 }
+#pragma endregion
 
-// State Tags
+#pragma region "Static State Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityAttackingTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -212,7 +211,17 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTag()
 	return FGameplayTag::EmptyTag;
 }
 
-// Event Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetStateStaminaRegenBlockTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+#pragma endregion
+
+#pragma region "Static Event Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -284,8 +293,9 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTag()
 	}
 	return FGameplayTag::EmptyTag;
 }
+#pragma endregion
 
-// Effect Tags
+#pragma region "Static Effect Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -295,11 +305,35 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectJustRolledDurationTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectJustRolledDurationTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaCostTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectStaminaCostTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaRegenBlockDurationTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectStaminaRegenBlockDurationTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
 #pragma endregion
 
-#pragma region "Internal Tag Functions"
-
-// Ability Tags
+#pragma region "Internal Ability Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetAbilityAttackTagInternal() const
 {
 	if (GameplayTagsDataAsset)
@@ -389,8 +423,9 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTagInternal() const
 	}
 	return FGameplayTag::EmptyTag;
 }
+#pragma endregion
 
-// State Tags
+#pragma region "Internal State Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetStateAbilityAttackingTagInternal() const
 {
 	if (GameplayTagsDataAsset)
@@ -472,7 +507,17 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTagInternal() cons
 	return FGameplayTag::EmptyTag;
 }
 
-// Event Tags
+const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->State_StaminaRegenBlock;
+	}
+	return FGameplayTag::EmptyTag;
+}
+#pragma endregion
+
+#pragma region "Internal Event Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTagInternal() const
 {
 	if (GameplayTagsDataAsset)
@@ -544,13 +589,41 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventActionPlayBufferTagInternal(
 	}
 	return FGameplayTag::EmptyTag;
 }
+#pragma endregion
 
-// Effect Tags
+#pragma region "Internal Effect Tags"
 const FGameplayTag& UGameplayTagsSubsystem::GetEffectInvincibilityDurationTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Effect_Invincibility_Duration;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectJustRolledDurationTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_JustRolled_Duration;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaCostTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Stamina_Cost;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaRegenBlockDurationTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Stamina_RegenBlockDuration;
 	}
 	return FGameplayTag::EmptyTag;
 }

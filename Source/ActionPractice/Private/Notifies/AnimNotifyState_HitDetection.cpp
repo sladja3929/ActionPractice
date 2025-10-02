@@ -10,12 +10,11 @@
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponTrace, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogAnimNotifyState_HitDetection, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogAnimNotifyState_HitDetection, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
-
-DEFINE_LOG_CATEGORY_STATIC(LogWeaponTrace, Log, All);
 
 UAnimNotifyState_HitDetection::UAnimNotifyState_HitDetection()
 {

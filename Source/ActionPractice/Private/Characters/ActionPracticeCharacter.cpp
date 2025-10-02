@@ -28,7 +28,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogActionPracticeCharacter, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogActionPracticeCharacter, Warning, Format, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(Format, ...)
 #endif

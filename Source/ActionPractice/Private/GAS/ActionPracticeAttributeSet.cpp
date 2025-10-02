@@ -40,7 +40,6 @@ void UActionPracticeAttributeSet::PreAttributeChange(const FGameplayAttribute& A
 {
 	Super::PreAttributeChange(Attribute, NewValue);
 
-	// Clamp values to prevent negative or invalid values
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 1.0f);
@@ -87,10 +86,10 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 	UAbilitySystemComponent* Source = Context.GetOriginalInstigatorAbilitySystemComponent();
 	const FGameplayTagContainer& SourceTags = *Data.EffectSpec.CapturedSourceTags.GetAggregatedTags();
 
-	// Get the Target actor, which should be our owner
 	AActor* TargetActor = nullptr;
 	AController* TargetController = nullptr;
 	ACharacter* TargetCharacter = nullptr;
+	
 	if (Data.Target.AbilityActorInfo.IsValid() && Data.Target.AbilityActorInfo->AvatarActor.IsValid())
 	{
 		TargetActor = Data.Target.AbilityActorInfo->AvatarActor.Get();
@@ -98,10 +97,10 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 		TargetCharacter = Cast<ACharacter>(TargetActor);
 	}
 
-	// Handle incoming damage
+	//피격 대미지 처리
 	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
 	{
-		// Get the Source actor
+		//소스 액터
 		AActor* SourceActor = nullptr;
 		AController* SourceController = nullptr;
 		if (Source && Source->AbilityActorInfo.IsValid() && Source->AbilityActorInfo->AvatarActor.IsValid())

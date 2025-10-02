@@ -17,15 +17,10 @@ class ACTIONPRACTICE_API UActionPracticeAttributeSet : public UAttributeSet
 	GENERATED_BODY()
 
 public:
-	UActionPracticeAttributeSet();
+#pragma region "Public Variables"
+	// ===== Standard Attributes =====
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
-	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
-
-	// ===== Primary Attributes (엘든링 스타일) =====
-	
-	// Health (체력) - HP
+	//HP
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Health)
@@ -34,7 +29,7 @@ public:
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, MaxHealth)
 
-	// Stamina (스태미나) - FP
+	//Stamina
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_Stamina)
 	FGameplayAttributeData Stamina;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Stamina)
@@ -43,28 +38,27 @@ public:
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, MaxStamina)
 
-	// Stamina Regeneration (스태미나 리젠)
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_StaminaRegenRate)
 	FGameplayAttributeData StaminaRegenRate;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, StaminaRegenRate)
 
-	// Defense (방어력)
+	//Defense
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_Defense)
 	FGameplayAttributeData Defense;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Defense)
 
-	// Strength (근력) - 무거운 무기, 방패에 영향
+	//Strength 근력
 	UPROPERTY(BlueprintReadOnly, Category = "Stats", ReplicatedUsing = OnRep_Strength)
 	FGameplayAttributeData Strength;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Strength)
 
-	// Dexterity (기량) - 빠른 무기, 활에 영향
+	//Dexterity 기력
 	UPROPERTY(BlueprintReadOnly, Category = "Stats", ReplicatedUsing = OnRep_Dexterity)
 	FGameplayAttributeData Dexterity;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Dexterity)
 
 	// ===== Secondary Attributes (계산된 능력치) =====
-	
+
 	// Physical Attack Power (물리 공격력)
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_PhysicalAttackPower)
 	FGameplayAttributeData PhysicalAttackPower;
@@ -76,19 +70,39 @@ public:
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, MovementSpeed)
 
 	// ===== Meta Attributes (계산용, 복제되지 않음) =====
-	
-	// Incoming Damage
+
+	//Incoming Damage
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, IncomingDamage)
 
-	// Incoming Healing
+	//Incoming Healing
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingHealing;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, IncomingHealing)
+#pragma endregion
+
+#pragma region "Public Functions"
+	UActionPracticeAttributeSet();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+
+	// Helper functions for calculations
+	UFUNCTION(BlueprintPure, Category = "Attributes")
+	float GetHealthPercent() const;
+
+	UFUNCTION(BlueprintPure, Category = "Attributes")
+	float GetStaminaPercent() const;
+
+	// Calculate weapon damage bonus based on stats
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	float CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const;
+#pragma endregion
 
 protected:
-	// Rep notifies
+#pragma region "Protected Functions"
 	UFUNCTION()
 	virtual void OnRep_Health(const FGameplayAttributeData& OldHealth);
 
@@ -124,16 +138,5 @@ protected:
 
 	// Calculate secondary attributes from primary stats
 	void CalculateSecondaryAttributes();
-
-public:
-	// Helper functions for calculations
-	UFUNCTION(BlueprintPure, Category = "Attributes")
-	float GetHealthPercent() const;
-
-	UFUNCTION(BlueprintPure, Category = "Attributes")
-	float GetStaminaPercent() const;
-
-	// Calculate weapon damage bonus based on stats
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	float CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const;
+#pragma endregion
 };

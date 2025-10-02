@@ -14,9 +14,10 @@
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogRollAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogRollAbility, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 URollAbility::URollAbility()
@@ -97,18 +98,20 @@ void URollAbility::ApplyInvincibilityEffect()
 
 	// 무적 이펙트 적용
 	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(InvincibilityEffect, 1.0f, EffectContext);
-
-	if (EffectSpec.IsValid())
-	{
-		EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag(), InvincibilityDuration);
-		InvincibilityEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-		DEBUG_LOG(TEXT("Invincibility Effect Applied with Duration: %f"), InvincibilityDuration)
-	}
-	else
+	EffectContext.AddSourceObject(this);
+	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(InvincibilityEffect, EffectiveLevel, EffectContext);
+	
+	if (!EffectSpec.IsValid())
 	{
 		DEBUG_LOG(TEXT("Failed to create Invincibility Effect Spec"));
+		return;
 	}
+
+	EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag(), InvincibilityDuration);
+	InvincibilityEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+	
+	DEBUG_LOG(TEXT("Invincibility Effect Applied with Duration: %f"), InvincibilityDuration)
 }
 
 void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
@@ -139,12 +142,12 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 			{
 				FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 				EffectContext.AddSourceObject(this);
-
-				FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, 1.f, EffectContext);
+				const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+				FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, EffectiveLevel, EffectContext);
+				
 				if (EffectSpec.IsValid())
 				{
-					// Has Duration 효과일 때만 의미. 에셋 Duration을 코드로 오버라이드
-					EffectSpec.Data->SetDuration(JustRolledWindowDuration, true);
+					EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectJustRolledDurationTag(), JustRolledWindowDuration);
 					ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
 					DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
 				}

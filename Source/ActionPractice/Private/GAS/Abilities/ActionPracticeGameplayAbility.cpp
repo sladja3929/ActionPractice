@@ -3,21 +3,33 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "GAS/GameplayTagsSubsystem.h"
+
+#define ENABLE_DEBUG_LOG 1
+
+#if ENABLE_DEBUG_LOG
+	DEFINE_LOG_CATEGORY_STATIC(LogActionPracticeGameplayAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogActionPracticeGameplayAbility, Warning, Format, ##__VA_ARGS__)
+#else
+#define DEBUG_LOG(Format, ...)
+#endif
 
 UActionPracticeGameplayAbility::UActionPracticeGameplayAbility()
 {
 	// 기본 설정
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-	
-	// 기본 태그 설정은 상속 클래스에서 직접 처리
 }
 
 void UActionPracticeGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
 
-	// 어빌리티가 부여될 때의 추가 설정이 필요하면 여기에 구현
+	EffectStaminaCostTag = UGameplayTagsSubsystem::GetEffectStaminaCostTag();
+	if (!EffectStaminaCostTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EffectStaminaCostTag is Invalid"));
+	}
 }
 
 bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
@@ -27,54 +39,12 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 		return false;
 	}
 	
-	// 스태미나 체크
 	if (!CheckStaminaCost(*ActorInfo))
 	{
 		return false;
 	}
 
 	return true;
-}
-
-bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
-{
-	if (StaminaCost <= 0.0f)
-	{
-		return true;
-	}
-	
-	if (UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo(&ActorInfo))
-	{
-		return AttributeSet->GetStamina() >= StaminaCost;
-	}
-
-	return false;
-}
-
-bool UActionPracticeGameplayAbility::ConsumeStamina()
-{
-	if (StaminaCost <= 0.0f)
-	{
-		return true;
-	}
-
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo();
-
-	if (ASC && AttributeSet)
-	{
-		// 스태미나 소모 GameplayEffect를 적용
-		// 여기서는 직접 속성을 수정하는 방식을 사용
-		const float CurrentStamina = AttributeSet->GetStamina();
-		const float NewStamina = FMath::Max(0.0f, CurrentStamina - StaminaCost);
-		
-		// 속성 직접 설정 (실제 프로젝트에서는 GameplayEffect 사용 권장)
-		const_cast<UActionPracticeAttributeSet*>(AttributeSet)->SetStamina(NewStamina);
-		
-		return true;
-	}
-
-	return false;
 }
 
 void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -85,8 +55,7 @@ void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	// 스태미나 소모
-	if (!ConsumeStamina())
+	if (!ApplyStaminaCost())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -98,6 +67,56 @@ void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 void UActionPracticeGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
+{
+	if (StaminaCost <= 0.0f)
+	{
+		return true;
+	}
+	
+	if (UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo(&ActorInfo))
+	{
+		return AttributeSet->GetStamina() > 0;
+	}
+
+	return false;
+}
+
+bool UActionPracticeGameplayAbility::ApplyStaminaCost()
+{
+	if (StaminaCost <= 0.0f)
+	{
+		return true;
+	}
+
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC || !StaminaCostEffect)
+	{
+		DEBUG_LOG(TEXT("No ASC or StaminaCostEffect"));
+		return false;
+	}
+	
+	// EffectSpec 생성
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(StaminaCostEffect, EffectiveLevel, EffectContext);
+	
+	if (!EffectSpec.IsValid())
+	{
+		DEBUG_LOG(TEXT("Failed StaminaCost GameplayEffectSpec"));
+		return false;
+	}
+
+	EffectSpec.Data.Get()->SetSetByCallerMagnitude(EffectStaminaCostTag, -StaminaCost);
+	const FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+	const bool bApplied = Handle.IsValid();
+	
+	DEBUG_LOG(TEXT("ApplyStaminaCost applied=%s, Cost=%.2f"), bApplied ? TEXT("true") : TEXT("false"), StaminaCost);
+
+	return true;
 }
 
 AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo() const

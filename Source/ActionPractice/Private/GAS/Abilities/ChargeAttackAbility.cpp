@@ -16,9 +16,10 @@
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogChargeAttackAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogChargeAttackAbility, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 UChargeAttackAbility::UChargeAttackAbility()

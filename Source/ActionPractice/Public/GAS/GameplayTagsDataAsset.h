@@ -75,6 +75,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
 	FGameplayTag State_Invincible;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
+	FGameplayTag State_StaminaRegenBlock;
 	
 #pragma endregion
 
@@ -110,5 +113,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
 	FGameplayTag Effect_Invincibility_Duration;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_JustRolled_Duration;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_Stamina_Cost;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_Stamina_RegenBlockDuration;
 #pragma endregion
 };
