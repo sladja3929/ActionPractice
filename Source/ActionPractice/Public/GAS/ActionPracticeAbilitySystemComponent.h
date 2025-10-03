@@ -14,6 +14,13 @@ class ACTIONPRACTICE_API UActionPracticeAbilitySystemComponent : public UAbility
 
 public:
 #pragma region "Public Variables"
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stamina")
+	TSubclassOf<UGameplayEffect> StaminaRegenBlockEffect;
+	
+#pragma endregion
+
+#pragma region "Public Functions"
 	
 	UActionPracticeAbilitySystemComponent();
 
@@ -26,31 +33,31 @@ public:
 	// 초기화 완료 델리게이트(필요 시 외부에서 바인딩)
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnASCInitialized, UActionPracticeAbilitySystemComponent*);
 	FOnASCInitialized OnASCInitialized;
-#pragma endregion
 
-#pragma region "Public Functions"
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
-	bool bDebugLogEnabled = false;
+	UFUNCTION(BlueprintCallable, Category="Stamina")
+	void ApplyStaminaRegenBlock(float Duration);
 	
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables"
 	
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	TWeakObjectPtr<AActionPracticeCharacter> CachedCharacter;
+	FGameplayTag EffectStaminaRegenBlockDurationTag;
 	
 #pragma endregion
 
 #pragma region "Protected Functions"
 	
-	TWeakObjectPtr<AActionPracticeCharacter> CachedCharacter;
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 #pragma endregion
 
 private:
 #pragma region "Private Variables"
+
+	FActiveGameplayEffectHandle StaminaRegenBlockHandle;
 	
 #pragma endregion
 

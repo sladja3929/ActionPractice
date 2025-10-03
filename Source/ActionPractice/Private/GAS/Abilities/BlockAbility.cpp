@@ -26,9 +26,7 @@ UBlockAbility::UBlockAbility()
 	StaminaDamageReduction = 0.5f;
 	BlockAngle = 120.0f;
 	ParryWindow = 0.3f;
-
-	// 인스턴싱 정책: 지속적인 어빌리티이므로 액터별 인스턴스
-	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	StaminaRegenBlockDuration = 1.0f;
 }
 
 void UBlockAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

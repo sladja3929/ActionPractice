@@ -38,11 +38,12 @@ public:
 	static const FGameplayTag& GetStateRecoveringTag();
 	static const FGameplayTag& GetStateStunnedTag();
 	static const FGameplayTag& GetStateInvincibleTag();
-	static const FGameplayTag& GetStateStaminaRegenBlockTag();
+	static const FGameplayTag& GetStateStaminaRegenBlockedTag();
 #pragma endregion
 
 #pragma region "Static Event Tags"
 	static const FGameplayTag& GetEventNotifyEnableBufferInputTag();
+	static const FGameplayTag& GetEventNotifyActionRecoveryStartTag();
 	static const FGameplayTag& GetEventNotifyActionRecoveryEndTag();
 	static const FGameplayTag& GetEventNotifyResetComboTag();
 	static const FGameplayTag& GetEventNotifyChargeStartTag();
@@ -86,11 +87,12 @@ private:
 	const FGameplayTag& GetStateRecoveringTagInternal() const;
 	const FGameplayTag& GetStateStunnedTagInternal() const;
 	const FGameplayTag& GetStateInvincibleTagInternal() const;
-	const FGameplayTag& GetStateStaminaRegenBlockTagInternal() const;
+	const FGameplayTag& GetStateStaminaRegenBlockedTagInternal() const;
 #pragma endregion
 
 #pragma region "Internal Event Tags"
 	const FGameplayTag& GetEventNotifyEnableBufferInputTagInternal() const;
+	const FGameplayTag& GetEventNotifyActionRecoveryStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyActionRecoveryEndTagInternal() const;
 	const FGameplayTag& GetEventNotifyResetComboTagInternal() const;
 	const FGameplayTag& GetEventNotifyChargeStartTagInternal() const;

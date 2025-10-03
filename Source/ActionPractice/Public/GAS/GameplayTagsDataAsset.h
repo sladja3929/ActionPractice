@@ -77,7 +77,7 @@ public:
 	FGameplayTag State_Invincible;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "State Tags")
-	FGameplayTag State_StaminaRegenBlock;
+	FGameplayTag State_StaminaRegenBlocked;
 	
 #pragma endregion
 
@@ -86,6 +86,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Notify_EnableBufferInput;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Notify_ActionRecoveryStart;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Notify_ActionRecoveryEnd;
 

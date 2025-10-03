@@ -18,7 +18,10 @@ class ACTIONPRACTICE_API UActionPracticeAttributeSet : public UAttributeSet
 
 public:
 #pragma region "Public Variables"
-	// ===== Standard Attributes =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vital")
+	float StaminaDepletionDuration = 0.5f;
+	
+	// ===== Primary Attributes =====
 
 	//HP
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_Health)
@@ -57,7 +60,7 @@ public:
 	FGameplayAttributeData Dexterity;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Dexterity)
 
-	// ===== Secondary Attributes (계산된 능력치) =====
+	// ===== Secondary Attributes (Primary 기반 계산된 능력치) =====
 
 	// Physical Attack Power (물리 공격력)
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_PhysicalAttackPower)
@@ -69,7 +72,7 @@ public:
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, MovementSpeed)
 
-	// ===== Meta Attributes (계산용, 복제되지 않음) =====
+	// ===== Meta Attributes (복제되지 않는 순수 계산용) =====
 
 	//Incoming Damage
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
@@ -89,14 +92,13 @@ public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
-	// Helper functions for calculations
+	//Helper functions for calculations
 	UFUNCTION(BlueprintPure, Category = "Attributes")
 	float GetHealthPercent() const;
 
 	UFUNCTION(BlueprintPure, Category = "Attributes")
 	float GetStaminaPercent() const;
-
-	// Calculate weapon damage bonus based on stats
+	
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	float CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const;
 #pragma endregion
@@ -133,10 +135,10 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed);
 
-	// Helper function to adjust attributes when max value changes
+	//Helper function to adjust attributes when max value changes
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
-	// Calculate secondary attributes from primary stats
+	//Calculate secondary attributes from primary stats
 	void CalculateSecondaryAttributes();
 #pragma endregion
 };

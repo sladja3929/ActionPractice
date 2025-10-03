@@ -23,17 +23,19 @@ public:
 
 	// 어빌리티 활성화 가능 여부 확인 (이 함수에서 호출하는 함수는 무조건 파라미터 ActorInfo를 넘겨받아 사용해야 함, Instance Policing에 따라 에러날 수 있음)
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
-
-	// 스태미나 체크 (UFUNCTION은 원시 포인터 *를 인자로 못받기 때문에 참조 사용)
-	UFUNCTION(BlueprintPure, Category = "Ability")
-	virtual bool CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const;
-
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool ApplyStaminaCost();
-	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	// 스태미나 체크 (UFUNCTION은 원시 포인터 *를 인자로 못받기 때문에 참조 사용)
+	UFUNCTION(BlueprintPure, Category = "Stamina")
+	virtual bool CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Stamina")
+	virtual bool ApplyStaminaCost();
+
+	UFUNCTION(BlueprintCallable, Category = "Stamina")
+	virtual void SetStaminaCost(float StaminaCost, float StaminaRegenBlockDuration);
+	
 #pragma endregion
 	
 protected:
@@ -42,6 +44,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
 	float StaminaCost = 0.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
+	float StaminaRegenBlockDuration = 0.0f;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
 	float CooldownDuration = 0.0f;
 
@@ -57,6 +62,9 @@ protected:
 #pragma endregion
 	
 #pragma region "Protected Functions"
+	
+	UFUNCTION(BlueprintPure, Category = "Ability")
+	class UActionPracticeAbilitySystemComponent* GetActionPracticeAbilitySystemComponentFromActorInfo() const;
 	
 	UFUNCTION(BlueprintPure, Category = "Ability")
 	class AActionPracticeCharacter* GetActionPracticeCharacterFromActorInfo() const;

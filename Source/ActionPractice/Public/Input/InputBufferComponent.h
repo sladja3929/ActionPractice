@@ -34,18 +34,6 @@ public:
 
 	UFUNCTION()
 	void UnBufferHoldAction(const UInputAction* InputedAction);
-	
-	//어빌리티 몽타주 Start에서 직접 호출 (추후 노티파이 추가 가능)
-	UFUNCTION()
-	void OnActionRecoveryStart(const FGameplayEventData& EventData);
-	
-	//노티파이를 부착하거나, 어빌리티 몽타주 Start에서 직접 호출
-	UFUNCTION()
-	void OnEnableBufferInput(const FGameplayEventData& EventData);
-
-	//노티파이를 부착하거나, 어빌리티 몽타주 End에서 직접 호출
-	UFUNCTION()
-	void OnActionRecoveryEnd(const FGameplayEventData& EventData);
 
 	UFUNCTION()
 	bool IsBufferWaiting();
@@ -65,6 +53,7 @@ protected:
 	TSet<const UInputAction*> BufferedHoldAction;
 
 	FDelegateHandle EnableBufferInputHandle;
+	FDelegateHandle ActionRecoveryStartHandle;
 	FDelegateHandle ActionRecoveryEndHandle;
 	
 #pragma endregion
@@ -77,6 +66,18 @@ protected:
 	
 	UFUNCTION()
 	void ActivateBufferAction();
+
+	//어빌리티 몽타주 Start에서 이벤트 호출 (추후 노티파이 추가 가능)
+	UFUNCTION()
+	void OnActionRecoveryStart(const FGameplayEventData& EventData);
+	
+	//노티파이를 부착하거나, 어빌리티 몽타주 Start에서 이벤트 호출
+	UFUNCTION()
+	void OnEnableBufferInput(const FGameplayEventData& EventData);
+
+	//노티파이를 부착하거나, 어빌리티 몽타주 End에서 이벤트 호출
+	UFUNCTION()
+	void OnActionRecoveryEnd(const FGameplayEventData& EventData);
 	
 #pragma endregion
 

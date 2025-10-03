@@ -211,11 +211,11 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTag()
 	return FGameplayTag::EmptyTag;
 }
 
-const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockTag()
+const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockedTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
-		return Subsystem->GetStateStaminaRegenBlockTagInternal();
+		return Subsystem->GetStateStaminaRegenBlockedTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -227,6 +227,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag()
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
 		return Subsystem->GetEventNotifyEnableBufferInputTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventNotifyActionRecoveryStartTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -507,11 +516,11 @@ const FGameplayTag& UGameplayTagsSubsystem::GetStateInvincibleTagInternal() cons
 	return FGameplayTag::EmptyTag;
 }
 
-const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockTagInternal() const
+const FGameplayTag& UGameplayTagsSubsystem::GetStateStaminaRegenBlockedTagInternal() const
 {
 	if (GameplayTagsDataAsset)
 	{
-		return GameplayTagsDataAsset->State_StaminaRegenBlock;
+		return GameplayTagsDataAsset->State_StaminaRegenBlocked;
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -523,6 +532,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTagIn
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Event_Notify_EnableBufferInput;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Notify_ActionRecoveryStart;
 	}
 	return FGameplayTag::EmptyTag;
 }

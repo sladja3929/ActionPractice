@@ -24,6 +24,7 @@ URollAbility::URollAbility()
 {
 	RollMontage = nullptr;
 	StaminaCost = 20.0f;
+	StaminaRegenBlockDuration = 0.5f;
 	RotateTime = 0.05f;
 	WaitInvincibleStartEventTask = nullptr;
 }
@@ -122,11 +123,13 @@ void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
 
 void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	
 	DEBUG_LOG(TEXT("Roll Ability End"));
 	// 무적 이펙트 제거
 	if (InvincibilityEffectHandle.IsValid())
 	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		if (ASC)
 		{
 			ASC->RemoveActiveGameplayEffect(InvincibilityEffectHandle);
 			InvincibilityEffectHandle = FActiveGameplayEffectHandle();
@@ -136,7 +139,7 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 	//취소가 아니라면 JustRolled 부여
 	if (!bWasCancelled)
 	{
-		if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+		if (ASC)
 		{
 			if (JustRolledWindowEffect)
 			{
@@ -158,9 +161,9 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
 	// 버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
-	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
+	if (ASC)
 	{
 		FGameplayEventData EventData;
-		IBC->OnActionRecoveryEnd(EventData);
+		ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag(), &EventData);
 	}
 }

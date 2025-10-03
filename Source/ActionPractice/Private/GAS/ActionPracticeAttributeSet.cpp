@@ -4,6 +4,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GAS/ActionPracticeAbilitySystemComponent.h"
 
 UActionPracticeAttributeSet::UActionPracticeAttributeSet()
 {
@@ -130,7 +131,7 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 			}
 		}
 	}
-	// Handle incoming healing
+	//체력회복 처리
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
 	{
 		const float LocalIncomingHealing = GetIncomingHealing();
@@ -142,39 +143,37 @@ void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffec
 			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
 		}
 	}
-	// Handle direct health changes
-	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
-	{
-		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
-	}
-	// Handle stamina changes
-	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
-	{
-		SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
-	}
-	// Handle max health changes
-	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
-	{
-		AdjustAttributeForMaxChange(Health, MaxHealth, GetMaxHealth(), GetHealthAttribute());
-	}
-	// Handle max stamina changes
-	else if (Data.EvaluatedData.Attribute == GetMaxStaminaAttribute())
-	{
-		AdjustAttributeForMaxChange(Stamina, MaxStamina, GetMaxStamina(), GetStaminaAttribute());
-	}
-	// Handle stat changes that affect secondary attributes
+
+	//Secondary Attribute를 변경하는 것들 처리
 	else if (Data.EvaluatedData.Attribute == GetStrengthAttribute() || 
 			 Data.EvaluatedData.Attribute == GetDexterityAttribute())
 	{
 		CalculateSecondaryAttributes();
 	}
-	// Handle movement speed changes
 	else if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
 	{
 		if (TargetCharacter && TargetCharacter->GetCharacterMovement())
 		{
 			TargetCharacter->GetCharacterMovement()->MaxWalkSpeed = GetMovementSpeed();
 		}
+	}
+	
+	//기본 Attribute 처리
+	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		SetStamina(FMath::Clamp(GetStamina(), 0.0f, GetMaxStamina()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetMaxHealthAttribute())
+	{
+		AdjustAttributeForMaxChange(Health, MaxHealth, GetMaxHealth(), GetHealthAttribute());
+	}
+	else if (Data.EvaluatedData.Attribute == GetMaxStaminaAttribute())
+	{
+		AdjustAttributeForMaxChange(Stamina, MaxStamina, GetMaxStamina(), GetStaminaAttribute());
 	}
 }
 

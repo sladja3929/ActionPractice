@@ -3,9 +3,10 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "GAS/ActionPracticeAbilitySystemComponent.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogActionPracticeGameplayAbility, Log, All);
@@ -21,6 +22,7 @@ UActionPracticeGameplayAbility::UActionPracticeGameplayAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 }
 
+//Ability는 OnGiveAbility가 BeginPlay처럼 사용됨
 void UActionPracticeGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
@@ -38,7 +40,8 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 	{
 		return false;
 	}
-	
+
+	//초기 스테미나 소모값 확인
 	if (!CheckStaminaCost(*ActorInfo))
 	{
 		return false;
@@ -98,7 +101,7 @@ bool UActionPracticeGameplayAbility::ApplyStaminaCost()
 		return false;
 	}
 	
-	// EffectSpec 생성
+	//EffectSpec 생성
 	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
 	EffectContext.AddSourceObject(this);
 	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
@@ -119,12 +122,28 @@ bool UActionPracticeGameplayAbility::ApplyStaminaCost()
 	return true;
 }
 
+void UActionPracticeGameplayAbility::SetStaminaCost(float InStaminaCost, float InStaminaRegenBlockDuration)
+{
+	StaminaCost = InStaminaCost;
+	StaminaRegenBlockDuration = InStaminaRegenBlockDuration;
+}
+
+UActionPracticeAbilitySystemComponent* UActionPracticeGameplayAbility::GetActionPracticeAbilitySystemComponentFromActorInfo() const
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (ASC)
+	{
+		return Cast<UActionPracticeAbilitySystemComponent>(ASC);
+	}
+	return nullptr;
+}
+
 AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo() const
 {
 	return Cast<AActionPracticeCharacter>(GetActorInfo().AvatarActor.Get());
 }
 
-class AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	return Cast<AActionPracticeCharacter>(ActorInfo->AvatarActor.Get());
 }
@@ -139,7 +158,7 @@ UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAt
 	return nullptr;
 }
 
-class UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo(ActorInfo);
 	if (Character)
@@ -149,7 +168,7 @@ class UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPrac
 	return nullptr;
 }
 
-class UInputBufferComponent* UActionPracticeGameplayAbility::GetInputBufferComponentFromActorInfo() const
+UInputBufferComponent* UActionPracticeGameplayAbility::GetInputBufferComponentFromActorInfo() const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
 	if (Character)

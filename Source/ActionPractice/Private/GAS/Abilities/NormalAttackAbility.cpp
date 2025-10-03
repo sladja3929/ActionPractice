@@ -20,6 +20,7 @@
 UNormalAttackAbility::UNormalAttackAbility()
 {
     StaminaCost = 15.0f;
+    StaminaRegenBlockDuration = 1.0f;
 }
 
 void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

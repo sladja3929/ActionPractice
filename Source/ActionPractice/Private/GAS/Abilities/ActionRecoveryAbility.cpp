@@ -31,10 +31,10 @@ void UActionRecoveryAbility::ConsumeStaminaAndAddTag()
 	}
 
 	// 태그 부착
-	if (UInputBufferComponent* IBC = GetInputBufferComponentFromActorInfo())
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		FGameplayEventData EventData;
-		IBC->OnActionRecoveryStart(EventData);
+		ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag(), &EventData);
 	}
 }
 

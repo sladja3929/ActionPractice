@@ -17,6 +17,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Input/InputBufferComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "GAS/ActionPracticeAbilitySystemComponent.h"
 #include "UI/PlayerStatsWidget.h"
 #include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
@@ -67,9 +68,7 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	// Create Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	AbilitySystemComponent->SetIsReplicated(true);
-	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+	AbilitySystemComponent = CreateDefaultSubobject<UActionPracticeAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	// Create Attribute Set
 	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));

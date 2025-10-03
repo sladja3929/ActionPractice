@@ -44,6 +44,16 @@ void UInputBufferComponent::BeginPlay()
 				}
 			});
 
+		ActionRecoveryStartHandle = ASC->GenericGameplayEventCallbacks
+		.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag())
+		.AddLambda([this](const FGameplayEventData* EventData)
+			{
+				if (IsValid(this) && EventData)
+				{
+					OnActionRecoveryStart(*EventData);
+				}
+			});
+		
 		ActionRecoveryEndHandle = ASC->GenericGameplayEventCallbacks
 		.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
 		.AddLambda([this](const FGameplayEventData* EventData)
@@ -239,6 +249,12 @@ void UInputBufferComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 				.Remove(EnableBufferInputHandle);
 		}
 
+		if (ActionRecoveryStartHandle.IsValid())
+		{
+			ASC->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag())
+				.Remove(ActionRecoveryStartHandle);
+		}
+		
 		if (ActionRecoveryEndHandle.IsValid())
 		{
 			ASC->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
