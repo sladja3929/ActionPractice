@@ -79,3 +79,9 @@ DerivedDataCache/*
 .claude
 .env
 *repopackpy-output.txt
+
+# ThirdParty / temp content folders
+Content/ThirdParty/*
+
+# Other files
+other_helper/*
