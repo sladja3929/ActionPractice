@@ -122,10 +122,9 @@ bool UActionPracticeGameplayAbility::ApplyStaminaCost()
 	return true;
 }
 
-void UActionPracticeGameplayAbility::SetStaminaCost(float InStaminaCost, float InStaminaRegenBlockDuration)
+void UActionPracticeGameplayAbility::SetStaminaCost(float InStaminaCost)
 {
 	StaminaCost = InStaminaCost;
-	StaminaRegenBlockDuration = InStaminaRegenBlockDuration;
 }
 
 UActionPracticeAbilitySystemComponent* UActionPracticeGameplayAbility::GetActionPracticeAbilitySystemComponentFromActorInfo() const

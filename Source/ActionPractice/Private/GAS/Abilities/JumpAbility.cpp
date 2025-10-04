@@ -18,7 +18,6 @@
 UJumpAbility::UJumpAbility()
 {
 	StaminaCost = 10.0f;
-	StaminaRegenBlockDuration = 1.0f;
 }
 
 bool UJumpAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const

@@ -23,7 +23,14 @@ protected:
 
 	FActiveGameplayEffectHandle StaminaDrainHandle;
 
+	UPROPERTY(EditDefaultsOnly, Category="Cost")
+	TSubclassOf<class UGameplayEffect> SprintEffect;
+    
+	FActiveGameplayEffectHandle SprintHandle;
+	FGameplayTag EffectSprintSpeedMultiplierTag;
+
 public:
+	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
@@ -40,14 +47,20 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Sprint")
 	virtual void HandleSprinting();
 
+	UFUNCTION(BlueprintCallable, Category = "Sprint")
+	bool StartSprintEffect();
+
+	UFUNCTION(BlueprintCallable, Category = "Sprint")
+	void StopSprintEffect();
+	
 	UFUNCTION(BlueprintPure, Category = "Sprint")
 	virtual bool CanContinueSprinting() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual bool StartStaminaDrain();
+	UFUNCTION(BlueprintCallable, Category = "Cost")
+	virtual bool StartStaminaDrainEffect();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	virtual void StopStaminaDrain();
+	UFUNCTION(BlueprintCallable, Category = "Cost")
+	virtual void StopStaminaDrainEffect();
 
 private:
 	FTimerHandle SprintCheckTimer;

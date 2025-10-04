@@ -24,7 +24,6 @@ URollAbility::URollAbility()
 {
 	RollMontage = nullptr;
 	StaminaCost = 20.0f;
-	StaminaRegenBlockDuration = 0.5f;
 	RotateTime = 0.05f;
 	WaitInvincibleStartEventTask = nullptr;
 }

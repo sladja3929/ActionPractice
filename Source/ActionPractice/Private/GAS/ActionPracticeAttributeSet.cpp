@@ -8,7 +8,6 @@
 
 UActionPracticeAttributeSet::UActionPracticeAttributeSet()
 {
-	// Set default values (엘든링 초기 스텟)
 	InitHealth(100.0f);
 	InitMaxHealth(100.0f);
 	InitStamina(100.0f);
@@ -76,13 +75,27 @@ void UActionPracticeAttributeSet::PreAttributeChange(const FGameplayAttribute& A
 	else if (Attribute == GetMovementSpeedAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
+
+		if (AActor* OwnerActor = GetOwningActor())
+		{
+			if (ACharacter* Character = Cast<ACharacter>(OwnerActor))
+			{
+				if (UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement())
+				{
+					MovementComp->MaxWalkSpeed = NewValue;
+				}
+			}
+		}
 	}
 }
 
 void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
-
+	
+	 //Target: 현재 AttributeSet이 변경된(이 PostGameplayEffectExecute가 실행된) 목표의 ASC
+	 //Source: 적용된 GE spec을 만든 소스의 ASC
+	
 	FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
 	UAbilitySystemComponent* Source = Context.GetOriginalInstigatorAbilitySystemComponent();
 	const FGameplayTagContainer& SourceTags = *Data.EffectSpec.CapturedSourceTags.GetAggregatedTags();

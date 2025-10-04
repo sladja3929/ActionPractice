@@ -58,6 +58,7 @@ public:
 	static const FGameplayTag& GetEffectJustRolledDurationTag();
 	static const FGameplayTag& GetEffectStaminaCostTag();
 	static const FGameplayTag& GetEffectStaminaRegenBlockDurationTag();
+	static const FGameplayTag& GetEffectSprintSpeedMultiplierTag();
 #pragma endregion
 
 private:
@@ -107,6 +108,7 @@ private:
 	const FGameplayTag& GetEffectJustRolledDurationTagInternal() const;
 	const FGameplayTag& GetEffectStaminaCostTagInternal() const;
 	const FGameplayTag& GetEffectStaminaRegenBlockDurationTagInternal() const;
+	const FGameplayTag& GetEffectSprintSpeedMultiplierTagInternal() const;
 #pragma endregion
 	
 protected:

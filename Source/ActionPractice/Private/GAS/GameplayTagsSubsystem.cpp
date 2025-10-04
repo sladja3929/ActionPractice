@@ -340,6 +340,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaRegenBlockDurationTa
 	}
 	return FGameplayTag::EmptyTag;
 }
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectSprintSpeedMultiplierTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectSprintSpeedMultiplierTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
 #pragma endregion
 
 #pragma region "Internal Ability Tags"
@@ -642,6 +651,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectStaminaRegenBlockDurationTa
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Effect_Stamina_RegenBlockDuration;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectSprintSpeedMultiplierTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Sprint_SpeedMultiplier;
 	}
 	return FGameplayTag::EmptyTag;
 }

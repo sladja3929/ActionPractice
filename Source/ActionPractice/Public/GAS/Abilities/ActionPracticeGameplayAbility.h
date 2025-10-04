@@ -34,7 +34,7 @@ public:
 	virtual bool ApplyStaminaCost();
 
 	UFUNCTION(BlueprintCallable, Category = "Stamina")
-	virtual void SetStaminaCost(float StaminaCost, float StaminaRegenBlockDuration);
+	virtual void SetStaminaCost(float StaminaCost);
 	
 #pragma endregion
 	
@@ -43,9 +43,6 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
 	float StaminaCost = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
-	float StaminaRegenBlockDuration = 0.0f;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Stats")
 	float CooldownDuration = 0.0f;
