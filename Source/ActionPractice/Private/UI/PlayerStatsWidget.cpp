@@ -2,7 +2,7 @@
 #include "Components/ProgressBar.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogPlayerStatsWidget, Log, All);
@@ -15,45 +15,24 @@ void UPlayerStatsWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	CurrentHealthPercent = 1.0f;
-	CurrentStaminaPercent = 1.0f;
-	TargetHealthDamagePercent = 1.0f;
-	TargetStaminaDamagePercent = 1.0f;
-	CurrentHealthDelayTimer = 0.0f;
-	CurrentStaminaDelayTimer = 0.0f;
-
-	if (DamageBarLerpSpeed == 0.0f)
-	{
-		DamageBarLerpSpeed = 2.0f;
-	}
-
-	if (DamageBarDelayTime == 0.0f)
-	{
-		DamageBarDelayTime = 0.5f;
-	}
-
 	if (HealthBar)
 	{
 		HealthBar->SetPercent(1.0f);
-		HealthBar->SetFillColorAndOpacity(FLinearColor::Red);
 	}
 
 	if (HealthDamageBar)
 	{
 		HealthDamageBar->SetPercent(1.0f);
-		HealthDamageBar->SetFillColorAndOpacity(FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
 	}
 
 	if (StaminaBar)
 	{
 		StaminaBar->SetPercent(1.0f);
-		StaminaBar->SetFillColorAndOpacity(FLinearColor::Green);
 	}
 
 	if (StaminaDamageBar)
 	{
 		StaminaDamageBar->SetPercent(1.0f);
-		StaminaDamageBar->SetFillColorAndOpacity(FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
 	}
 
 	DEBUG_LOG(TEXT("PlayerStatsWidget Constructed"));
@@ -87,7 +66,7 @@ void UPlayerStatsWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 
 	float NewHealthPercent = CurrentHealth / MaxHealth;
 
-	//HP가 감소한 경우
+	//HP 감소
 	if (NewHealthPercent < CurrentHealthPercent)
 	{
 		HealthBar->SetPercent(NewHealthPercent);
@@ -95,7 +74,7 @@ void UPlayerStatsWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 		CurrentHealthDelayTimer = 0.0f;
 	}
 	
-	//HP가 회복된 경우
+	//HP 회복
 	else if (NewHealthPercent > CurrentHealthPercent)
 	{
 		HealthBar->SetPercent(NewHealthPercent);
@@ -120,15 +99,18 @@ void UPlayerStatsWidget::UpdateStamina(float CurrentStamina, float MaxStamina)
 
 	float NewStaminaPercent = CurrentStamina / MaxStamina;
 
-	//스테미나가 감소한 경우
+	//스테미나 감소
 	if (NewStaminaPercent < CurrentStaminaPercent)
 	{
 		StaminaBar->SetPercent(NewStaminaPercent);
-		TargetStaminaDamagePercent = NewStaminaPercent;
+
+		//지속 감소일 경우 지연 X, 일반 바와 같이 감소
+		if (NewStaminaPercent < CurrentStaminaPercent - 0.01f) TargetStaminaDamagePercent = NewStaminaPercent;
+		else StaminaDamageBar->SetPercent(NewStaminaPercent);
 		CurrentStaminaDelayTimer = 0.0f;
 	}
 	
-	//스테미나가 회복된 경우
+	//스테미나 회복
 	else if (NewStaminaPercent > CurrentStaminaPercent)
 	{
 		StaminaBar->SetPercent(NewStaminaPercent);
@@ -146,7 +128,6 @@ void UPlayerStatsWidget::UpdateStamina(float CurrentStamina, float MaxStamina)
 
 void UPlayerStatsWidget::UpdateDamageBars(float DeltaTime)
 {
-	//HP 지연 바 업데이트
 	if (HealthDamageBar && HealthDamageBar->GetPercent() > TargetHealthDamagePercent)
 	{
 		CurrentHealthDelayTimer += DeltaTime;
@@ -156,10 +137,10 @@ void UPlayerStatsWidget::UpdateDamageBars(float DeltaTime)
 			float CurrentPercent = HealthDamageBar->GetPercent();
 			float NewPercent = FMath::FInterpTo(CurrentPercent, TargetHealthDamagePercent, DeltaTime, DamageBarLerpSpeed);
 			HealthDamageBar->SetPercent(NewPercent);
+			DEBUG_LOG(TEXT("HP Lerp Applied: NewPercent=%f"), NewPercent);
 		}
 	}
 
-	//스테미나 지연 바 업데이트
 	if (StaminaDamageBar && StaminaDamageBar->GetPercent() > TargetStaminaDamagePercent)
 	{
 		CurrentStaminaDelayTimer += DeltaTime;
@@ -169,6 +150,8 @@ void UPlayerStatsWidget::UpdateDamageBars(float DeltaTime)
 			float CurrentPercent = StaminaDamageBar->GetPercent();
 			float NewPercent = FMath::FInterpTo(CurrentPercent, TargetStaminaDamagePercent, DeltaTime, DamageBarLerpSpeed);
 			StaminaDamageBar->SetPercent(NewPercent);
+			
+			DEBUG_LOG(TEXT("ST Lerp Applied: NewPercent=%f"), NewPercent);
 		}
 	}
 }
