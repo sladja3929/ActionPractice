@@ -74,7 +74,8 @@ void UActionPracticeGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle
 
 bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
 {
-	if (StaminaCost <= 0.0f)
+	//0이면 스테미나 소모는 없지만 현재 스테미나가 있는지는 확인, 음수면 체크도 하지 않음
+	if (StaminaCost < 0.0f)
 	{
 		return true;
 	}
@@ -89,11 +90,19 @@ bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActo
 
 bool UActionPracticeGameplayAbility::ApplyStaminaCost()
 {
-	if (StaminaCost <= 0.0f)
+	//0이면 스테미나 소모는 없지만 현재 스테미나가 있는지는 확인, 음수면 체크도 하지 않음
+	if (StaminaCost < 0.0f)
 	{
 		return true;
 	}
 
+	UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo();
+	if (!AttributeSet || AttributeSet->GetStamina() < 3.0f)
+	{
+		DEBUG_LOG(TEXT("No AttributeSet or Low Stamina"));
+		return false;
+	}
+	
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (!ASC || !StaminaCostEffect)
 	{

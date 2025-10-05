@@ -44,8 +44,11 @@ protected:
 #pragma region "Protected Functions"
 
 	UFUNCTION()
-	virtual void ConsumeStaminaAndAddTag();
+	virtual void ConsumeStamina();
 
+	UFUNCTION()
+	virtual void AddActionRecoveryTag();
+	
 	UFUNCTION()
 	virtual void RotateCharacter();
 	

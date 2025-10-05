@@ -78,6 +78,14 @@ void UChargeAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
     }    
 }
 
+void UChargeAttackAbility::SetStaminaCost(float InStaminaCost)
+{
+    if (!bIsAttackMontage) InStaminaCost = 0.0f;
+    else if (bMaxCharged) InStaminaCost *= 1.4f;
+    
+    Super::SetStaminaCost(InStaminaCost);
+}
+
 void UChargeAttackAbility::RotateCharacter()
 {
     //캐릭터 회전 (차지 x, 공격 o)
@@ -92,8 +100,9 @@ void UChargeAttackAbility::RotateCharacter()
 
 void UChargeAttackAbility::PlayAction()
 {
-    ConsumeStaminaAndAddTag();
-    SetHitDetectionConfig();
+    ConsumeStamina();
+    AddActionRecoveryTag();
+    if (bIsAttackMontage) SetHitDetectionConfig();
     RotateCharacter();
     
     WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);

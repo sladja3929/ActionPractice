@@ -44,7 +44,6 @@ void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
     
-    //차지어택에 따라 추후 변경
     ComboCounter = 0;
     bCreateTask = true;
     PlayAction();

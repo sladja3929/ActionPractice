@@ -86,7 +86,7 @@ void AActionPracticeCharacter::BeginPlay()
 
 	InitializeAbilitySystem();
 
-	EquipWeapon(LoadWeaponClassByName("BP_StraightSword"), false, false);
+	EquipWeapon(LoadWeaponClassByName("BP_GreatSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
 
 	if (PlayerStatsWidgetClass)

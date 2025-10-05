@@ -45,6 +45,7 @@ protected:
 
 #pragma region "Protected Functions" //================================================
 
+	virtual void SetStaminaCost(float InStaminaCost) override;
 	virtual void RotateCharacter() override;
 	virtual void ExecuteMontageTask() override;
 	virtual void PlayAction() override;

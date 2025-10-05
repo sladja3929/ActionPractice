@@ -43,12 +43,10 @@ protected:
 
 	UFUNCTION()
 	void SetHitDetectionConfig();
-	
-	virtual void PlayAction() override;
-	
-	virtual void ExecuteMontageTask() override;
 
-	
+	virtual void ConsumeStamina() override;
+	virtual void PlayAction() override;
+	virtual void ExecuteMontageTask() override;
 	
 #pragma endregion
 

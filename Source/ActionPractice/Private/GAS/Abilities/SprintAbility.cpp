@@ -33,21 +33,6 @@ void USprintAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, c
 	}
 }
 
-bool USprintAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
-{
-	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
-	{
-		return false;
-	}
-
-	if (const UActionPracticeAttributeSet* AttributeSet = Cast<UActionPracticeAttributeSet>(ActorInfo->AbilitySystemComponent->GetAttributeSet(UActionPracticeAttributeSet::StaticClass())))
-	{
-		return AttributeSet->GetStamina() > 0;
-	}
-
-	return false;
-}
-
 void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))

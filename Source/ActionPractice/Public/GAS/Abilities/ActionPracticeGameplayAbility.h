@@ -34,7 +34,7 @@ public:
 	virtual bool ApplyStaminaCost();
 
 	UFUNCTION(BlueprintCallable, Category = "Stamina")
-	virtual void SetStaminaCost(float StaminaCost);
+	virtual void SetStaminaCost(float InStaminaCost);
 	
 #pragma endregion
 	

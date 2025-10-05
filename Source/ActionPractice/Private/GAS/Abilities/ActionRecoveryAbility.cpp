@@ -6,7 +6,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogActionRecoveryAbility, Log, All);
@@ -20,9 +20,8 @@ UActionRecoveryAbility::UActionRecoveryAbility()
 	
 }
 
-void UActionRecoveryAbility::ConsumeStaminaAndAddTag()
+void UActionRecoveryAbility::ConsumeStamina()
 {
-	// 스태미나 소모
 	if (!ApplyStaminaCost())
 	{
 		DEBUG_LOG(TEXT("No Stamina"));
@@ -30,7 +29,11 @@ void UActionRecoveryAbility::ConsumeStaminaAndAddTag()
 		return;
 	}
 
-	// 태그 부착
+	
+}
+
+void UActionRecoveryAbility::AddActionRecoveryTag()
+{
 	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
 	{
 		FGameplayEventData EventData;
@@ -49,7 +52,8 @@ void UActionRecoveryAbility::RotateCharacter()
 
 void UActionRecoveryAbility::PlayAction()
 {
-	ConsumeStaminaAndAddTag();
+	ConsumeStamina();
+	AddActionRecoveryTag();
 	RotateCharacter();
 
 	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);

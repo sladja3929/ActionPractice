@@ -74,9 +74,17 @@ void UBaseAttackAbility::SetHitDetectionConfig()
     }
 }
 
+void UBaseAttackAbility::ConsumeStamina()
+{
+    SetStaminaCost(WeaponAttackData->ComboAttackData[ComboCounter].StaminaCost);
+    
+    Super::ConsumeStamina();
+}
+
 void UBaseAttackAbility::PlayAction()
 {
-    ConsumeStaminaAndAddTag();
+    ConsumeStamina();
+    AddActionRecoveryTag();
     SetHitDetectionConfig();
     RotateCharacter();
 
