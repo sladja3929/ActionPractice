@@ -66,11 +66,11 @@ void UBaseAttackAbility::ActivateInitSettings()
     ComboCounter = 0;
 }
 
-void UBaseAttackAbility::ConsumeStamina()
+bool UBaseAttackAbility::ConsumeStamina()
 {
     SetStaminaCost(WeaponAttackData->ComboAttackData[ComboCounter].StaminaCost);
     
-    Super::ConsumeStamina();
+    return Super::ConsumeStamina();
 }
 
 void UBaseAttackAbility::PlayAction()

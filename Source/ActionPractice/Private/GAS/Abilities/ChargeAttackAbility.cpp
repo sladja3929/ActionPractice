@@ -156,7 +156,6 @@ void UChargeAttackAbility::BindEventsAndReadyMontageTask()
 
 void UChargeAttackAbility::PlayNextCharge()
 {
-    AddStateRecoveringTag();
     ComboCounter++;
     bMaxCharged = false;
     bIsCharging = false;

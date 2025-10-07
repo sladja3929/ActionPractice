@@ -65,7 +65,7 @@ protected:
 	virtual void RemoveStateRecoveringTags();
 	
 	UFUNCTION()
-	virtual void ConsumeStamina();
+	virtual bool ConsumeStamina();
 	
 	UFUNCTION()
 	virtual void RotateCharacter();
@@ -97,7 +97,7 @@ protected:
 	UFUNCTION()
 	virtual void OnTaskNotifyEventsReceived(FGameplayEventData Payload);
 
-	//ActionRecovery 노티파이 콜백 함수들, State.Recovering는 노티파이와 별개로 ActivateInitSettings에서 무조건 부착
+	//ActionRecovery 노티파이 콜백 함수들, State.Recovering는 노티파이와 별개로 스테미나 소모 체크 직후 무조건 부착
 	UFUNCTION()
 	virtual void OnEventActionRecoveryStart(FGameplayEventData Payload);
 	

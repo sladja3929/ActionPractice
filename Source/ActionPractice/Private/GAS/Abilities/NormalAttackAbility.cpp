@@ -59,7 +59,6 @@ void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 
 void UNormalAttackAbility::PlayNextAttack()
 {
-    AddStateRecoveringTag();
     ++ComboCounter;
     
     if (ComboCounter >= MaxComboCount)

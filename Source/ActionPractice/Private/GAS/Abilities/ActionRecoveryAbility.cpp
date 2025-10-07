@@ -63,8 +63,6 @@ void UActionRecoveryAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 void UActionRecoveryAbility::ActivateInitSettings()
 {
 	Super::ActivateInitSettings();
-
-	AddStateRecoveringTag();
 }
 
 void UActionRecoveryAbility::AddStateRecoveringTag()
@@ -96,13 +94,16 @@ void UActionRecoveryAbility::RemoveStateRecoveringTags()
 	DEBUG_LOG(TEXT("Remove All State.Recovering"));
 }
 
-void UActionRecoveryAbility::ConsumeStamina()
+bool UActionRecoveryAbility::ConsumeStamina()
 {
 	if (!ApplyStaminaCost())
 	{
 		DEBUG_LOG(TEXT("No Stamina"));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+		return false;
 	}
+
+	return true;
 }
 
 void UActionRecoveryAbility::RotateCharacter()
@@ -116,7 +117,8 @@ void UActionRecoveryAbility::RotateCharacter()
 
 void UActionRecoveryAbility::PlayAction()
 {
-	ConsumeStamina();
+	if (!ConsumeStamina()) return;
+	AddStateRecoveringTag();
 	RotateCharacter();
 
 	//캐릭터가 회전을 마칠 때까지 기다린 후에 몽타주 태스크 실행

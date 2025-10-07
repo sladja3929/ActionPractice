@@ -41,7 +41,7 @@ protected:
 	virtual void SetHitDetectionConfig();
 	
 	virtual void ActivateInitSettings() override;
-	virtual void ConsumeStamina() override;
+	virtual bool ConsumeStamina() override;
 	virtual void PlayAction() override;
 	virtual UAnimMontage* SetMontageToPlayTask() override;
 	
