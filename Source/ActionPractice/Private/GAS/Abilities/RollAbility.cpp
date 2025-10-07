@@ -1,15 +1,11 @@
 #include "GAS/Abilities/RollAbility.h"
-
-#include <Input/InputBufferComponent.h>
-
-#include "Characters/ActionPracticeCharacter.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "GameplayEffect.h"
+#include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -22,63 +18,50 @@
 
 URollAbility::URollAbility()
 {
-	RollMontage = nullptr;
+	bRetriggerInstancedAbility = true;
 	StaminaCost = 20.0f;
 	RotateTime = 0.05f;
-	WaitInvincibleStartEventTask = nullptr;
 }
 
-void URollAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void URollAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		DEBUG_LOG(TEXT("Cannot Commit Ability"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-	
-	//노티파이 이벤트 태스크	
-	WaitInvincibleStartEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
-		this,
-		UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag()
-	);
-	
-	if (WaitInvincibleStartEventTask)
-	{
-		WaitInvincibleStartEventTask->EventReceived.AddDynamic(this, &URollAbility::OnNotifyInvincibleStart);
-		WaitInvincibleStartEventTask->ReadyForActivation();
-	}
+	Super::OnGiveAbility(ActorInfo, Spec);
 
-	PlayAction();
+	EventNotifyInvincibleStartTag = UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag();
+	EffectInvincibilityDurationTag = UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag();
+	EffectJustRolledDurationTag = UGameplayTagsSubsystem::GetEffectJustRolledDurationTag();
+
+	if (!EventNotifyInvincibleStartTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventNotifyInvincibleStartTag is not valid"));
+	}
+	if (!EffectInvincibilityDurationTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EffectInvincibilityDurationTag is not valid"));
+	}
+	if (!EffectJustRolledDurationTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EffectJustRolledDurationTag is not valid"));
+	}
 }
 
-void URollAbility::ExecuteMontageTask()
+UAnimMontage* URollAbility::SetMontageToPlayTask()
 {
-	if (!RollMontage)
-	{
-		DEBUG_LOG(TEXT("No RollMontage"));
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
+	return RollMontage;
+}
 
-	PlayMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
-		this,
-		NAME_None,
-		RollMontage
-	);
-
-	if (PlayMontageTask)
+void URollAbility::BindEventsAndReadyMontageTask()
+{
+	if (!PlayMontageWithEventsTask)
 	{
-		PlayMontageTask->OnCompleted.AddDynamic(this, &URollAbility::OnTaskMontageCompleted);
-		PlayMontageTask->OnInterrupted.AddDynamic(this, &URollAbility::OnTaskMontageInterrupted);
-		PlayMontageTask->ReadyForActivation();
-		DEBUG_LOG(TEXT("Roll Montage Task Started"));
-	}
-	else
-	{
-		DEBUG_LOG(TEXT("Failed to create Montage Task"));
+		DEBUG_LOG(TEXT("No MontageWithEvents Task"));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 	}
+
+	//Invincibility 노티파이 이벤트 바인딩
+	PlayMontageWithEventsTask->BindNotifyEventCallbackWithTag(ActionRecoveryStartTag);
+	
+	Super::BindEventsAndReadyMontageTask();
 }
 
 void URollAbility::ApplyInvincibilityEffect()
@@ -108,10 +91,41 @@ void URollAbility::ApplyInvincibilityEffect()
 		return;
 	}
 
-	EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectInvincibilityDurationTag(), InvincibilityDuration);
+	EffectSpec.Data.Get()->SetSetByCallerMagnitude(EffectInvincibilityDurationTag, InvincibilityDuration);
 	InvincibilityEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
 	
 	DEBUG_LOG(TEXT("Invincibility Effect Applied with Duration: %f"), InvincibilityDuration)
+}
+
+void URollAbility::OnTaskNotifyEventsReceived(FGameplayEventData Payload)
+{
+	Super::OnTaskNotifyEventsReceived(Payload);
+	
+	if (Payload.EventTag == EventNotifyInvincibleStartTag) OnNotifyInvincibleStart(Payload);
+}
+
+void URollAbility::OnEventActionRecoveryEnd(FGameplayEventData Payload)
+{
+	//JustRolled 태그 부여
+	auto ASC = GetAbilitySystemComponentFromActorInfo();
+	if (ASC && JustRolledWindowEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+		const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+		FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, EffectiveLevel, EffectContext);
+				
+		if (EffectSpec.IsValid())
+		{
+			EffectSpec.Data.Get()->SetSetByCallerMagnitude(EffectJustRolledDurationTag, JustRolledWindowDuration);
+			ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+			DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
+		}
+	}
+	
+	else DEBUG_LOG(TEXT("No ASC or JustRolledWindowEffect"));
+	
+	Super::OnEventActionRecoveryEnd(Payload);
 }
 
 void URollAbility::OnNotifyInvincibleStart(FGameplayEventData Payload)
@@ -134,35 +148,6 @@ void URollAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 			InvincibilityEffectHandle = FActiveGameplayEffectHandle();
 		}
 	}
-
-	//취소가 아니라면 JustRolled 부여
-	if (!bWasCancelled)
-	{
-		if (ASC)
-		{
-			if (JustRolledWindowEffect)
-			{
-				FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-				EffectContext.AddSourceObject(this);
-				const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
-				FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, EffectiveLevel, EffectContext);
-				
-				if (EffectSpec.IsValid())
-				{
-					EffectSpec.Data.Get()->SetSetByCallerMagnitude(UGameplayTagsSubsystem::GetEffectJustRolledDurationTag(), JustRolledWindowDuration);
-					ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-					DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
-				}
-			}
-		}
-	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-
-	// 버퍼에 같은 어빌리티가 있을 경우 완전한 종료 후 재시작
-	if (ASC)
-	{
-		FGameplayEventData EventData;
-		ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag(), &EventData);
-	}
 }

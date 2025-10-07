@@ -166,9 +166,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_LockOn = nullptr;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Sprint = nullptr;
+
+	//사용되는 태그들
+	FGameplayTag StateRecoveringTag;
+	FGameplayTag StateAbilitySprintingTag;
+	FGameplayTag StateAbilityAttackingTag;
+	FGameplayTag AbilityAttackTag;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Crouch = nullptr;

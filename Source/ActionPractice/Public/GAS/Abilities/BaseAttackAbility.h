@@ -18,7 +18,6 @@ public:
 #pragma region "Public Functions" //==================================================
 	
 	UBaseAttackAbility();
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 #pragma endregion
@@ -29,9 +28,6 @@ protected:
 	const FAttackActionData* WeaponAttackData = nullptr;
 
 	UPROPERTY()
-	TObjectPtr<UAbilityTask_PlayMontageWithEvents> PlayMontageWithEventsTask = nullptr;
-
-	UPROPERTY()
 	int32 ComboCounter = 0;
 
 	UPROPERTY()
@@ -40,13 +36,14 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
-
+	
 	UFUNCTION()
-	void SetHitDetectionConfig();
-
+	virtual void SetHitDetectionConfig();
+	
+	virtual void ActivateInitSettings() override;
 	virtual void ConsumeStamina() override;
 	virtual void PlayAction() override;
-	virtual void ExecuteMontageTask() override;
+	virtual UAnimMontage* SetMontageToPlayTask() override;
 	
 #pragma endregion
 

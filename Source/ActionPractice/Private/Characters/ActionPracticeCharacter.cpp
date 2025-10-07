@@ -84,6 +84,29 @@ void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//태그 초기화
+	StateRecoveringTag = UGameplayTagsSubsystem::GetStateRecoveringTag();
+	StateAbilitySprintingTag = UGameplayTagsSubsystem::GetStateAbilitySprintingTag();
+	StateAbilityAttackingTag = UGameplayTagsSubsystem::GetStateAbilityAttackingTag();
+	AbilityAttackTag = UGameplayTagsSubsystem::GetAbilityAttackTag();
+
+	if (!StateRecoveringTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateRecoveringTag is not valid"));
+	}
+	if (!StateAbilitySprintingTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateAbilitySprintingTag is not valid"));
+	}
+	if (!StateAbilityAttackingTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateAbilityAttackingTag is not valid"));
+	}
+	if (!AbilityAttackTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("AbilityAttackTag is not valid"));
+	}
+
 	InitializeAbilitySystem();
 
 	EquipWeapon(LoadWeaponClassByName("BP_GreatSword"), false, false);
@@ -218,11 +241,11 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 		CancelActionForMove();
 	}
 
-	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-	
+	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(StateRecoveringTag);
+
 	if (Controller != nullptr && !bIsRecovering)
 	{
-		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilitySprintingTag());
+		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(StateAbilitySprintingTag);
 		
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
 		{
@@ -372,16 +395,16 @@ void AActionPracticeCharacter::CancelActionForMove()
 	}
     
 	// Attack 어빌리티가 활성화되어 있는지 확인
-	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilityAttackingTag());
-	
+	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(StateAbilityAttackingTag);
+
 	if (bHasActiveAttackAbility)
 	{
 		// State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
-		if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+		if (!AbilitySystemComponent->HasMatchingGameplayTag(StateRecoveringTag))
 		{
 			// Ability.Attack 태그를 가진 어빌리티 취소
 			FGameplayTagContainer CancelTags;
-			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
+			CancelTags.AddTag(AbilityAttackTag);
 			AbilitySystemComponent->CancelAbilities(&CancelTags);
 			DEBUG_LOG(TEXT("Attack Ability Cancelled by Move Input"));
 		}

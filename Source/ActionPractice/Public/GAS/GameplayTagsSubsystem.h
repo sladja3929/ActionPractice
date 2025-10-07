@@ -50,6 +50,7 @@ public:
 	static const FGameplayTag& GetEventNotifyInvincibleStartTag();
 	static const FGameplayTag& GetEventNotifyHitDetectionStartTag();
 	static const FGameplayTag& GetEventNotifyHitDetectionEndTag();
+	static const FGameplayTag& GetEventActionInputByBufferTag();
 	static const FGameplayTag& GetEventActionPlayBufferTag();
 #pragma endregion
 
@@ -100,6 +101,7 @@ private:
 	const FGameplayTag& GetEventNotifyInvincibleStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyHitDetectionStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyHitDetectionEndTagInternal() const;
+	const FGameplayTag& GetEventActionInputByBufferTagInternal() const;
 	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
 #pragma endregion
 

@@ -15,15 +15,15 @@ public:
 #pragma region "Public Functions"
 	URollAbility();
 
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables"
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
-	class UAnimMontage* RollMontage;
+	class UAnimMontage* RollMontage = nullptr;
 
 	//무적 상태 Gameplay Effect
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
@@ -38,28 +38,33 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
 	float JustRolledWindowDuration = 0.1f;
+
+	//사용되는 태그들
+	FGameplayTag EventNotifyInvincibleStartTag;
+	FGameplayTag EffectInvincibilityDurationTag;
+	FGameplayTag EffectJustRolledDurationTag;
 #pragma endregion
 
 #pragma region "Protected Functions"
 
-	virtual void ExecuteMontageTask() override;
+	virtual UAnimMontage* SetMontageToPlayTask() override;
+	virtual void BindEventsAndReadyMontageTask() override;
+	virtual void OnTaskNotifyEventsReceived(FGameplayEventData Payload) override;
+	virtual void OnEventActionRecoveryEnd(FGameplayEventData Payload) override;
 	
 	UFUNCTION()
 	virtual void OnNotifyInvincibleStart(FGameplayEventData Payload);
-
-	// 무적 상태 적용
+	
 	UFUNCTION(BlueprintCallable, Category = "Roll")
 	virtual void ApplyInvincibilityEffect();
+	
 #pragma endregion
 
 private:
 #pragma region "Private Variables"
-	// 무적 이벤트 대기 태스크
-	UPROPERTY()
-	UAbilityTask_WaitGameplayEvent* WaitInvincibleStartEventTask;
 
-	// 무적 이펙트 핸들
 	FActiveGameplayEffectHandle InvincibilityEffectHandle;
+	
 #pragma endregion
 
 #pragma region "Private Functions"

@@ -2,7 +2,6 @@
 #include "GAS/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "Items/HitDetectionInterface.h"
@@ -22,28 +21,6 @@ UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
 }
-
-void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
-{
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        DEBUG_LOG(TEXT("Cannot Commit Ability"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
-    if (!WeaponAttackData)
-    {
-        DEBUG_LOG(TEXT("Cannot Load Base Attack Data"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    ComboCounter = 0;
-    PlayAction();
-}
-
 
 void UBaseAttackAbility::SetHitDetectionConfig()
 {
@@ -74,6 +51,21 @@ void UBaseAttackAbility::SetHitDetectionConfig()
     }
 }
 
+void UBaseAttackAbility::ActivateInitSettings()
+{
+    Super::ActivateInitSettings();
+    
+    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
+    if (!WeaponAttackData)
+    {
+        DEBUG_LOG(TEXT("Cannot Load Base Attack Data"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+
+    ComboCounter = 0;
+}
+
 void UBaseAttackAbility::ConsumeStamina()
 {
     SetStaminaCost(WeaponAttackData->ComboAttackData[ComboCounter].StaminaCost);
@@ -83,55 +75,16 @@ void UBaseAttackAbility::ConsumeStamina()
 
 void UBaseAttackAbility::PlayAction()
 {
-    ConsumeStamina();
-    AddActionRecoveryTag();
     SetHitDetectionConfig();
-    RotateCharacter();
 
-    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
-    if (WaitDelayTask)
-    {
-        WaitDelayTask->OnFinish.AddDynamic(this, &UBaseAttackAbility::ExecuteMontageTask);
-        WaitDelayTask->ReadyForActivation();
-    }
+    Super::PlayAction();
 }
 
-void UBaseAttackAbility::ExecuteMontageTask()
+UAnimMontage* UBaseAttackAbility::SetMontageToPlayTask()
 {
-    UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
-    if (!MontageToPlay)
-    {
-        DEBUG_LOG(TEXT("No Montage to Play"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
-    // 커스텀 태스크 생성
-    PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
-        this,
-        NAME_None,
-        MontageToPlay,
-        1.0f,
-        NAME_None,
-        1.0f
-    );
-    
-    if (PlayMontageWithEventsTask)
-    {        
-        // 델리게이트 바인딩 - 부모 클래스의 함수 사용
-        PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
-        PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
-
-        // 태스크 활성화
-        PlayMontageWithEventsTask->ReadyForActivation();
-    }
-    
-    else
-    {
-        DEBUG_LOG(TEXT("No Montage Task"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-    }
-}     
+    if (ComboCounter < 0) ComboCounter = 0;
+    return WeaponAttackData->AttackMontages[ComboCounter].Get();
+}
 
 void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {

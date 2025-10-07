@@ -35,12 +35,17 @@ void USprintAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, c
 
 void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	DEBUG_LOG(TEXT("Sprint Ability Activated"));
+	StartSprinting();
+}
 
+
+void USprintAbility::ActivateInitSettings()
+{
+	Super::ActivateInitSettings();
+	
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
 	if (!Character)
 	{
@@ -48,8 +53,6 @@ void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	}
 
 	SprintSpeedMultiplier = Character->SprintSpeedMultiplier;
-	DEBUG_LOG(TEXT("Sprint Ability Activated"));
-	StartSprinting();
 }
 
 void USprintAbility::StartSprinting()

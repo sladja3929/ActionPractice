@@ -6,7 +6,6 @@
 #include "AbilitySystemGlobals.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-// 디버그 로그 활성화/비활성화 (0: 비활성화, 1: 활성화)
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
@@ -59,7 +58,8 @@ void UAbilityTask_PlayMontageWithEvents::Activate()
 
         if (AnimInstance != nullptr)
         {
-            BindEventCallbacks();            
+            //추후 태스크 생성에서 태그 컨테이너를 넘기면 활성화
+            //BindAllEventCallbacks();            
             PlayMontage();
             bPlayedMontage = true;
         }
@@ -201,110 +201,107 @@ void UAbilityTask_PlayMontageWithEvents::OnMontageEnded(UAnimMontage* Montage, b
     EndTask();
 }
 
-void UAbilityTask_PlayMontageWithEvents::HandleEnableBufferInputEvent(const FGameplayEventData& Payload)
+void UAbilityTask_PlayMontageWithEvents::HandleNotifyEvents(const FGameplayEventData& Payload)
 {
     if (ShouldBroadcastAbilityTaskDelegates())
     {
-        OnEnableBufferInput.Broadcast();
+        //Payload를 그대로 넘겨서 어빌리티에서 이벤트 종류를 판별하도록 함
+        OnNotifyEventsReceived.Broadcast(Payload);
     }
 }
 
-void UAbilityTask_PlayMontageWithEvents::HandleActionRecoveryEndEvent(const FGameplayEventData& Payload)
-{
-    if (ShouldBroadcastAbilityTaskDelegates())
-    {
-        OnActionRecoveryEnd.Broadcast();
-    }
-}
-
-void UAbilityTask_PlayMontageWithEvents::HandleResetComboEvent(const FGameplayEventData& Payload)
-{    
-    if (ShouldBroadcastAbilityTaskDelegates())
-    {
-        OnResetCombo.Broadcast(); 
-    }
-}
-
-void UAbilityTask_PlayMontageWithEvents::HandleChargeStartEvent(const FGameplayEventData& Payload)
-{
-    if (ShouldBroadcastAbilityTaskDelegates())
-    {
-        OnChargeStart.Broadcast();
-    }
-}
 #pragma endregion
 
 #pragma region "Delegate Binding Functions"
-void UAbilityTask_PlayMontageWithEvents::BindEventCallbacks()
+void UAbilityTask_PlayMontageWithEvents::BindNotifyEventCallbackWithTag(FGameplayTag EventTag)
 {
-    if (AbilitySystemComponent.IsValid() && Ability)
+    EventTagsToReceive.AddTag(EventTag);
+
+    if (!AbilitySystemComponent.IsValid() || !Ability)
     {
-        EnableBufferInputHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
-            .AddLambda([this](const FGameplayEventData* EventData)
-            {
-                if (IsValid(this) && EventData)
-                {
-                    HandleEnableBufferInputEvent(*EventData);
-                }
-            });
+        return;
+    }
 
-        ActionRecoveryEndHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
-            .AddLambda([this](const FGameplayEventData* EventData)
-            {
-                if (IsValid(this) && EventData)
-                {
-                    HandleActionRecoveryEndEvent(*EventData);
-                }
-            });
+    FDelegateHandle Handle = AbilitySystemComponent->GenericGameplayEventCallbacks
+       .FindOrAdd(EventTag)
+       .AddLambda([this](const FGameplayEventData* EventData)
+       {
+           if (IsValid(this) && EventData)
+           {
+               HandleNotifyEvents(*EventData);
+           }
+       });
 
-        ResetComboHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
-            .AddLambda([this](const FGameplayEventData* EventData)
-            {
-                if (IsValid(this) && EventData)
-                {
-                    HandleResetComboEvent(*EventData);
-                }
-            });
+    //Map에 핸들 저장
+    EventHandles.Add(EventTag, Handle);
+    DEBUG_LOG(TEXT("Event Callback Bound - Tag: %s"), *EventTag.ToString());
+}
 
-        ChargeStartHandle = AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyChargeStartTag())
-            .AddLambda([this](const FGameplayEventData* EventData)
+void UAbilityTask_PlayMontageWithEvents::UnbindNotifyEventCallbackWithTag(FGameplayTag EventTag)
+{
+    if (!AbilitySystemComponent.IsValid())
+    {
+        return;
+    }
+
+    //TMap에 태그에 따른 핸들이 존재하고, 해당 핸들이 유효할 경우 (핸들이 존재하면 무조건 삭제)
+    FDelegateHandle Handle;    
+    if (EventHandles.RemoveAndCopyValue(EventTag, Handle) && Handle.IsValid())
+    {
+        AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(EventTag).Remove(Handle);
+        DEBUG_LOG(TEXT("Event Callback Unbound - Tag: %s"), *EventTag.ToString());
+    }
+
+    EventTagsToReceive.RemoveTag(EventTag);
+}
+
+void UAbilityTask_PlayMontageWithEvents::BindAllEventCallbacks()
+{
+    if (!AbilitySystemComponent.IsValid() || !Ability)
+    {
+        return;
+    }
+
+    //현재 저장된 태그 컨테이너를 순회하며 바인딩
+    for (const FGameplayTag& Tag: EventTagsToReceive)
+    {
+        FDelegateHandle Handle = AbilitySystemComponent->GenericGameplayEventCallbacks
+        .FindOrAdd(Tag)
+        .AddLambda([this](const FGameplayEventData* EventData)
+        {
+            if (IsValid(this) && EventData)
             {
-                if (IsValid(this) && EventData)
-                {
-                    HandleChargeStartEvent(*EventData);
-                }
-            });
+                HandleNotifyEvents(*EventData);
+            }
+        });
+
+        //Map에 핸들 저장
+        EventHandles.Add(Tag, Handle);
+        DEBUG_LOG(TEXT("All Event Callback Bound - Tag: %s"), *Tag.ToString());
     }
 }
 
-void UAbilityTask_PlayMontageWithEvents::UnbindEventCallbacks()
+void UAbilityTask_PlayMontageWithEvents::UnbindAllEventCallbacks()
 {
-    if (AbilitySystemComponent.IsValid())
+    if (!AbilitySystemComponent.IsValid())
     {
-        if (EnableBufferInputHandle.IsValid())
-        {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
-                .Remove(EnableBufferInputHandle);
-        }
+        return;
+    }
 
-        if (ActionRecoveryEndHandle.IsValid())
-        {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
-                .Remove(ActionRecoveryEndHandle);
-        }
+    //저장된 이벤트 핸들 순회
+    for (const auto& Pair: EventHandles)
+    {
+        const FGameplayTag& Tag = Pair.Key;
+        const FDelegateHandle& Handle = Pair.Value;
 
-        if (ResetComboHandle.IsValid())
+        if (Handle.IsValid())
         {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyResetComboTag())
-                .Remove(ResetComboHandle);
-        }
-
-        if (ChargeStartHandle.IsValid())
-        {
-            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyChargeStartTag())
-                .Remove(ChargeStartHandle);
+            AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(Tag).Remove(Handle);
+            DEBUG_LOG(TEXT("All Event Callback Unbound - Tag: %s"), *Tag.ToString());
         }
     }
+
+    EventHandles.Empty();
 }
 
 void UAbilityTask_PlayMontageWithEvents::BindMontageCallbacks()
@@ -317,12 +314,12 @@ void UAbilityTask_PlayMontageWithEvents::BindMontageCallbacks()
         return;
     }
 
-    BlendingOutDelegate = FOnMontageBlendingOutStarted::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageBlendingOut);
-    AnimInstance->Montage_SetBlendingOutDelegate(BlendingOutDelegate, MontageToPlay);
+    OnBlendingOutInternal = FOnMontageBlendingOutStarted::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageBlendingOut);
+    AnimInstance->Montage_SetBlendingOutDelegate(OnBlendingOutInternal, MontageToPlay);
     DEBUG_LOG(TEXT("BlendingOutDelegate Bound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
 
-    MontageEndedDelegate = FOnMontageEnded::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageEnded);
-    AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
+    OnMontageEndedInternal = FOnMontageEnded::CreateUObject(this, &UAbilityTask_PlayMontageWithEvents::OnMontageEnded);
+    AnimInstance->Montage_SetEndDelegate(OnMontageEndedInternal, MontageToPlay);
     DEBUG_LOG(TEXT("MontageEndedDelegate Bound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
 }
 
@@ -337,19 +334,19 @@ void UAbilityTask_PlayMontageWithEvents::UnbindMontageCallbacks()
     UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
     if (AnimInstance && MontageToPlay)
     {
-        if (BlendingOutDelegate.IsBound())
+        if (OnBlendingOutInternal.IsBound())
         {
             FOnMontageBlendingOutStarted EmptyBlendDelegate;
             AnimInstance->Montage_SetBlendingOutDelegate(EmptyBlendDelegate, MontageToPlay);
-            BlendingOutDelegate.Unbind();
+            OnBlendingOutInternal.Unbind();
             DEBUG_LOG(TEXT("BlendingOutDelegate Unbound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
         }
         
-        if (MontageEndedDelegate.IsBound())
+        if (OnMontageEndedInternal.IsBound())
         {
             FOnMontageEnded EmptyEndDelegate;
             AnimInstance->Montage_SetEndDelegate(EmptyEndDelegate, MontageToPlay);
-            MontageEndedDelegate.Unbind();
+            OnMontageEndedInternal.Unbind();
             DEBUG_LOG(TEXT("MontageEndedDelegate Unbound Successfully, Montage Name: %s") ,MontageToPlay ? *MontageToPlay->GetName() : TEXT("NULL"));
         }
     }
@@ -366,7 +363,7 @@ void UAbilityTask_PlayMontageWithEvents::OnDestroy(bool AbilityEnded)
     }
     
     //이벤트 콜백 해제
-    UnbindEventCallbacks();
+    UnbindAllEventCallbacks();
     
     //몽타주 델리게이트 해제
     UnbindMontageCallbacks();

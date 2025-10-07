@@ -6,7 +6,7 @@
 #include "GAS/ActionPracticeAbilitySystemComponent.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogActionPracticeGameplayAbility, Log, All);
@@ -38,12 +38,14 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 {
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
+		DEBUG_LOG(TEXT("Cannot Activate Ability"));
 		return false;
 	}
 
 	//초기 스테미나 소모값 확인
 	if (!CheckStaminaCost(*ActorInfo))
 	{
+		DEBUG_LOG(TEXT("Cannot Activate Ability"));
 		return false;
 	}
 
@@ -54,16 +56,13 @@ void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
+		DEBUG_LOG(TEXT("Cannot Commit Ability"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	if (!ApplyStaminaCost())
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
+	
+	ActivateInitSettings();
+	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 

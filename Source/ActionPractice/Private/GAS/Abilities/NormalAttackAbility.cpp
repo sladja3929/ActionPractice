@@ -22,46 +22,44 @@ UNormalAttackAbility::UNormalAttackAbility()
     StaminaCost = 15.0f;
 }
 
-void UNormalAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UNormalAttackAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        DEBUG_LOG(TEXT("Cannot Commit Ability"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	Super::OnGiveAbility(ActorInfo, Spec);
 
-    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
-    if (!WeaponAttackData)
-    {
-        DEBUG_LOG(TEXT("Cannot Load Normal Attack Data"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
+	EventNotifyResetComboTag = UGameplayTagsSubsystem::GetEventNotifyResetComboTag();
 
-    BindAndReadyPlayBufferEvent();
+	if (!EventNotifyResetComboTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventNotifyResetComboTag is not valid"));
+	}
+}
+
+void UNormalAttackAbility::ActivateInitSettings()
+{
+    Super::ActivateInitSettings();
+
+    ReadyInputByBufferTask();
     
     //무기 데이터 적용
     MaxComboCount = WeaponAttackData->ComboAttackData.Num();
     
-    ComboCounter = 0;
     bCreateTask = true;
-    PlayAction();
 }
 
 void UNormalAttackAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{     
+{
     //ActionRecoveryEnd 이후 구간에서 입력이 들어오면 콤보 실행
-    if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+    if (!GetAbilitySystemComponentFromActorInfo()->HasMatchingGameplayTag(StateRecoveringTag))
     {
         PlayNextAttack();
         DEBUG_LOG(TEXT("Input Pressed - After Recovery"));
-    }    
+    }
 }
 
 
 void UNormalAttackAbility::PlayNextAttack()
 {
+    AddStateRecoveringTag();
     ++ComboCounter;
     
     if (ComboCounter >= MaxComboCount)
@@ -77,7 +75,7 @@ void UNormalAttackAbility::PlayNextAttack()
 
 /* 공격 수행 메커니즘
  * 1. 몽타주 실행 (State.IsRecovering 태그 추가)
- * 2. enablecomboInput = 입력 저장 가능 구간, 다음 공격과 구르기 저장 가능 (구르기를 저장해도 다음 공격 우선 저장)
+ * 2. EnableComboInput = 입력 저장 가능 구간, 다음 공격과 구르기 저장 가능 (구르기를 저장해도 다음 공격 우선 저장)
  * 3. ActionRecoveryEnd = 공격 선딜이 끝나는 지점
  * 3-1. 2~3 사이 저장한 행동이 있을 경우 CheckComboInput으로 행동 수행
  * 3-2. 2~3 사이 저장한 행동이 없을 경우 입력이 들어오면 다음 공격 가능, 이동/점프/구르기로 캔슬 가능 (State.IsRecovering 태그 제거)
@@ -87,7 +85,7 @@ void UNormalAttackAbility::PlayNextAttack()
 
 void UNormalAttackAbility::ExecuteMontageTask()
 {
-    UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
+    UAnimMontage* MontageToPlay = SetMontageToPlayTask();
     if (!MontageToPlay)
     {
         DEBUG_LOG(TEXT("No Montage to Play %d"), ComboCounter);
@@ -95,7 +93,7 @@ void UNormalAttackAbility::ExecuteMontageTask()
         return;
     }
     
-    if (bCreateTask) // 커스텀 태스크 생성
+    if (bCreateTask) //커스텀 태스크 생성
     {        
         PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
             this,
@@ -105,23 +103,8 @@ void UNormalAttackAbility::ExecuteMontageTask()
             NAME_None,
             1.0f
         );
-    
-        if (PlayMontageWithEventsTask)
-        {        
-            // 델리게이트 바인딩 - 사용하지 않는 델리게이트도 있음
-            PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageCompleted);
-            PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UNormalAttackAbility::OnTaskMontageInterrupted);
-            PlayMontageWithEventsTask->OnResetCombo.AddDynamic(this, &UNormalAttackAbility::OnNotifyResetCombo);
 
-            // 태스크 활성화
-            PlayMontageWithEventsTask->ReadyForActivation();
-        }
-    
-        else
-        {
-            DEBUG_LOG(TEXT("No Montage Task"));
-            EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-        }
+        BindEventsAndReadyMontageTask();
     }
 
     else //태스크 중간에 몽타주 바꾸기
@@ -130,7 +113,28 @@ void UNormalAttackAbility::ExecuteMontageTask()
     }
 }
 
-void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
+void UNormalAttackAbility::BindEventsAndReadyMontageTask()
+{
+    if (!PlayMontageWithEventsTask)
+    {
+        DEBUG_LOG(TEXT("No MontageWithEvents Task"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+    }
+
+    //ResetCombo 노티파이 이벤트 바인딩
+    PlayMontageWithEventsTask->BindNotifyEventCallbackWithTag(EventNotifyResetComboTag);
+    
+    Super::BindEventsAndReadyMontageTask();
+}
+
+void UNormalAttackAbility::OnTaskNotifyEventsReceived(FGameplayEventData Payload)
+{
+    Super::OnTaskNotifyEventsReceived(Payload);
+
+    if (Payload.EventTag == EventNotifyResetComboTag) OnNotifyResetCombo(Payload);
+}
+
+void UNormalAttackAbility::OnEventInputByBuffer(FGameplayEventData Payload)
 {
     if (Payload.OptionalObject && Payload.OptionalObject != this) return;
     
@@ -138,7 +142,7 @@ void UNormalAttackAbility::OnEventPlayBuffer(FGameplayEventData Payload)
     DEBUG_LOG(TEXT("Attack Recovery End - Play Next Attack"));
 }
 
-void UNormalAttackAbility::OnNotifyResetCombo()
+void UNormalAttackAbility::OnNotifyResetCombo(FGameplayEventData Payload)
 {
     DEBUG_LOG(TEXT("Reset Combo"));
     ComboCounter = -1; //어빌리티가 살아있는 동안 입력이 들어오면 PlayNext로 0이 되고, 어빌리티가 죽으면 초기화
