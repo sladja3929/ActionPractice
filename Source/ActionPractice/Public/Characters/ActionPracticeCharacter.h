@@ -3,10 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "Characters/BaseCharacter.h"
+#include "GAS/ActionPracticeAttributeSet.h"
 #include "Logging/LogMacros.h"
-#include "AbilitySystemInterface.h"
-#include "GameplayEffect.h"
 #include "ActionPracticeCharacter.generated.h"
 
 class UInputActionDataAsset;
@@ -16,7 +15,6 @@ class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
 class UAbilitySystemComponent;
-class UActionPracticeAttributeSet;
 class UGameplayAbility;
 class UInputBufferComponent;
 class AWeapon;
@@ -25,7 +23,7 @@ class UPlayerStatsWidget;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
 UCLASS(abstract)
-class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterface
+class AActionPracticeCharacter : public ABaseCharacter
 {
 	GENERATED_BODY()
 
@@ -54,57 +52,48 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// ===== Camera =====
+	// ===== Getter =====
+	//Camera
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }	
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	// ===== GAS Interface =====
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return AttributeSet; }
+	//GAS
+	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return Cast<UActionPracticeAttributeSet>(AttributeSet); }
+
+	//Input
+	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
 	FORCEINLINE const UInputActionDataAsset* GetInputActionData() const { return InputActionData; }
 	
-	// ===== Input Buffer Interface =====
-	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
-	
-	// ===== Weapon Getter Functions =====
+	//Weapon
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
-	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const;
+	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const override;
+	// ===================
 	
-	// ===== Input Helper Functions =====
+	//Movement Functions
 	UFUNCTION(BlueprintPure, Category = "Input")
 	FVector2D GetCurrentMovementInput() const;
-
-	// ===== Character Rotation Functions =====
+	
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void RotateCharacterToInputDirection(float RotationTime);
 
 	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
+	
 #pragma endregion
 
 protected:
 #pragma region "Protected Variables"
-	/** Camera boom positioning the camera behind the character */
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom = nullptr;
-
-	/** Follow camera */
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FollowCamera = nullptr;
-
-	/** Ability System Component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent = nullptr;
-
-	/** Attribute Set */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UActionPracticeAttributeSet> AttributeSet = nullptr;
-
-	/** Input Buffer Component */
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputBufferComponent> InputBufferComponent = nullptr;
 
-	// ===== Stats UI Properties =====
+	// ===== UI Properties =====
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UPlayerStatsWidget> PlayerStatsWidgetClass;
 
@@ -121,13 +110,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TObjectPtr<AWeapon> RightWeapon = nullptr;
 
-	// ===== GAS Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
-		
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
-	
 	// ====== Input Actions ======
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Jump = nullptr;
@@ -165,7 +147,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
 
-	//사용되는 태그들
+	// ===== Usage Tags =====
 	FGameplayTag StateRecoveringTag;
 	FGameplayTag StateAbilitySprintingTag;
 	FGameplayTag StateAbilityAttackingTag;
@@ -197,11 +179,9 @@ protected:
 	void UnequipWeapon(bool bIsLeftHand = true);
 	
 	// ===== GAS Functions =====
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void InitializeAbilitySystem();
-
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass);
+	virtual void InitializeAbilitySystem() override;
+	virtual void CreateAbilitySystemComponent() override;
+	virtual void CreateAttributeSet() override;
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void GASInputPressed(const UInputAction* InputAction);

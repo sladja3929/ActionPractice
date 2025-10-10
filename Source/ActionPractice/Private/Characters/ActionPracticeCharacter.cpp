@@ -37,18 +37,18 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AActionPracticeCharacter::AActionPracticeCharacter()
 {
-	// Set size for collision capsule
+	PrimaryActorTick.bCanEverTick = true;
+	
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
-	// Don't rotate when the controller rotates. Let that just affect the camera.
+	//Controller Settings
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
+	//Character Movement Settings
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-	
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -56,28 +56,23 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
-	// Create a camera boom (pulls in towards the player if there is a collision)
+	//Camera Boom Settings
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f;
 	CameraBoom->bUsePawnControlRotation = true;
 
-	// Create a follow camera
+	//FollowCamera Settings
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// Create Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UActionPracticeAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-
-	// Create Attribute Set
-	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
-
-	// Create Input Buffer Component
+	//Input Buffer Component Settings
 	InputBufferComponent = CreateDefaultSubobject<UInputBufferComponent>(TEXT("InputBufferComponent"));
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	//GAS Settings
+	CreateAbilitySystemComponent();
+	CreateAttributeSet();
 }
 
 void AActionPracticeCharacter::BeginPlay()
@@ -125,7 +120,7 @@ void AActionPracticeCharacter::BeginPlay()
 				//AttributeSet 연결
 				if (AttributeSet)
 				{
-					PlayerStatsWidget->SetAttributeSet(AttributeSet);
+					PlayerStatsWidget->SetAttributeSet(GetAttributeSet());
 					DEBUG_LOG(TEXT("PlayerStatsWidget created and AttributeSet connected"));
 				}
 				else
@@ -693,52 +688,19 @@ void AActionPracticeCharacter::OnChargeAttackReleased()
 #pragma endregion
 
 #pragma region "GAS Functions"
-UAbilitySystemComponent* AActionPracticeCharacter::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent;
-}
-
 void AActionPracticeCharacter::InitializeAbilitySystem()
 {
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		
-		if (AttributeSet)
-		{
-			// Attributes are automatically initialized in the AttributeSet constructor
-			// Additional setup can be done here if needed
-		}
-		
-		for (const auto& StartAbility : StartAbilities)
-		{
-			GiveAbility(StartAbility);
-		}
-
-		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-		EffectContext.AddSourceObject(this);
-		
-		for (const auto& StartEffect : StartEffects)
-		{
-			if (StartEffect)
-			{
-				FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(StartEffect, 1, EffectContext);
-				if (SpecHandle.IsValid())
-				{
-					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-				}
-			}
-		}
-	}
+	Super::InitializeAbilitySystem();
 }
 
-void AActionPracticeCharacter::GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass)
+void AActionPracticeCharacter::CreateAbilitySystemComponent()
 {
-	if (AbilitySystemComponent && AbilityClass)
-	{
-		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
-		AbilitySystemComponent->GiveAbility(AbilitySpec);
-	}
+	AbilitySystemComponent = CreateDefaultSubobject<UActionPracticeAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+}
+
+void AActionPracticeCharacter::CreateAttributeSet()
+{
+	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
 }
 
 void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)
