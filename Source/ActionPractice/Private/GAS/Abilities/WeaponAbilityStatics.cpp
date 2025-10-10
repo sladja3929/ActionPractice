@@ -35,7 +35,7 @@ const FAttackActionData* FWeaponAbilityStatics::GetAttackDataFromAbility(const U
 		return nullptr;
 	}
 
-	// 몽타주 검증, 데이터 배열 크기 일치 검증
+	//몽타주 검증, 데이터 배열 크기 일치 검증
 	const FAttackActionData* WeaponAttackData = Weapon->GetWeaponAttackDataByTag(AssetTag);
 	if (!WeaponAttackData)
 	{

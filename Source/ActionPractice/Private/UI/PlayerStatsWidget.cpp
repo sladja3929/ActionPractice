@@ -1,5 +1,8 @@
 ﻿#include "UI/PlayerStatsWidget.h"
+
+#include "Components/CanvasPanelSlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/VerticalBox.h"
 #include "GAS/ActionPracticeAttributeSet.h"
 
 #define ENABLE_DEBUG_LOG 0
@@ -64,6 +67,8 @@ void UPlayerStatsWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 		return;
 	}
 
+	UpdateHealthBarSize(MaxHealth);
+	
 	float NewHealthPercent = CurrentHealth / MaxHealth;
 
 	//HP 감소
@@ -74,7 +79,7 @@ void UPlayerStatsWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 		CurrentHealthDelayTimer = 0.0f;
 	}
 	
-	//HP 회복
+	//HP 증가
 	else if (NewHealthPercent > CurrentHealthPercent)
 	{
 		HealthBar->SetPercent(NewHealthPercent);
@@ -97,6 +102,8 @@ void UPlayerStatsWidget::UpdateStamina(float CurrentStamina, float MaxStamina)
 		return;
 	}
 
+	UpdateStaminaBarSize(MaxStamina);
+	
 	float NewStaminaPercent = CurrentStamina / MaxStamina;
 
 	//스테미나 감소
@@ -110,7 +117,7 @@ void UPlayerStatsWidget::UpdateStamina(float CurrentStamina, float MaxStamina)
 		CurrentStaminaDelayTimer = 0.0f;
 	}
 	
-	//스테미나 회복
+	//스테미나 증가
 	else if (NewStaminaPercent > CurrentStaminaPercent)
 	{
 		StaminaBar->SetPercent(NewStaminaPercent);
@@ -124,6 +131,36 @@ void UPlayerStatsWidget::UpdateStamina(float CurrentStamina, float MaxStamina)
 	}
 
 	CurrentStaminaPercent = NewStaminaPercent;
+}
+
+void UPlayerStatsWidget::UpdateHealthBarSize(float MaxHealth)
+{
+    if (!HealthVerticalBox) return;
+	
+	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(HealthVerticalBox->Slot);
+	if (!CanvasSlot) return;
+	
+	FVector2D CurrentSize = CanvasSlot->GetSize();
+    float BarWidth = MaxHealth * BarWidthPerHealth;
+
+	CanvasSlot->SetSize(FVector2D(BarWidth, CurrentSize.Y));
+    
+    DEBUG_LOG(TEXT("Health Bar Size Updated: MaxHP=%.1f, BarWidth=%.1f"), ClampedMaxHealth, BarWidth);
+}
+
+void UPlayerStatsWidget::UpdateStaminaBarSize(float MaxStamina)
+{
+	if (!StaminaVerticalBox) return;
+	
+	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(StaminaVerticalBox->Slot);
+	if (!CanvasSlot) return;
+	
+	FVector2D CurrentSize = CanvasSlot->GetSize();
+	float BarWidth = MaxStamina * BarWidthPerStamina;
+
+	CanvasSlot->SetSize(FVector2D(BarWidth, CurrentSize.Y));
+    
+	DEBUG_LOG(TEXT("Stamina Bar Size Updated: MaxStamina=%.1f, BarWidth=%.1f"), ClampedMaxStamina, BarWidth);
 }
 
 void UPlayerStatsWidget::UpdateDamageBars(float DeltaTime)

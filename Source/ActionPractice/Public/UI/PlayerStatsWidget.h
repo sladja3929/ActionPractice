@@ -4,6 +4,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerStatsWidget.generated.h"
 
+class UVerticalBox;
 class UProgressBar;
 class UActionPracticeAttributeSet;
 
@@ -16,11 +17,17 @@ public:
 #pragma region "Public Variables"
 	
 	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UVerticalBox>HealthVerticalBox;
+	
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> HealthBar;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> HealthDamageBar;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UVerticalBox>StaminaVerticalBox;
+	
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaBar;
 
@@ -66,8 +73,13 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions"
-	//지연 바를 부드럽게 감소
+	
+	//지연 바 감소
 	void UpdateDamageBars(float DeltaTime);
+
+	void UpdateHealthBarSize(float MaxHealth);
+	void UpdateStaminaBarSize(float MaxStamina);
+	
 #pragma endregion
 
 private:
@@ -79,8 +91,15 @@ private:
 
 	//지연 바가 몇초 뒤에 줄어드는지
 	UPROPERTY(EditAnywhere, Category = "UI Settings", meta = (AllowPrivateAccess = "true"))
-	
 	float DamageBarDelayTime = 0.5f;
+
+	//체력 1당 바 길이
+	UPROPERTY(EditAnywhere, Category = "UI Settings", meta = (AllowPrivateAccess = "true"))
+	float BarWidthPerHealth = 0.5f;
+	
+	//스테미나 1당 바 길이
+	UPROPERTY(EditAnywhere, Category = "UI Settings", meta = (AllowPrivateAccess = "true"))
+	float BarWidthPerStamina = 3.0f;
 	
 #pragma endregion
 

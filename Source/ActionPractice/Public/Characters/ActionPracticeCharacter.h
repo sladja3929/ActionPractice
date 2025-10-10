@@ -44,9 +44,7 @@ public:
     
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float CrouchSpeedMultiplier = 0.5f;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float BlockingSpeedMultiplier = 1.0f;
+
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -80,30 +78,6 @@ public:
 	// ===== Character Rotation Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void RotateCharacterToInputDirection(float RotationTime);
-
-
-	// ===== Weapon Functions =====
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	TSubclassOf<AWeapon> LoadWeaponClassByName(const FString& WeaponName);
-	
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand = true, bool bIsTwoHanded = false);
-
-	UFUNCTION(BlueprintCallable, Category = "Weapon")
-	void UnequipWeapon(bool bIsLeftHand = true);
-	
-	// ===== GAS Functions =====
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void InitializeAbilitySystem();
-
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass);
-
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void GASInputPressed(const UInputAction* InputAction);
-	
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void GASInputReleased(const UInputAction* InputAction);
 
 	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
 #pragma endregion
@@ -170,12 +144,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Sprint = nullptr;
 
-	//사용되는 태그들
-	FGameplayTag StateRecoveringTag;
-	FGameplayTag StateAbilitySprintingTag;
-	FGameplayTag StateAbilityAttackingTag;
-	FGameplayTag AbilityAttackTag;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> IA_Crouch = nullptr;
 
@@ -196,6 +164,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
+
+	//사용되는 태그들
+	FGameplayTag StateRecoveringTag;
+	FGameplayTag StateAbilitySprintingTag;
+	FGameplayTag StateAbilityAttackingTag;
+	FGameplayTag AbilityAttackTag;
 	
 	// ===== State Variables =====
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
@@ -211,6 +185,29 @@ protected:
 #pragma endregion
 
 #pragma region "Protected Functions"
+	
+	// ===== Weapon Functions =====
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	TSubclassOf<AWeapon> LoadWeaponClassByName(const FString& WeaponName);
+	
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, bool bIsLeftHand = true, bool bIsTwoHanded = false);
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void UnequipWeapon(bool bIsLeftHand = true);
+	
+	// ===== GAS Functions =====
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void InitializeAbilitySystem();
+
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GASInputPressed(const UInputAction* InputAction);
+	
+	UFUNCTION(BlueprintCallable, Category = "GAS")
+	void GASInputReleased(const UInputAction* InputAction);
 	
 	// ===== Input Handler Functions =====
 	void Move(const FInputActionValue& Value);
