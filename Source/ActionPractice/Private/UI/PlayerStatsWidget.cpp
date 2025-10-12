@@ -3,7 +3,7 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/ProgressBar.h"
 #include "Components/VerticalBox.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 
 #define ENABLE_DEBUG_LOG 0
 

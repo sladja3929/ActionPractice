@@ -1,4 +1,4 @@
-#include "GAS/BaseAttributeSet.h"
+#include "GAS/AttributeSet/BaseAttributeSet.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"

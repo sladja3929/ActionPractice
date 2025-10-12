@@ -1,15 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/BaseAttributeSet.h"
+#include "GAS/AttributeSet/BaseAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "ActionPracticeAttributeSet.generated.h"
 
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
-	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
-	GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
-	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
-	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
+		GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
+		GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
+		GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
+		GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 UCLASS()
 class ACTIONPRACTICE_API UActionPracticeAttributeSet : public UBaseAttributeSet

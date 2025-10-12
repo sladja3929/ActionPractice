@@ -1,6 +1,6 @@
 #include "GAS/Abilities/ChargeAttackAbility.h"
 #include "Input/InputBufferComponent.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"

@@ -9,7 +9,7 @@
 
 #include "GAS/Abilities/JumpAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"

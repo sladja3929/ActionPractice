@@ -1,8 +1,8 @@
-﻿#include "GAS/ActionPracticeAbilitySystemComponent.h"
+﻿#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Actor.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "GAS/GameplayTagsSubsystem.h"
 
 #define ENABLE_DEBUG_LOG 1

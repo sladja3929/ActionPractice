@@ -18,7 +18,8 @@ class ACTIONPRACTICE_API UBaseAttributeSet : public UAttributeSet
 
 public:
 #pragma region "Public Variables"
-	// ===== Vital Attributes =====
+	
+	// ===== Base Attributes =====
 
 	//HP
 	UPROPERTY(BlueprintReadOnly, Category = "Vital", ReplicatedUsing = OnRep_Health)
@@ -46,23 +47,21 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_Defense)
 	FGameplayAttributeData Defense;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Defense)
-
-	// Movement Speed (이동 속도)
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Movement", ReplicatedUsing = OnRep_MovementSpeed)
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MovementSpeed)
 
-	// ===== Meta Attributes (복제되지 않는 순수 계산용) =====
-
-	//Incoming Damage
+	// ===== Meta Attributes =====
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingDamage)
-
-	//Incoming Healing
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingHealing;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingHealing)
+	
 #pragma endregion
 
 #pragma region "Public Functions"
@@ -85,6 +84,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Attributes")
 	float GetStaminaPercent() const;
+	
 #pragma endregion
 
 protected:
@@ -112,5 +112,6 @@ protected:
 
 	//Helper function to adjust attributes when max value changes
 	void AdjustAttributeForMaxChange(const FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty) const;
+	
 #pragma endregion
 };

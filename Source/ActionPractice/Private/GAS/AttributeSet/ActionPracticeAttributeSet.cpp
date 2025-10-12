@@ -1,10 +1,7 @@
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "GameplayEffect.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
-#include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "GAS/ActionPracticeAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 1
 

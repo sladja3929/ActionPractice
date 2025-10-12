@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Characters/BaseCharacter.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Logging/LogMacros.h"
 #include "ActionPracticeCharacter.generated.h"
 
