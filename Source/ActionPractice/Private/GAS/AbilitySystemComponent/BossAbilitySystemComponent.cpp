@@ -15,8 +15,6 @@
 
 UBossAbilitySystemComponent::UBossAbilitySystemComponent()
 {
-	SetIsReplicated(true);
-	SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 }
 
 void UBossAbilitySystemComponent::BeginPlay()
@@ -25,23 +23,15 @@ void UBossAbilitySystemComponent::BeginPlay()
 
 	if (AActor* Owner = GetOwner())
 	{
-		CachedCharacter = Cast<ABossCharacter>(Owner);
+		CachedBossCharacter = Cast<ABossCharacter>(Owner);
 	}
-}
-
-void UBossAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
 }
 
 void UBossAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
 {
 	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
 
-	CachedCharacter = Cast<ABossCharacter>(InOwnerActor);
-
-	//외부 바인딩용 신호
-	OnASCInitialized.Broadcast(this);
+	CachedBossCharacter = Cast<ABossCharacter>(InOwnerActor);
 }
 
 const UBossAttributeSet* UBossAbilitySystemComponent::GetBossAttributeSet() const

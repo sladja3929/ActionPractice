@@ -16,8 +16,6 @@
 
 UActionPracticeAbilitySystemComponent::UActionPracticeAbilitySystemComponent()
 {
-	SetIsReplicated(true);
-	SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 }
 
 void UActionPracticeAbilitySystemComponent::BeginPlay()
@@ -26,9 +24,9 @@ void UActionPracticeAbilitySystemComponent::BeginPlay()
 
 	if (AActor* Owner = GetOwner())
 	{
-		CachedCharacter = Cast<AActionPracticeCharacter>(Owner);
+		CachedAPCharacter = Cast<AActionPracticeCharacter>(Owner);
 	}
-	
+
 	EffectStaminaRegenBlockDurationTag = UGameplayTagsSubsystem::GetEffectStaminaRegenBlockDurationTag();
 	if (!EffectStaminaRegenBlockDurationTag.IsValid())
 	{
@@ -36,19 +34,11 @@ void UActionPracticeAbilitySystemComponent::BeginPlay()
 	}
 }
 
-void UActionPracticeAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-}
-
 void UActionPracticeAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
 {
 	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
 
-	CachedCharacter = Cast<AActionPracticeCharacter>(InOwnerActor);
-
-	//외부 바인딩용 신호
-	OnASCInitialized.Broadcast(this);
+	CachedAPCharacter = Cast<AActionPracticeCharacter>(InOwnerActor);
 }
 
 const UActionPracticeAttributeSet* UActionPracticeAbilitySystemComponent::GetActionPracticeAttributeSet() const 

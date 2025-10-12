@@ -6,8 +6,8 @@
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-	DEFINE_LOG_CATEGORY_STATIC(LogPlayerStatsWidget, Log, All);
-#define DEBUG_LOG(Format, ...) UE_LOG(LogPlayerStatsWidget, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogBossAttributeSet, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogBossAttributeSet, Warning, Format, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(Format, ...)
 #endif
