@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Public/Items/WeaponEnums.h"
+#include "Public/Items/AttackData.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GameplayTagContainer.h"

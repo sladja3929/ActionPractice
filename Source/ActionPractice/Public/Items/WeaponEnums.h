@@ -11,12 +11,3 @@ enum class EWeaponEnums : uint8
 	GreatSword UMETA(DisplayName = "GreatSword"),
 	Shield UMETA(DisplayName = "Shield"),
 };
-
-UENUM(BlueprintType)
-enum class EAttackDamageType : uint8
-{
-	None UMETA(DisplayName = "None"), 
-	Slash UMETA(DisplayName = "Slash"), 
-	Strike UMETA(DisplayName = "Strike"), 
-	Pierce UMETA(DisplayName = "Pierce"), 
-};

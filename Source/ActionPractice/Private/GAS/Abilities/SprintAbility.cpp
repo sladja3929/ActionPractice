@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -141,32 +142,35 @@ bool USprintAbility::CanContinueSprinting() const
 
 bool USprintAbility::StartSprintEffect()
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
+	{
+		DEBUG_LOG(TEXT("No APASC"));
+		return false;
+	}
 
 	// 기존 이펙트가 살아있으면 재설정(해제 후 재적용)
 	if (SprintHandle.IsValid())
 	{
-		ASC->RemoveActiveGameplayEffect(SprintHandle);
+		APASC->RemoveActiveGameplayEffect(SprintHandle);
 		SprintHandle = FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
 	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(SprintEffect, EffectiveLevel, EffectContext);
-	
+	FGameplayEffectSpecHandle SpecHandle = APASC->CreateGameplayEffectSpec(SprintEffect, EffectiveLevel, this);
+
 	if (!SpecHandle.IsValid())
 	{
 		DEBUG_LOG(TEXT("failed Sprint GameplayEffectSpec"));
 		return false;
 	}
 
-	SpecHandle.Data.Get()->SetSetByCallerMagnitude(EffectSprintSpeedMultiplierTag, SprintSpeedMultiplier);
-	SprintHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	APASC->SetSpecSetByCallerMagnitude(SpecHandle, EffectSprintSpeedMultiplierTag, SprintSpeedMultiplier);
+	SprintHandle = APASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 	const bool bApplied = SprintHandle.IsValid();
-	
+
 	DEBUG_LOG(TEXT("SprintEffect applied=%s, SpeedMultiplier=%.2f"), bApplied ? TEXT("true") : TEXT("false"), SprintSpeedMultiplier);
-	
+
 	return bApplied;
 }
 
@@ -190,32 +194,35 @@ void USprintAbility::StopSprintEffect()
 
 bool USprintAbility::StartStaminaDrainEffect()
 {
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
+	{
+		DEBUG_LOG(TEXT("No APASC"));
+		return false;
+	}
 
 	// 기존 드레인이 살아있으면 재설정(해제 후 재적용)
 	if (StaminaDrainHandle.IsValid())
 	{
-		ASC->RemoveActiveGameplayEffect(StaminaDrainHandle);
+		APASC->RemoveActiveGameplayEffect(StaminaDrainHandle);
 		StaminaDrainHandle = FActiveGameplayEffectHandle();
 	}
 
-	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
 	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
-	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(StaminaDrainEffect, EffectiveLevel, EffectContext);
-	
+	FGameplayEffectSpecHandle SpecHandle = APASC->CreateGameplayEffectSpec(StaminaDrainEffect, EffectiveLevel, this);
+
 	if (!SpecHandle.IsValid())
 	{
 		DEBUG_LOG(TEXT("failed StaminaDrain GameplayEffectSpec"));
 		return false;
 	}
 
-	SpecHandle.Data.Get()->SetSetByCallerMagnitude(EffectStaminaCostTag, -StaminaCost);
-	StaminaDrainHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	APASC->SetSpecSetByCallerMagnitude(SpecHandle, EffectStaminaCostTag, -StaminaCost);
+	StaminaDrainHandle = APASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 	const bool bApplied = StaminaDrainHandle.IsValid();
-	
+
 	DEBUG_LOG(TEXT("StaminaDrainEffect applied=%s, DrainPerPeriod=%.2f"), bApplied ? TEXT("true") : TEXT("false"), StaminaCost);
-	
+
 	return bApplied;
 }
 

@@ -6,6 +6,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "GameplayEffect.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -72,28 +73,26 @@ void URollAbility::ApplyInvincibilityEffect()
 		return;
 	}
 
-	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!ASC)
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
 	{
-		DEBUG_LOG(TEXT("No AbilitySystemComponent"));
+		DEBUG_LOG(TEXT("No APASC"));
 		return;
 	}
 
 	// 무적 이펙트 적용
-	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
 	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
-	FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(InvincibilityEffect, EffectiveLevel, EffectContext);
-	
+	FGameplayEffectSpecHandle EffectSpec = APASC->CreateGameplayEffectSpec(InvincibilityEffect, EffectiveLevel, this);
+
 	if (!EffectSpec.IsValid())
 	{
 		DEBUG_LOG(TEXT("Failed to create Invincibility Effect Spec"));
 		return;
 	}
 
-	EffectSpec.Data.Get()->SetSetByCallerMagnitude(EffectInvincibilityDurationTag, InvincibilityDuration);
-	InvincibilityEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-	
+	APASC->SetSpecSetByCallerMagnitude(EffectSpec, EffectInvincibilityDurationTag, InvincibilityDuration);
+	InvincibilityEffectHandle = APASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+
 	DEBUG_LOG(TEXT("Invincibility Effect Applied with Duration: %f"), InvincibilityDuration)
 }
 
@@ -107,23 +106,34 @@ void URollAbility::OnTaskNotifyEventsReceived(FGameplayEventData Payload)
 void URollAbility::OnEventActionRecoveryEnd(FGameplayEventData Payload)
 {
 	//JustRolled 태그 부여
-	auto ASC = GetAbilitySystemComponentFromActorInfo();
-	if (ASC && JustRolledWindowEffect)
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
 	{
-		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
-		EffectContext.AddSourceObject(this);
-		const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
-		FGameplayEffectSpecHandle EffectSpec = ASC->MakeOutgoingSpec(JustRolledWindowEffect, EffectiveLevel, EffectContext);
-				
-		if (EffectSpec.IsValid())
-		{
-			EffectSpec.Data.Get()->SetSetByCallerMagnitude(EffectJustRolledDurationTag, JustRolledWindowDuration);
-			ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-			DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
-		}
+		DEBUG_LOG(TEXT("No APASC"));
+		Super::OnEventActionRecoveryEnd(Payload);
+		return;
 	}
-	
-	else DEBUG_LOG(TEXT("No ASC or JustRolledWindowEffect"));
+
+	if (!JustRolledWindowEffect)
+	{
+		DEBUG_LOG(TEXT("No JustRolledWindowEffect"));
+		Super::OnEventActionRecoveryEnd(Payload);
+		return;
+	}
+
+	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+	FGameplayEffectSpecHandle EffectSpec = APASC->CreateGameplayEffectSpec(JustRolledWindowEffect, EffectiveLevel, this);
+
+	if (!EffectSpec.IsValid())
+	{
+		DEBUG_LOG(TEXT("Failed to create JustRolled Effect Spec"));
+		Super::OnEventActionRecoveryEnd(Payload);
+		return;
+	}
+
+	APASC->SetSpecSetByCallerMagnitude(EffectSpec, EffectJustRolledDurationTag, JustRolledWindowDuration);
+	APASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+	DEBUG_LOG(TEXT("JustRolled EffectWindow Attached"));
 	
 	Super::OnEventActionRecoveryEnd(Payload);
 }

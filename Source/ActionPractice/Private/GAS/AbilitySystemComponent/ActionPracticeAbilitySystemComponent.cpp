@@ -85,11 +85,8 @@ void UActionPracticeAbilitySystemComponent::ApplyStaminaRegenBlock(float Duratio
 	}*/
 
 	//Spec 생성
-	FGameplayEffectContextHandle Context = MakeEffectContext();
-	Context.AddSourceObject(this);
-
 	const float Level = 1.0f;
-	FGameplayEffectSpecHandle Spec = MakeOutgoingSpec(StaminaRegenBlockEffect, Level, Context);
+	FGameplayEffectSpecHandle Spec = CreateGameplayEffectSpec(StaminaRegenBlockEffect, Level, this);
 	if (!Spec.IsValid())
 	{
 		DEBUG_LOG(TEXT("Failed to create GE_StaminaRegenBlock spec"));
@@ -98,7 +95,7 @@ void UActionPracticeAbilitySystemComponent::ApplyStaminaRegenBlock(float Duratio
 
 	if (EffectStaminaRegenBlockDurationTag.IsValid())
 	{
-		Spec.Data.Get()->SetSetByCallerMagnitude(EffectStaminaRegenBlockDurationTag, Duration);
+		SetSpecSetByCallerMagnitude(Spec, EffectStaminaRegenBlockDurationTag, Duration);
 		Spec.Data.Get()->SetDuration(Duration, true);
 	}
 

@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
 #include "WeaponEnums.h"
+#include "AttackData.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
 #include "WeaponDataAsset.generated.h"

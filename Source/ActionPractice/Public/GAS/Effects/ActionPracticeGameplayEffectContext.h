@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayEffectTypes.h"
-#include "Items/WeaponEnums.h"
+#include "Items/AttackData.h"
 #include "ActionPracticeGameplayEffectContext.generated.h"
 
 USTRUCT()

@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "WeaponEnums.h"
+#include "AttackData.h"
 #include "Items/HitDetectionInterface.h"
 #include "GameplayAbilities/Public/GameplayEffectTypes.h"
 #include "WeaponAttackTraceComponent.generated.h"

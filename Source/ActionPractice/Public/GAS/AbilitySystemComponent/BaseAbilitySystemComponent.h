@@ -5,6 +5,8 @@
 #include "BaseAbilitySystemComponent.generated.h"
 
 class ABaseCharacter;
+struct FFinalAttackData;
+struct FActionPracticeGameplayEffectContext;
 
 /**
  * Base AbilitySystemComponent
@@ -26,6 +28,26 @@ public:
 	//초기화 완료 델리게이트(필요 시 외부에서 바인딩)
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnASCInitialized, UBaseAbilitySystemComponent*);
 	FOnASCInitialized OnASCInitialized;
+
+	//기본 GE 생성 헬퍼
+	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
+	FGameplayEffectSpecHandle CreateGameplayEffectSpec(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level, UObject* SourceObject = nullptr);
+
+	//공격 GE 생성
+	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
+	FGameplayEffectSpecHandle CreateAttackGameplayEffectSpec(
+		TSubclassOf<UGameplayEffect> GameplayEffectClass,
+		float Level,
+		UObject* SourceObject,
+		const FFinalAttackData& FinalAttackData
+	);
+
+	//SetByCaller 설정
+	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
+	void SetSpecSetByCallerMagnitude(FGameplayEffectSpecHandle& SpecHandle, const FGameplayTag& Tag, float Magnitude);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
+	void SetSpecSetByCallerMagnitudes(FGameplayEffectSpecHandle& SpecHandle, const TMap<FGameplayTag, float>& Magnitudes);
 
 #pragma endregion
 
