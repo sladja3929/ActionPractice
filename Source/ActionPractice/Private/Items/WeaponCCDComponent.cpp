@@ -303,7 +303,7 @@ void UWeaponCCDComponent::ProcessHit(AActor* HitActor, const FHitResult& HitResu
               *HitResult.Location.ToString());
     
     //이벤트 브로드캐스트
-    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentDamageType, CurrentDamageMultiplier);
+    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentAttackData);
 }
 
 void UWeaponCCDComponent::ResetHitActors()
@@ -326,8 +326,9 @@ bool UWeaponCCDComponent::LoadAttackConfig(const FGameplayTagContainer& AttackTa
     ComboIndex = FMath::Clamp(ComboIndex, 0, AttackData->ComboAttackData.Num() - 1);
     const FIndividualAttackData& AttackInfo = AttackData->ComboAttackData[ComboIndex];
     
-    CurrentDamageType = AttackInfo.DamageType;
-    CurrentDamageMultiplier = AttackInfo.DamageMultiplier;
+    CurrentAttackData.DamageType = AttackInfo.DamageType;
+    CurrentAttackData.FinalDamage = OwnerWeapon->GetCalculatedDamage() * AttackInfo.DamageMultiplier;
+    CurrentAttackData.PoiseDamage = AttackInfo.PoiseDamage;
     
     // UpdateCapsuleSize 호출 제거 - 고정 크기 유지
     

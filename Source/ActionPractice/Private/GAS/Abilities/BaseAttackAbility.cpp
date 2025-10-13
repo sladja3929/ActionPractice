@@ -1,4 +1,6 @@
 #include "GAS/Abilities/BaseAttackAbility.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
@@ -7,6 +9,8 @@
 #include "Items/HitDetectionInterface.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
+#include "GAS/AbilitySystemComponent/BaseAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -33,21 +37,50 @@ void UBaseAttackAbility::SetHitDetectionConfig()
         return;
     }
 
-    if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
-    {
-        DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
-        FGameplayTagContainer AssetTag = GetAssetTags();
-        if (!AssetTag.IsEmpty()) 
-        {
-            HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
-        }
-    }
-    
-    else
+    HitDetection = Character->GetHitDetectionInterface();
+    if (!HitDetection)
     {
         DEBUG_LOG(TEXT("Character Not Has HitDetection System"));
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
         return; 
+    }
+    
+    FGameplayTagContainer AssetTag = GetAssetTags();
+    if (AssetTag.IsEmpty()) 
+    {
+        DEBUG_LOG(TEXT("No AssetTags"));
+        return;
+    }
+    
+    HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
+    OnHitDelegateHandle = HitDetection->GetOnHitDetected().AddUObject(this, &UBaseAttackAbility::OnHitDetected);
+
+    DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
+}
+
+void UBaseAttackAbility::OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData)
+{
+    //Source ASC (공격자, AttackAbility 소유자)
+    UActionPracticeAbilitySystemComponent* SourceASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+    if (!HitActor || !SourceASC) return;
+    
+    //Target ASC (피격자)
+    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+    if (!TargetASC) return;
+    
+    //Source ASC에서 GE Spec 생성
+    FGameplayEffectSpecHandle SpecHandle = SourceASC->CreateAttackGameplayEffectSpec(DamageInstantEffect, GetAbilityLevel(), this, AttackData);
+    
+    if (SpecHandle.IsValid())
+    {        
+        //Target에게 적용
+        FActiveGameplayEffectHandle ActiveGEHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+        
+        //적용에 성공했으면
+        if (ActiveGEHandle.WasSuccessfullyApplied())
+        {
+            //추후 필요시 구현
+        }
     }
 }
 
@@ -92,6 +125,12 @@ void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, con
     
     if (IsEndAbilityValid(Handle, ActorInfo))
     {
+        if (OnHitDelegateHandle.IsValid() && HitDetection)
+        {
+            HitDetection->GetOnHitDetected().Remove(OnHitDelegateHandle);
+            OnHitDelegateHandle.Reset();
+        }
+        
         if (PlayMontageWithEventsTask)
         {
             PlayMontageWithEventsTask->bStopMontageWhenAbilityCancelled = bWasCancelled;

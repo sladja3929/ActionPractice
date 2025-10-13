@@ -33,12 +33,8 @@ public:
 	FGameplayAttributeData Dexterity;
 	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, Dexterity)
 
-	// ===== Secondary Attributes (Primary 기반 계산된 능력치) =====
+	// ===== Secondary Attributes (Primary 기반 계산된 능력치, 필요하면 추가) =====
 
-	// Physical Attack Power (물리 공격력)
-	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_PhysicalAttackPower)
-	FGameplayAttributeData PhysicalAttackPower;
-	ATTRIBUTE_ACCESSORS(UActionPracticeAttributeSet, PhysicalAttackPower)
 #pragma endregion
 
 #pragma region "Public Functions"
@@ -54,10 +50,7 @@ public:
 
 	//GE 직후 Instant, Periodic에서 수행
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
-	
-	//Helper functions for calculations
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	float CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const;
+
 #pragma endregion
 
 protected:
@@ -68,10 +61,5 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_Dexterity(const FGameplayAttributeData& OldDexterity);
 
-	UFUNCTION()
-	virtual void OnRep_PhysicalAttackPower(const FGameplayAttributeData& OldPhysicalAttackPower);
-
-	//Calculate secondary attributes from primary stats
-	void CalculateSecondaryAttributes();
 #pragma endregion
 };

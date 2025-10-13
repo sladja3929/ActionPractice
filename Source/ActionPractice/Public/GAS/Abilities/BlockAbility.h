@@ -2,14 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "MontageAbilityInterface.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "BlockAbility.generated.h"
 
 struct FBlockActionData;
 class UAbilityTask_PlayMontageWithEvents;
 
 UCLASS()
-class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeGameplayAbility, public IMontageAbilityInterface
+class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeAbility, public IMontageAbilityInterface
 {
 	GENERATED_BODY()
 	

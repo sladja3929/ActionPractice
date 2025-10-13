@@ -70,6 +70,8 @@ protected:
 	void OnNotifyChargeStart(FGameplayEventData Payload);
 
 	virtual void OnEventInputByBuffer(FGameplayEventData Payload) override;
+
+	virtual void OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData) override;
 	
 #pragma endregion
 

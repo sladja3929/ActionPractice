@@ -2,9 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Characters/BaseCharacter.h"
+#include "GAS/AttributeSet/BossAttributeSet.h"
 #include "BossCharacter.generated.h"
-
-class UBossAttributeSet;
 
 UCLASS()
 class ACTIONPRACTICE_API ABossCharacter : public ABaseCharacter
@@ -23,7 +22,9 @@ public:
 
 	//===== Hit Detection Interface =====
 	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const override;
-
+	
+	FORCEINLINE UBossAttributeSet* GetAttributeSet() const { return Cast<UBossAttributeSet>(AttributeSet); }
+	
 #pragma endregion
 
 protected:

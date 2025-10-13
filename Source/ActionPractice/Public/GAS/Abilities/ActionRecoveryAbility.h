@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "MontageAbilityInterface.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "ActionRecoveryAbility.generated.h"
 
 class UAbilityTask_PlayMontageWithEvents;
@@ -14,7 +14,7 @@ class UAbilityTask_WaitGameplayEvent;
  * 몽타주를 사용하며 ActionRecovery와 RotateCharacter가 있는 어빌리티.
  */
 UCLASS(Abstract)
-class ACTIONPRACTICE_API UActionRecoveryAbility : public UActionPracticeGameplayAbility, public IMontageAbilityInterface
+class ACTIONPRACTICE_API UActionRecoveryAbility : public UActionPracticeAbility, public IMontageAbilityInterface
 {
 	GENERATED_BODY()
 

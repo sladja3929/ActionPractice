@@ -3,8 +3,10 @@
 #include "CoreMinimal.h"
 #include "GAS/Abilities/ActionRecoveryAbility.h"
 #include "Engine/Engine.h"
+#include "Items/HitDetectionInterface.h"
 #include "BaseAttackAbility.generated.h"
 
+struct FFinalAttackData;
 class UAbilityTask_PlayMontageWithEvents;
 class UAbilityTask_WaitGameplayEvent;
 
@@ -32,6 +34,15 @@ protected:
 
 	UPROPERTY()
 	int32 MaxComboCount = 0;
+
+	//HitDetection 관련
+	UPROPERTY()
+	TScriptInterface<IHitDetectionInterface> HitDetection;
+	
+	FDelegateHandle OnHitDelegateHandle;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
+	TSubclassOf<UGameplayEffect> DamageInstantEffect;
 	
 #pragma endregion
 
@@ -44,6 +55,9 @@ protected:
 	virtual bool ConsumeStamina() override;
 	virtual void PlayAction() override;
 	virtual UAnimMontage* SetMontageToPlayTask() override;
+
+	//공격 감지 콜백 함수
+	virtual void OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData);
 	
 #pragma endregion
 

@@ -231,6 +231,13 @@ void UChargeAttackAbility::OnEventInputByBuffer(FGameplayEventData Payload)
     DEBUG_LOG(TEXT("Input By Buffer - Play Next Charge"));
 }
 
+void UChargeAttackAbility::OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData)
+{
+    if (bMaxCharged) AttackData.FinalDamage *= 1.5f;
+    
+    Super::OnHitDetected(HitActor, HitResult, AttackData);
+}
+
 void UChargeAttackAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
     //차지를 멈췄을 때

@@ -12,6 +12,7 @@
 class UAbilitySystemComponent;
 class AWeapon;
 struct FWeaponDataAsset;
+struct FFinalAttackData;
 
 USTRUCT()
 struct FHitRecord
@@ -25,8 +26,6 @@ struct FHitRecord
     float HitTime = 0.0f;
 };
 
-DECLARE_MULTICAST_DELEGATE_FourParams(FOnWeaponCCDHit, AActor*, const FHitResult&, EAttackDamageType, float);
-
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ACTIONPRACTICE_API UWeaponCCDComponent : public UCapsuleComponent, public IHitDetectionInterface
 {
@@ -34,7 +33,7 @@ class ACTIONPRACTICE_API UWeaponCCDComponent : public UCapsuleComponent, public 
 
 public:
 #pragma region "Public Variables"
-    FOnWeaponCCDHit OnWeaponHit;
+    FOnHitDetected OnWeaponHit;
     
     //히트 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Hit Settings")
@@ -56,12 +55,16 @@ public:
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, 
                                FActorComponentTickFunction* ThisTickFunction) override;
     
-    //IHitDetectionInterface 구현
+    //HitDetection Interface
     virtual void PrepareHitDetection(const FGameplayTagContainer& AttackTags, const int32 ComboIndex) override;
+    
     UFUNCTION()
     virtual void HandleHitDetectionStart(const FGameplayEventData& Payload) override;
+    
     UFUNCTION()
     virtual void HandleHitDetectionEnd(const FGameplayEventData& Payload) override;
+
+    virtual FOnHitDetected& GetOnHitDetected() override { return OnWeaponHit; }
     
     UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
     void ResetHitActors();
@@ -77,8 +80,7 @@ protected:
     
     //현재 공격 정보
     int32 CurrentComboIndex = 0;
-    EAttackDamageType CurrentDamageType = EAttackDamageType::None;
-    float CurrentDamageMultiplier = 1.0f;
+    FFinalAttackData CurrentAttackData;
     
     //히트 기록
     UPROPERTY()

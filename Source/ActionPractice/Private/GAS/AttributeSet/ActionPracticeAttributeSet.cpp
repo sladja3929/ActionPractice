@@ -16,7 +16,6 @@ UActionPracticeAttributeSet::UActionPracticeAttributeSet()
 {
 	InitStrength(10.0f);
 	InitDexterity(10.0f);
-	InitPhysicalAttackPower(50.0f);
 }
 
 void UActionPracticeAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -25,7 +24,6 @@ void UActionPracticeAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimePro
 
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Strength, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, Dexterity, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UActionPracticeAttributeSet, PhysicalAttackPower, COND_None, REPNOTIFY_Always);
 }
 
 void UActionPracticeAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -59,33 +57,6 @@ void UActionPracticeAttributeSet::PreAttributeBaseChange(const FGameplayAttribut
 void UActionPracticeAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
-
-	//Secondary Attribute를 변경하는 것들 처리
-	if (Data.EvaluatedData.Attribute == GetStrengthAttribute() ||
-		Data.EvaluatedData.Attribute == GetDexterityAttribute())
-	{
-		CalculateSecondaryAttributes();
-	}
-}
-
-void UActionPracticeAttributeSet::CalculateSecondaryAttributes()
-{
-	// Calculate Physical Attack Power based on Strength and Dexterity
-	// 기본 공격력 + 스텟 보너스
-	const float BaseAttackPower = 50.0f;
-	const float StrengthBonus = GetStrength() * 0.8f;
-	const float DexterityBonus = GetDexterity() * 0.6f;
-	
-	SetPhysicalAttackPower(BaseAttackPower + StrengthBonus + DexterityBonus);
-}
-
-float UActionPracticeAttributeSet::CalculateWeaponDamageBonus(float StrengthScaling, float DexterityScaling) const
-{
-	// 엘든링 스타일 무기 스케일링 계산
-	const float StrengthBonus = GetStrength() * StrengthScaling * 0.01f; // 스케일링을 퍼센트로 계산
-	const float DexterityBonus = GetDexterity() * DexterityScaling * 0.01f;
-	
-	return StrengthBonus + DexterityBonus;
 }
 
 // Rep Notify Functions
@@ -97,9 +68,4 @@ void UActionPracticeAttributeSet::OnRep_Strength(const FGameplayAttributeData& O
 void UActionPracticeAttributeSet::OnRep_Dexterity(const FGameplayAttributeData& OldDexterity)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, Dexterity, OldDexterity);
-}
-
-void UActionPracticeAttributeSet::OnRep_PhysicalAttackPower(const FGameplayAttributeData& OldPhysicalAttackPower)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UActionPracticeAttributeSet, PhysicalAttackPower, OldPhysicalAttackPower);
 }

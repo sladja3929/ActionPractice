@@ -1,4 +1,4 @@
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -15,7 +15,7 @@
 #define DEBUG_LOG(Format, ...)
 #endif
 
-UActionPracticeGameplayAbility::UActionPracticeGameplayAbility()
+UActionPracticeAbility::UActionPracticeAbility()
 {
 	// 기본 설정
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -23,7 +23,7 @@ UActionPracticeGameplayAbility::UActionPracticeGameplayAbility()
 }
 
 //Ability는 OnGiveAbility가 BeginPlay처럼 사용됨
-void UActionPracticeGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+void UActionPracticeAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
 
@@ -34,7 +34,7 @@ void UActionPracticeGameplayAbility::OnGiveAbility(const FGameplayAbilityActorIn
 	}
 }
 
-bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
+bool UActionPracticeAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
 {
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
@@ -52,7 +52,7 @@ bool UActionPracticeGameplayAbility::CanActivateAbility(const FGameplayAbilitySp
 	return true;
 }
 
-void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void UActionPracticeAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
@@ -66,12 +66,12 @@ void UActionPracticeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
-void UActionPracticeGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+void UActionPracticeAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
+bool UActionPracticeAbility::CheckStaminaCost(const FGameplayAbilityActorInfo& ActorInfo) const
 {
 	//0이면 스테미나 소모는 없지만 현재 스테미나가 있는지는 확인, 음수면 체크도 하지 않음
 	if (StaminaCost < 0.0f)
@@ -87,7 +87,7 @@ bool UActionPracticeGameplayAbility::CheckStaminaCost(const FGameplayAbilityActo
 	return false;
 }
 
-bool UActionPracticeGameplayAbility::ApplyStaminaCost()
+bool UActionPracticeAbility::ApplyStaminaCost()
 {
 	//0이면 스테미나 소모는 없지만 현재 스테미나가 있는지는 확인, 음수면 체크도 하지 않음
 	if (StaminaCost < 0.0f)
@@ -130,12 +130,12 @@ bool UActionPracticeGameplayAbility::ApplyStaminaCost()
 	return true;
 }
 
-void UActionPracticeGameplayAbility::SetStaminaCost(float InStaminaCost)
+void UActionPracticeAbility::SetStaminaCost(float InStaminaCost)
 {
 	StaminaCost = InStaminaCost;
 }
 
-UActionPracticeAbilitySystemComponent* UActionPracticeGameplayAbility::GetActionPracticeAbilitySystemComponentFromActorInfo() const
+UActionPracticeAbilitySystemComponent* UActionPracticeAbility::GetActionPracticeAbilitySystemComponentFromActorInfo() const
 {
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	if (ASC)
@@ -145,17 +145,17 @@ UActionPracticeAbilitySystemComponent* UActionPracticeGameplayAbility::GetAction
 	return nullptr;
 }
 
-AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo() const
+AActionPracticeCharacter* UActionPracticeAbility::GetActionPracticeCharacterFromActorInfo() const
 {
 	return Cast<AActionPracticeCharacter>(GetActorInfo().AvatarActor.Get());
 }
 
-AActionPracticeCharacter* UActionPracticeGameplayAbility::GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+AActionPracticeCharacter* UActionPracticeAbility::GetActionPracticeCharacterFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	return Cast<AActionPracticeCharacter>(ActorInfo->AvatarActor.Get());
 }
 
-UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo() const
+UActionPracticeAttributeSet* UActionPracticeAbility::GetActionPracticeAttributeSetFromActorInfo() const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
 	if (Character)
@@ -165,7 +165,7 @@ UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAt
 	return nullptr;
 }
 
-UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+UActionPracticeAttributeSet* UActionPracticeAbility::GetActionPracticeAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo(ActorInfo);
 	if (Character)
@@ -175,7 +175,7 @@ UActionPracticeAttributeSet* UActionPracticeGameplayAbility::GetActionPracticeAt
 	return nullptr;
 }
 
-UInputBufferComponent* UActionPracticeGameplayAbility::GetInputBufferComponentFromActorInfo() const
+UInputBufferComponent* UActionPracticeAbility::GetInputBufferComponentFromActorInfo() const
 {
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
 	if (Character)

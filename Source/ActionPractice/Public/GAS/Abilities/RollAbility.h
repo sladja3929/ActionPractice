@@ -27,7 +27,7 @@ protected:
 
 	//무적 상태 Gameplay Effect
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
-	TSubclassOf<class UGameplayEffect> InvincibilityEffect;
+	TSubclassOf<UGameplayEffect> InvincibilityEffect;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Roll")
 	float InvincibilityDuration = 0.5f;

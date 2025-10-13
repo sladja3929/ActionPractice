@@ -4,6 +4,8 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerStatsWidget.generated.h"
 
+class UBossAttributeSet;
+struct FOnAttributeChangeData;
 class UVerticalBox;
 class UProgressBar;
 class UActionPracticeAttributeSet;
@@ -33,6 +35,12 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaDamageBar;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UProgressBar> BossHealthBar;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UProgressBar> BossHealthDamageBar;
 	
 #pragma endregion
 
@@ -40,15 +48,22 @@ public:
 	
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
+	virtual void NativeDestruct() override;
+	
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetAttributeSet(UActionPracticeAttributeSet* InAttributeSet);
-
+	
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateHealth(float CurrentHealth, float MaxHealth);
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateStamina(float CurrentStamina, float MaxStamina);
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void SetBossAttributeSet();
+
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void UpdateBossHealth(float CurrentHealth, float MaxHealth);
 	
 #pragma endregion
 
@@ -69,7 +84,16 @@ protected:
 	
 	float CurrentHealthDelayTimer = 0.0f;
 	float CurrentStaminaDelayTimer = 0.0f;
-	
+
+	//Attribute Change Delegate
+	FDelegateHandle MaxHealthChangedHandle;
+	FDelegateHandle MaxStaminaChangedHandle;
+
+	UPROPERTY()
+	TObjectPtr<UBossAttributeSet> BossAttributeSet;
+	float CurrentBossHealthPercent = 1.0f;
+	float TargetBossHealthDamagePercent = 1.0f;
+	float CurrentBossHealthDelayTimer = 0.0f;
 #pragma endregion
 
 #pragma region "Protected Functions"
@@ -79,7 +103,14 @@ protected:
 
 	void UpdateHealthBarSize(float MaxHealth);
 	void UpdateStaminaBarSize(float MaxStamina);
-	
+
+	//델리게이트 바인드
+	void BindAttributeDelegates();
+	void UnbindAttributeDelegates();
+
+	//콜백 함수
+	void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
+	void OnMaxStaminaChanged(const FOnAttributeChangeData& Data);
 #pragma endregion
 
 private:

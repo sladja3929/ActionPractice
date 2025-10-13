@@ -1,6 +1,6 @@
 ﻿#include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponDataAsset.h"
 

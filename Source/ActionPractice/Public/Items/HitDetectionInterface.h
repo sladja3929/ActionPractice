@@ -6,6 +6,9 @@
 #include "HitDetectionInterface.generated.h"
 
 struct FGameplayEventData;
+struct FFinalAttackData;
+
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnHitDetected, AActor*, const FHitResult&, FFinalAttackData);
 
 UINTERFACE(Blueprintable)
 class ACTIONPRACTICE_API UHitDetectionInterface : public UInterface
@@ -23,4 +26,5 @@ public:
 	virtual void PrepareHitDetection(const FGameplayTagContainer& AttackTags, const int32 ComboIndex) = 0;
 	virtual void HandleHitDetectionStart(const FGameplayEventData& Payload) = 0;
 	virtual void HandleHitDetectionEnd(const FGameplayEventData& Payload) = 0;
+	virtual FOnHitDetected& GetOnHitDetected() = 0;
 };

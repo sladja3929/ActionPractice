@@ -7,7 +7,7 @@
 
 class AActionPracticeCharacter;
 class UInputAction;
-class UActionPracticeGameplayAbility;
+class UActionPracticeAbility;
 class UGameplayAbility;
 struct FGameplayEventData;
 

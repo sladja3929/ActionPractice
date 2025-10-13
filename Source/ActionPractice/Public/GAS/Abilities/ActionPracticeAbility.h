@@ -3,10 +3,10 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "GameplayTagContainer.h"
-#include "ActionPracticeGameplayAbility.generated.h"
+#include "ActionPracticeAbility.generated.h"
 
 UCLASS()
-class ACTIONPRACTICE_API UActionPracticeGameplayAbility : public UGameplayAbility
+class ACTIONPRACTICE_API UActionPracticeAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 
@@ -17,7 +17,7 @@ public:
 
 #pragma region "Public Functions"
 	
-	UActionPracticeGameplayAbility();
+	UActionPracticeAbility();
 	
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 

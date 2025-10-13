@@ -14,6 +14,7 @@ class AWeapon;
 struct FWeaponDataAsset;
 struct FAttackActionData;
 struct FIndividualAttackData;
+struct FFinalAttackData;
 
 USTRUCT()
 struct FHitValidationData
@@ -35,11 +36,9 @@ struct FTraceConfig
 {
     GENERATED_BODY()
     
-    EAttackDamageType DamageType = EAttackDamageType::None;
+    EAttackDamageType AttackMotionType = EAttackDamageType::None;
     int32 SocketCount = 2;
     float TraceRadius = 10.0f;
-    float DamageMultiplier = 1.0f;
-    float StaminaDamage = 10.0f;
 };
 
 USTRUCT(BlueprintType)
@@ -59,8 +58,6 @@ struct FAdaptiveTraceConfig
     float SpeedThreshold = 0;
 };
 
-DECLARE_MULTICAST_DELEGATE_FourParams(FOnWeaponHit, AActor*, const FHitResult&, EAttackDamageType, float);
-
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ACTIONPRACTICE_API UWeaponAttackTraceComponent : public UActorComponent, public IHitDetectionInterface
 {
@@ -69,7 +66,7 @@ class ACTIONPRACTICE_API UWeaponAttackTraceComponent : public UActorComponent, p
 public:
 #pragma region "Public Variables"
 
-    FOnWeaponHit OnWeaponHit;
+    FOnHitDetected OnWeaponHit;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Trace Settings")
     FName SocketNamePrefix = FName(TEXT("trace_socket_"));
@@ -83,24 +80,30 @@ public:
 #pragma endregion
 
 #pragma region "Public Functions"
+    
     UWeaponAttackTraceComponent();
     
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-    virtual void TickComponent(float DeltaTime, ELevelTick TickType, 
-                               FActorComponentTickFunction* ThisTickFunction) override;
-    
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+    //HitDetection Interface
     virtual void PrepareHitDetection(const FGameplayTagContainer& AttackTags, const int32 ComboIndex) override;
+    
     UFUNCTION()
     virtual void HandleHitDetectionStart(const FGameplayEventData& Payload) override;
+    
     UFUNCTION()
     virtual void HandleHitDetectionEnd(const FGameplayEventData& Payload) override;
+
+    virtual FOnHitDetected& GetOnHitDetected() override { return OnWeaponHit; }
     
     UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
     void ResetHitActors();
 
     UFUNCTION(BlueprintCallable, Category = "Weapon Collision")
     void SetWeaponStaticMesh();
+
 #pragma endregion
 
 protected:
@@ -114,9 +117,11 @@ protected:
 
     UPROPERTY()
     TObjectPtr<UStaticMeshComponent> WeaponStaticMesh = nullptr;
+
+    FFinalAttackData CurrentAttackData;
     
     //Trace Config Variables
-    FTraceConfig CurrentConfig;
+    FTraceConfig CurrentTraceConfig;
     TArray<FName> TraceSocketNames;
 
     UPROPERTY()
@@ -156,7 +161,7 @@ protected:
     
 #pragma region "Protected Functions"
 
-    //Event (DetectionEnd가 RecoveryEnd보다 뒤에 일어나면 InputBuffer로 제대로 작동하지 않는 문제, 나중에 해결)
+    //Event (애님 노티파이 스테이트 DetectionEnd가 RecoveryEnd보다 뒤에 위치하면 InputBuffer로 제대로 작동하지 않는 문제, 나중에 해결)
     void BindEventCallbacks();
     void UnbindEventCallbacks();
 
@@ -165,9 +170,8 @@ protected:
     void StopWeaponTrace();
     bool LoadTraceConfigFromWeaponData(const FGameplayTagContainer& AttackTags, int32 ComboIndex);
     void GenerateSocketNames();
-
-
-    //Main Trace
+    
+    //Execute Trace
     void PerformTrace(float DeltaTime);
     void PerformSlashTrace();
     void PerformPierceTrace();
@@ -190,6 +194,7 @@ protected:
 #pragma endregion
 private:
 #pragma region "Private Variables"
+    
     //속도 계산용 무기 끝 소켓 정보
     FVector PrevTipSocketLocation;
     FName TipSocketName;
@@ -197,11 +202,13 @@ private:
 #pragma endregion
     
 #pragma region "Private Functions"
+    
     // 콜리전 채널 가져오기
     ECollisionChannel GetTraceChannel() const;
     
     // 콜리전 쿼리 파라미터 설정
     FCollisionQueryParams GetCollisionQueryParams() const;
+    
 #pragma endregion
 
 #pragma region "Debug And Profiling"
