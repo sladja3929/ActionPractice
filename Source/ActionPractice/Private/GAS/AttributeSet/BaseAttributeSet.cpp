@@ -22,6 +22,9 @@ UBaseAttributeSet::UBaseAttributeSet()
 	InitMaxStamina(100.0f);
 	InitStaminaRegenRate(10.0f);
 	InitDefense(10.0f);
+	InitPoise(100.0f);
+	InitMaxPoise(100.0f);
+	InitPoiseRegenRate(10.0f);
 	InitMovementSpeed(600.0f);
 }
 
@@ -35,6 +38,9 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, StaminaRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Defense, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Poise, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxPoise, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, PoiseRegenRate, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MovementSpeed, COND_None, REPNOTIFY_Always);
 }
 
@@ -69,6 +75,18 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
 	}
+	else if (Attribute == GetMaxPoiseAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetPoiseAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxPoise());
+	}
+	else if (Attribute == GetPoiseRegenRateAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
 	else if (Attribute == GetMovementSpeedAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
@@ -93,7 +111,6 @@ void UBaseAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 1.0f);
-		//AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 		DEBUG_LOG(TEXT("PreAttributeBase Change MaxHealth: %f"), NewValue);
 	}
 	else if (Attribute == GetHealthAttribute())
@@ -104,7 +121,6 @@ void UBaseAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
-		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 	}
 	else if (Attribute == GetStaminaAttribute())
 	{
@@ -115,6 +131,18 @@ void UBaseAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribu
 		NewValue = FMath::Max(NewValue, 0.0f);
 	}
 	else if (Attribute == GetDefenseAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetMaxPoiseAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+	else if (Attribute == GetPoiseAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxPoise());
+	}
+	else if (Attribute == GetPoiseRegenRateAttribute())
 	{
 		NewValue = FMath::Max(NewValue, 0.0f);
 	}
@@ -202,6 +230,24 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
 		}
 	}
+	//포이즈 대미지 처리
+	else if (Data.EvaluatedData.Attribute == GetIncomingPoiseDamageAttribute())
+	{
+		const float LocalIncomingPoiseDamage = GetIncomingPoiseDamage();
+		SetIncomingPoiseDamage(0.f);
+
+		if (LocalIncomingPoiseDamage > 0)
+		{
+			const float OldPoise = GetPoise();
+			SetPoise(FMath::Clamp(OldPoise - LocalIncomingPoiseDamage, 0.0f, GetMaxPoise()));
+
+			// Handle poise break
+			if (GetPoise() <= 0.0f)
+			{
+				// TODO: Implement poise break logic (stun, stagger)
+			}
+		}
+	}
 	else if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
 	{
 		if (TargetCharacter && TargetCharacter->GetCharacterMovement())
@@ -268,6 +314,21 @@ void UBaseAttributeSet::OnRep_StaminaRegenRate(const FGameplayAttributeData& Old
 void UBaseAttributeSet::OnRep_Defense(const FGameplayAttributeData& OldDefense)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Defense, OldDefense);
+}
+
+void UBaseAttributeSet::OnRep_Poise(const FGameplayAttributeData& OldPoise)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Poise, OldPoise);
+}
+
+void UBaseAttributeSet::OnRep_MaxPoise(const FGameplayAttributeData& OldMaxPoise)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, MaxPoise, OldMaxPoise);
+}
+
+void UBaseAttributeSet::OnRep_PoiseRegenRate(const FGameplayAttributeData& OldPoiseRegenRate)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, PoiseRegenRate, OldPoiseRegenRate);
 }
 
 void UBaseAttributeSet::OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed)

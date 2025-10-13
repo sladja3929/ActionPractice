@@ -47,7 +47,20 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_Defense)
 	FGameplayAttributeData Defense;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Defense)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_Poise)
+	FGameplayAttributeData Poise;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Poise)
 	
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_MaxPoise)
+	FGameplayAttributeData MaxPoise;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxPoise)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_PoiseRegenRate)
+	FGameplayAttributeData PoiseRegenRate;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, PoiseRegenRate)
+	
+	//Speed
 	UPROPERTY(BlueprintReadOnly, Category = "Movement", ReplicatedUsing = OnRep_MovementSpeed)
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MovementSpeed)
@@ -61,6 +74,10 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingHealing;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingHealing)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Meta")
+	FGameplayAttributeData IncomingPoiseDamage;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingPoiseDamage)
 	
 #pragma endregion
 
@@ -106,6 +123,15 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_Defense(const FGameplayAttributeData& OldDefense);
+
+	UFUNCTION()
+	virtual void OnRep_Poise(const FGameplayAttributeData& OldPoise);
+
+	UFUNCTION()
+	virtual void OnRep_MaxPoise(const FGameplayAttributeData& OldMaxPoise);
+
+	UFUNCTION()
+	virtual void OnRep_PoiseRegenRate(const FGameplayAttributeData& OldPoiseRegenRate);
 
 	UFUNCTION()
 	virtual void OnRep_MovementSpeed(const FGameplayAttributeData& OldMovementSpeed);

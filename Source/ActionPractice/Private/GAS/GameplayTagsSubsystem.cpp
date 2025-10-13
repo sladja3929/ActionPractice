@@ -358,6 +358,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectSprintSpeedMultiplierTag()
 	}
 	return FGameplayTag::EmptyTag;
 }
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectDamageIncomingDamageTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEffectDamageIncomingPoiseDamageTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
 #pragma endregion
 
 #pragma region "Internal Ability Tags"
@@ -678,6 +696,24 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectSprintSpeedMultiplierTagInt
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Effect_Sprint_SpeedMultiplier;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Damage_IncomingDamage;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Effect_Damage_IncomingPoiseDamage;
 	}
 	return FGameplayTag::EmptyTag;
 }

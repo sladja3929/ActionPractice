@@ -25,5 +25,5 @@ struct FFinalAttackData
 	float FinalDamage = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	float StaminaDamage = 10.0f;
+	float PoiseDamage = 10.0f;
 };

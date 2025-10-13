@@ -5,6 +5,7 @@
 #include "GAS/Effects/ActionPracticeGameplayEffectContext.h"
 #include "Items/AttackData.h"
 #include "GameplayEffect.h"
+#include "GAS/GameplayTagsSubsystem.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -54,7 +55,7 @@ FGameplayEffectSpecHandle UBaseAbilitySystemComponent::CreateGameplayEffectSpec(
 		return FGameplayEffectSpecHandle();
 	}
 
-	//APAbilitySystemGlobals에 의해 자동으로 ActionPracticeGameplayEffectContext 생성
+	//ActionPracticeAbilitySystemGlobals에 의해 자동으로 ActionPracticeGameplayEffectContext 생성
 	FGameplayEffectContextHandle EffectContext = MakeEffectContext();
 	if (SourceObject)
 	{
@@ -88,6 +89,10 @@ FGameplayEffectSpecHandle UBaseAbilitySystemComponent::CreateAttackGameplayEffec
 		return FGameplayEffectSpecHandle();
 	}
 
+	//Incoming Damage Attrbiute Magnitude 설정
+	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTag(), FinalAttackData.FinalDamage);
+	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTag(), FinalAttackData.PoiseDamage);
+	
 	//ActionPracticeGameplayEffectContext 추출하여 DamageType 설정
 	FGameplayEffectContext* Context = SpecHandle.Data.Get()->GetContext().Get();
 	FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context);

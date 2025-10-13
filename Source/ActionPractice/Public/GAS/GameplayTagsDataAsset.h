@@ -131,5 +131,11 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
 	FGameplayTag Effect_Sprint_SpeedMultiplier;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_Damage_IncomingDamage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
+	FGameplayTag Effect_Damage_IncomingPoiseDamage;
 #pragma endregion
 };

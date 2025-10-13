@@ -209,7 +209,7 @@ bool UWeaponAttackTraceComponent::LoadTraceConfigFromWeaponData(const FGameplayT
     
     CurrentConfig.DamageType = AttackInfo.DamageType;
     CurrentConfig.DamageMultiplier = AttackInfo.DamageMultiplier;
-    CurrentConfig.StaminaDamage = AttackInfo.StaminaDamage;
+    CurrentConfig.StaminaDamage = AttackInfo.PoiseDamage;
     CurrentConfig.SocketCount = WeaponData->SweepTraceSocketCount;
     
     // 고정 반경 사용

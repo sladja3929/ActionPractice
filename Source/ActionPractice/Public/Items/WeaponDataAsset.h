@@ -24,7 +24,7 @@ struct FIndividualAttackData
     float DamageMultiplier = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-    float StaminaDamage = 10.0f;
+    float PoiseDamage = 10.0f;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     float StaminaCost = 10.0f;
