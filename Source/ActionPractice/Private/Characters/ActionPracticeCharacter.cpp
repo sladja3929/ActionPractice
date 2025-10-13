@@ -12,11 +12,13 @@
 #include "InputActionValue.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystemComponent.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Input/InputBufferComponent.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "Blueprint/UserWidget.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
+#include "UI/PlayerStatsWidget.h"
 #include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponAttackTraceComponent.h"
@@ -27,25 +29,26 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-#define DEBUG_LOG(Format, ...) UE_LOG(LogAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogActionPracticeCharacter, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogActionPracticeCharacter, Warning, Format, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(Format, ...)
 #endif
 
 AActionPracticeCharacter::AActionPracticeCharacter()
 {
-	// Set size for collision capsule
+	PrimaryActorTick.bCanEverTick = true;
+	
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
-	// Don't rotate when the controller rotates. Let that just affect the camera.
+	//Controller Settings
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
+	//Character Movement Settings
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-	
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -53,41 +56,88 @@ AActionPracticeCharacter::AActionPracticeCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
-	// Create a camera boom (pulls in towards the player if there is a collision)
+	//Camera Boom Settings
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f;
 	CameraBoom->bUsePawnControlRotation = true;
 
-	// Create a follow camera
+	//FollowCamera Settings
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// Create Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	AbilitySystemComponent->SetIsReplicated(true);
-	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
-
-	// Create Attribute Set
-	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
-
-	// Create Input Buffer Component
+	//Input Buffer Component Settings
 	InputBufferComponent = CreateDefaultSubobject<UInputBufferComponent>(TEXT("InputBufferComponent"));
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	//GAS Settings
+	CreateAbilitySystemComponent();
+	CreateAttributeSet();
 }
 
 void AActionPracticeCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Initialize GAS
+	//태그 초기화
+	StateRecoveringTag = UGameplayTagsSubsystem::GetStateRecoveringTag();
+	StateAbilitySprintingTag = UGameplayTagsSubsystem::GetStateAbilitySprintingTag();
+	StateAbilityAttackingTag = UGameplayTagsSubsystem::GetStateAbilityAttackingTag();
+	AbilityAttackTag = UGameplayTagsSubsystem::GetAbilityAttackTag();
+
+	if (!StateRecoveringTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateRecoveringTag is not valid"));
+	}
+	if (!StateAbilitySprintingTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateAbilitySprintingTag is not valid"));
+	}
+	if (!StateAbilityAttackingTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateAbilityAttackingTag is not valid"));
+	}
+	if (!AbilityAttackTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("AbilityAttackTag is not valid"));
+	}
+
 	InitializeAbilitySystem();
 
-	EquipWeapon(LoadWeaponClassByName("BP_StraightSword"), false, false);
+	EquipWeapon(LoadWeaponClassByName("BP_GreatSword"), false, false);
 	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
+
+	if (PlayerStatsWidgetClass)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		if (PC)
+		{
+			PlayerStatsWidget = CreateWidget<UPlayerStatsWidget>(PC, PlayerStatsWidgetClass);
+			if (PlayerStatsWidget)
+			{
+				PlayerStatsWidget->AddToViewport();
+				
+				//AttributeSet 연결
+				if (AttributeSet)
+				{
+					PlayerStatsWidget->SetAttributeSet(GetAttributeSet());
+					DEBUG_LOG(TEXT("PlayerStatsWidget created and AttributeSet connected"));
+				}
+				else
+				{
+					DEBUG_LOG(TEXT("AttributeSet is nullptr!"));
+				}
+			}
+		}
+		else
+		{
+			DEBUG_LOG(TEXT("PlayerController is nullptr!"));
+		}
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("PlayerStatsWidgetClass is not set!"));
+	}
 }
 
 void AActionPracticeCharacter::Tick(float DeltaSeconds)
@@ -186,11 +236,11 @@ void AActionPracticeCharacter::Move(const FInputActionValue& Value)
 		CancelActionForMove();
 	}
 
-	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-	
+	bool bIsRecovering = AbilitySystemComponent->HasMatchingGameplayTag(StateRecoveringTag);
+
 	if (Controller != nullptr && !bIsRecovering)
 	{
-		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilitySprintingTag());
+		bool bIsSprinting = AbilitySystemComponent->HasMatchingGameplayTag(StateAbilitySprintingTag);
 		
 		if(!bIsSprinting && bIsLockOn && LockedOnTarget)
 		{
@@ -340,16 +390,16 @@ void AActionPracticeCharacter::CancelActionForMove()
 	}
     
 	// Attack 어빌리티가 활성화되어 있는지 확인
-	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateAbilityAttackingTag());
-	
+	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(StateAbilityAttackingTag);
+
 	if (bHasActiveAttackAbility)
 	{
 		// State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
-		if (!AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
+		if (!AbilitySystemComponent->HasMatchingGameplayTag(StateRecoveringTag))
 		{
 			// Ability.Attack 태그를 가진 어빌리티 취소
 			FGameplayTagContainer CancelTags;
-			CancelTags.AddTag(UGameplayTagsSubsystem::GetAbilityAttackTag());
+			CancelTags.AddTag(AbilityAttackTag);
 			AbilitySystemComponent->CancelAbilities(&CancelTags);
 			DEBUG_LOG(TEXT("Attack Ability Cancelled by Move Input"));
 		}
@@ -552,12 +602,12 @@ void AActionPracticeCharacter::EquipWeapon(TSubclassOf<AWeapon> NewWeaponClass, 
 
 void AActionPracticeCharacter::UnequipWeapon(bool bIsLeftHand)
 {
-	AWeapon** WeaponToRemove = bIsLeftHand ? &LeftWeapon : &RightWeapon;
-    
-	if (*WeaponToRemove)
+	TObjectPtr<AWeapon>& WeaponToRemove = bIsLeftHand ? LeftWeapon : RightWeapon;
+
+	if (WeaponToRemove)
 	{
-		(*WeaponToRemove)->Destroy();
-		*WeaponToRemove = nullptr;
+		WeaponToRemove->Destroy();
+		WeaponToRemove = nullptr;
 	}
 }
 
@@ -638,52 +688,19 @@ void AActionPracticeCharacter::OnChargeAttackReleased()
 #pragma endregion
 
 #pragma region "GAS Functions"
-UAbilitySystemComponent* AActionPracticeCharacter::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent;
-}
-
 void AActionPracticeCharacter::InitializeAbilitySystem()
 {
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		
-		if (AttributeSet)
-		{
-			// Attributes are automatically initialized in the AttributeSet constructor
-			// Additional setup can be done here if needed
-		}
-		
-		for (const auto& StartAbility : StartAbilities)
-		{
-			GiveAbility(StartAbility);
-		}
-
-		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-		EffectContext.AddSourceObject(this);
-		
-		for (const auto& StartEffect : StartEffects)
-		{
-			if (StartEffect)
-			{
-				FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(StartEffect, 1, EffectContext);
-				if (SpecHandle.IsValid())
-				{
-					AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-				}
-			}
-		}
-	}
+	Super::InitializeAbilitySystem();
 }
 
-void AActionPracticeCharacter::GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass)
+void AActionPracticeCharacter::CreateAbilitySystemComponent()
 {
-	if (AbilitySystemComponent && AbilityClass)
-	{
-		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
-		AbilitySystemComponent->GiveAbility(AbilitySpec);
-	}
+	AbilitySystemComponent = CreateDefaultSubobject<UActionPracticeAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+}
+
+void AActionPracticeCharacter::CreateAttributeSet()
+{
+	AttributeSet = CreateDefaultSubobject<UActionPracticeAttributeSet>(TEXT("AttributeSet"));
 }
 
 void AActionPracticeCharacter::GASInputPressed(const UInputAction* InputAction)

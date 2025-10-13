@@ -3,10 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "Characters/BaseCharacter.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Logging/LogMacros.h"
-#include "AbilitySystemInterface.h"
-#include "GameplayEffect.h"
 #include "ActionPracticeCharacter.generated.h"
 
 class UInputActionDataAsset;
@@ -16,38 +15,17 @@ class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
 class UAbilitySystemComponent;
-class UActionPracticeAttributeSet;
 class UGameplayAbility;
 class UInputBufferComponent;
 class AWeapon;
+class UPlayerStatsWidget;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All); 
 
 UCLASS(abstract)
-class AActionPracticeCharacter : public ACharacter, public IAbilitySystemInterface
+class AActionPracticeCharacter : public ABaseCharacter
 {
 	GENERATED_BODY()
-
-protected:
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom = nullptr;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera = nullptr;
-
-	/** Ability System Component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UAbilitySystemComponent* AbilitySystemComponent = nullptr;
-
-	/** Attribute Set */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	UActionPracticeAttributeSet* AttributeSet = nullptr;
-
-	/** Input Buffer Component */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
-	UInputBufferComponent* InputBufferComponent = nullptr;
 
 public:
 #pragma region "Public Variables"
@@ -64,9 +42,7 @@ public:
     
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
 	float CrouchSpeedMultiplier = 0.5f;
-    
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement")
-	float BlockingSpeedMultiplier = 1.0f;
+
 #pragma endregion
 	
 #pragma region "Public Functions"
@@ -76,32 +52,122 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// ===== Camera =====
+	// ===== Getter =====
+	//Camera
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }	
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	// ===== GAS Interface =====
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return AttributeSet; }
+	//GAS
+	FORCEINLINE UActionPracticeAttributeSet* GetAttributeSet() const { return Cast<UActionPracticeAttributeSet>(AttributeSet); }
+
+	//Input
+	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
 	FORCEINLINE const UInputActionDataAsset* GetInputActionData() const { return InputActionData; }
 	
-	// ===== Input Buffer Interface =====
-	FORCEINLINE UInputBufferComponent* GetInputBufferComponent() const { return InputBufferComponent; }
-	
-	// ===== Weapon Getter Functions =====
+	//Weapon
 	FORCEINLINE AWeapon* GetLeftWeapon() const { return LeftWeapon; }
 	FORCEINLINE AWeapon* GetRightWeapon() const { return RightWeapon; }
-	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const;
+	virtual TScriptInterface<IHitDetectionInterface> GetHitDetectionInterface() const override;
+	// ===================
 	
-	// ===== Input Helper Functions =====
+	//Movement Functions
 	UFUNCTION(BlueprintPure, Category = "Input")
 	FVector2D GetCurrentMovementInput() const;
-
-	// ===== Character Rotation Functions =====
+	
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void RotateCharacterToInputDirection(float RotationTime);
 
+	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
+	
+#pragma endregion
 
+protected:
+#pragma region "Protected Variables"
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> CameraBoom = nullptr;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> FollowCamera = nullptr;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UInputBufferComponent> InputBufferComponent = nullptr;
+
+	// ===== UI Properties =====
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UPlayerStatsWidget> PlayerStatsWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UPlayerStatsWidget> PlayerStatsWidget;
+
+	// ===== Weapon Properties =====
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AWeapon> WeaponClass = nullptr;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<AWeapon> LeftWeapon = nullptr;
+    
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	TObjectPtr<AWeapon> RightWeapon = nullptr;
+
+	// ====== Input Actions ======
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Jump = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Move = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Look = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_LockOn = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Sprint = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Crouch = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Roll = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Attack = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_Block = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_WeaponSwitch = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> IA_ChargeAttack = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
+
+	// ===== Usage Tags =====
+	FGameplayTag StateRecoveringTag;
+	FGameplayTag StateAbilitySprintingTag;
+	FGameplayTag StateAbilityAttackingTag;
+	FGameplayTag AbilityAttackTag;
+	
+	// ===== State Variables =====
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
+	bool bIsLockOn = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
+	bool bIsSwitching = false;
+
+	// ===== LockOn =====
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<AActor> LockedOnTarget = nullptr;
+	
+#pragma endregion
+
+#pragma region "Protected Functions"
+	
 	// ===== Weapon Functions =====
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	TSubclassOf<AWeapon> LoadWeaponClassByName(const FString& WeaponName);
@@ -113,92 +179,15 @@ public:
 	void UnequipWeapon(bool bIsLeftHand = true);
 	
 	// ===== GAS Functions =====
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void InitializeAbilitySystem();
-
-	UFUNCTION(BlueprintCallable, Category = "GAS")
-	void GiveAbility(TSubclassOf<UGameplayAbility> AbilityClass);
+	virtual void InitializeAbilitySystem() override;
+	virtual void CreateAbilitySystemComponent() override;
+	virtual void CreateAttributeSet() override;
 
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void GASInputPressed(const UInputAction* InputAction);
 	
 	UFUNCTION(BlueprintCallable, Category = "GAS")
 	void GASInputReleased(const UInputAction* InputAction);
-
-	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
-#pragma endregion
-
-protected:
-#pragma region "Protected Variables"
-	
-	// ====== Input Actions ======
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Jump = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Move = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Look = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_LockOn = nullptr;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Sprint = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Crouch = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Roll = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Attack = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_Block = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_WeaponSwitch = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	UInputAction* IA_ChargeAttack = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputActionDataAsset> InputActionData = nullptr;
-	
-	// ===== State Variables =====
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsLockOn = false;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Action State")
-	bool bIsSwitching = false;
-
-	// ===== LockOn =====
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	AActor* LockedOnTarget = nullptr;
-	
-	// ===== Weapon Properties =====
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	TSubclassOf<AWeapon> WeaponClass = nullptr;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	AWeapon* LeftWeapon = nullptr;
-    
-	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	AWeapon* RightWeapon = nullptr;
-
-	// ===== GAS Properties =====
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayAbility>> StartAbilities;
-		
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayEffect>> StartEffects;
-	
-#pragma endregion
-
-#pragma region "Protected Functions"
 	
 	// ===== Input Handler Functions =====
 	void Move(const FInputActionValue& Value);

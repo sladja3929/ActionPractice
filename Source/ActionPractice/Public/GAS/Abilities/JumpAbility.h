@@ -1,11 +1,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "JumpAbility.generated.h"
 
 UCLASS()
-class ACTIONPRACTICE_API UJumpAbility : public UActionPracticeGameplayAbility
+class ACTIONPRACTICE_API UJumpAbility : public UActionPracticeAbility
 {
 	GENERATED_BODY()
 

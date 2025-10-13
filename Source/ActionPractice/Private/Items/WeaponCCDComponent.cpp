@@ -10,12 +10,11 @@
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponCCD, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogWeaponCCDComponent, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponCCDComponent, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
-
-DEFINE_LOG_CATEGORY_STATIC(LogWeaponCCD, Log, All);
 
 UWeaponCCDComponent::UWeaponCCDComponent()
 {
@@ -304,7 +303,7 @@ void UWeaponCCDComponent::ProcessHit(AActor* HitActor, const FHitResult& HitResu
               *HitResult.Location.ToString());
     
     //이벤트 브로드캐스트
-    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentDamageType, CurrentDamageMultiplier);
+    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentAttackData);
 }
 
 void UWeaponCCDComponent::ResetHitActors()
@@ -327,8 +326,9 @@ bool UWeaponCCDComponent::LoadAttackConfig(const FGameplayTagContainer& AttackTa
     ComboIndex = FMath::Clamp(ComboIndex, 0, AttackData->ComboAttackData.Num() - 1);
     const FIndividualAttackData& AttackInfo = AttackData->ComboAttackData[ComboIndex];
     
-    CurrentDamageType = AttackInfo.DamageType;
-    CurrentDamageMultiplier = AttackInfo.DamageMultiplier;
+    CurrentAttackData.DamageType = AttackInfo.DamageType;
+    CurrentAttackData.FinalDamage = OwnerWeapon->GetCalculatedDamage() * AttackInfo.DamageMultiplier;
+    CurrentAttackData.PoiseDamage = AttackInfo.PoiseDamage;
     
     // UpdateCapsuleSize 호출 제거 - 고정 크기 유지
     

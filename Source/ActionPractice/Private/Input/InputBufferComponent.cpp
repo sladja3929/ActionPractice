@@ -2,17 +2,16 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/GameplayAbility.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
 #include "GAS/GameplayTagsSubsystem.h"
-#include "EnhancedInputComponent.h"
 #include "Input/InputActionDataAsset.h"
 
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogInputBufferComponent, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogInputBufferComponent, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 UInputBufferComponent::UInputBufferComponent()
@@ -30,11 +29,28 @@ void UInputBufferComponent::BeginPlay()
 		return;
 	}
 
-	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
-	if (ASC)
+	//태그 초기화
+	EventNotifyEnableBufferInputTag = UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag();
+	EventActionInputByBufferTag = UGameplayTagsSubsystem::GetEventActionInputByBufferTag();
+	EventActionPlayBufferTag = UGameplayTagsSubsystem::GetEventActionPlayBufferTag();
+
+	if (!EventNotifyEnableBufferInputTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventNotifyEnableBufferInputTag is not valid"));
+	}
+	if (!EventActionInputByBufferTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventActionInputByBufferTag is not valid"));
+	}
+	if (!EventActionPlayBufferTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventActionPlayBufferTag is not valid"));
+	}
+
+	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
 	{
 		EnableBufferInputHandle = ASC->GenericGameplayEventCallbacks
-		.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
+		.FindOrAdd(EventNotifyEnableBufferInputTag)
 		.AddLambda([this](const FGameplayEventData* EventData)
 			{
 				if (IsValid(this) && EventData)
@@ -43,16 +59,18 @@ void UInputBufferComponent::BeginPlay()
 				}
 			});
 
-		ActionRecoveryEndHandle = ASC->GenericGameplayEventCallbacks
-		.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
+		PlayBufferHandle = ASC->GenericGameplayEventCallbacks
+		.FindOrAdd(EventActionPlayBufferTag)
 		.AddLambda([this](const FGameplayEventData* EventData)
 			{
 				if (IsValid(this) && EventData)
 				{
-					OnActionRecoveryEnd(*EventData);
+					OnPlayBuffer(*EventData);
 				}
 			});
 	}
+
+	else DEBUG_LOG(TEXT("No ASC"));
 	
 	Super::BeginPlay();
 }
@@ -137,26 +155,34 @@ void UInputBufferComponent::ActivateAbility(const UInputAction* InputAction)
 
 	for (auto& Spec : TryActivateSpecs)
 	{
-		if (Spec->IsActive()) //어빌리티가 실행중이면 (콤보 공격)
+		//첫 실행이거나, bRetriggerInstancedAbility = true여서 재실행될 때
+		if (ASC->TryActivateAbility(Spec->Handle))
+		{
+			DEBUG_LOG(TEXT("Play Buffer - Activate Ability: %s"), *GetNameSafe(Spec->Ability->GetClass()));
+			Spec->InputPressed = true;
+		}
+
+		//어빌리티가 이미 실행중 / bRetriggerInstancedAbility = false여서 Try를 실패했을 때 (콤보 공격)
+		else if (Spec->IsActive()) //CanActivateAbility 실패로 활성화하지 못했을 때를 거르기 위해 실행 중 체크
 		{
 			DEBUG_LOG(TEXT("Play Buffer - Play Buffer Event: %s"), *GetNameSafe(Spec->Ability->GetClass()));
 			Spec->InputPressed = true;
 
-			//현재 Spec인 어빌리티만 OnPlayBuffer가 활성화되도록 자기 자신을 EventData로 넘김
+			//현재 Spec인 어빌리티만 OnInputByBuffer가 활성화되도록 자기 자신을 EventData로 넘김
 			UGameplayAbility* Instance = Spec->GetPrimaryInstance();
 			if (!Instance) Instance = Spec->Ability;
 			
 			FGameplayEventData EventData;
-			EventData.OptionalObject = Instance;			
-			ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventActionPlayBufferTag(), &EventData);
+			EventData.OptionalObject = Instance;
+			//bool 값을 EventMagnitude를 통해 전달
+			EventData.EventMagnitude = bBufferActionReleased ? 1.0f : 0.0f;
+			EventData.EventTag = EventActionInputByBufferTag;
+			
+			ASC->HandleGameplayEvent(EventActionInputByBufferTag, &EventData);
 		}
 
-		else
-		{
-			DEBUG_LOG(TEXT("Play Buffer - Activate Ability: %s"), *GetNameSafe(Spec->Ability->GetClass()));
-			Spec->InputPressed = true;
-			ASC->TryActivateAbility(Spec->Handle);
-		}
+		//다 아닐때
+		else DEBUG_LOG(TEXT("Play Buffer Activate Failed: %s"), *GetNameSafe(Spec->Ability->GetClass()));
 	}
 }
 
@@ -189,59 +215,39 @@ bool UInputBufferComponent::IsBufferWaiting()
 	return BufferedAction != nullptr;
 }
 
-void UInputBufferComponent::OnActionRecoveryStart(const FGameplayEventData& EventData)
-{
-	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
-	{
-		ASC->AddLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-	}
-	DEBUG_LOG(TEXT("Action Recovery Start - Add State.Recovering"));
-}
-
 void UInputBufferComponent::OnEnableBufferInput(const FGameplayEventData& EventData)
 {
 	bCanBufferInput = true;
 	DEBUG_LOG(TEXT("Enable Buffer Input - Can Buffer Action"));
 }
 
-void UInputBufferComponent::OnActionRecoveryEnd(const FGameplayEventData& EventData)
+void UInputBufferComponent::OnPlayBuffer(const FGameplayEventData& EventData)
 {
 	bCanBufferInput = false;
 	
-	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
-	{
-		//모든 StateRecovering 태그 제거 (스택된 태그 모두 제거)
-		while (ASC->HasMatchingGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag()))
-		{
-			ASC->RemoveLooseGameplayTag(UGameplayTagsSubsystem::GetStateRecoveringTag());
-		}
-		DEBUG_LOG(TEXT("Action Recovery End - Remove State.Recovering"));
-	}
-	
 	if (BufferedAction || BufferedHoldAction.Num() > 0) //저장한 행동이 있을 경우
 	{
-		DEBUG_LOG(TEXT("Action Recovery End - Play Buffer"));
+		DEBUG_LOG(TEXT("Play Buffer"));
 		ActivateBufferAction();
 	}
 
-	else DEBUG_LOG(TEXT("Action Recovery End - No Buffered Action"));
+	else DEBUG_LOG(TEXT("Play Buffer - No Buffered Action"));
 }
 
 void UInputBufferComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
-	if (ASC)
+	if (UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
 	{
 		if (EnableBufferInputHandle.IsValid())
 		{
-			ASC->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag())
+			ASC->GenericGameplayEventCallbacks.FindOrAdd(EventNotifyEnableBufferInputTag)
 				.Remove(EnableBufferInputHandle);
 		}
 
-		if (ActionRecoveryEndHandle.IsValid())
+		if (PlayBufferHandle.IsValid())
 		{
-			ASC->GenericGameplayEventCallbacks.FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag())
-				.Remove(ActionRecoveryEndHandle);
+			ASC->GenericGameplayEventCallbacks.FindOrAdd(EventActionPlayBufferTag)
+				.Remove(PlayBufferHandle);
 		}
 	}
 	

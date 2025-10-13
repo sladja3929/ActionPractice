@@ -9,13 +9,15 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "Items/WeaponAttackTraceComponent.h"
 #include "Items/WeaponCCDComponent.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogWeapon, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogWeapon, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 AWeapon::AWeapon()
@@ -44,19 +46,10 @@ void AWeapon::BeginPlay()
         return;
     }
 
+	CalculateCalculatedDamage();
+	BindDelegates();
+
     Super::BeginPlay();
-
-    // 콜리전 컴포넌트 델리게이트 바인딩
-    if (AttackTraceComponent)
-    {
-        AttackTraceComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
-    }
-
-    if (CCDComponent)
-    {
-        CCDComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
-    }
-
 }
 
 
@@ -121,10 +114,46 @@ TScriptInterface<IHitDetectionInterface> AWeapon::GetHitDetectionComponent() con
 }
 
 
+void AWeapon::CalculateCalculatedDamage()
+{
+	if (!WeaponData)
+	{
+		DEBUG_LOG(TEXT("WeaponData is null"));
+		return;
+	}
+
+	if (!OwnerCharacter)
+	{
+		DEBUG_LOG(TEXT("OwnerCharacter is null"));
+		return;
+	}
+
+	UActionPracticeAttributeSet* AttributeSet = OwnerCharacter->GetAttributeSet();
+	if (!AttributeSet)
+	{
+		DEBUG_LOG(TEXT("APAttributeSet is null"));
+		return;
+	}
+
+	const float Strength = AttributeSet->GetStrength();
+	const float Dexterity = AttributeSet->GetDexterity();
+
+	const float StrengthScaling = WeaponData->StrengthScaling;
+	const float DexterityScaling = WeaponData->DexterityScaling;
+
+	//최종 대미지 계산: BaseDamage + (근력 * 근력 보정 * 0.01) + (기량 * 기량 보정 * 0.01)
+	const float StrengthBonus = Strength * StrengthScaling * 0.01f;
+	const float DexterityBonus = Dexterity * DexterityScaling * 0.01f;
+
+	CalculatedDamage = WeaponData->BaseDamage + StrengthBonus + DexterityBonus;
+
+	DEBUG_LOG(TEXT("Calculated Damage: %.2f (Base: %.2f, Str Bonus: %.2f, Dex Bonus: %.2f)"),
+		CalculatedDamage, WeaponData->BaseDamage, StrengthBonus, DexterityBonus);
+}
+
 void AWeapon::EquipWeapon()
 {    
-    // 여기에 무기별 고유 로직을 추가할 수 있습니다
-    // 예: 몽타주 재생, 이펙트 재생, 사운드 재생, 데미지 처리 등
+    //무기 장착시 실행할 몽타주, 이펙트, 사운드 등의 로직
 }
 
 
@@ -132,13 +161,121 @@ void AWeapon::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitive
 {
     if (OtherActor && OtherActor != this)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Weapon %s hit %s"), *WeaponName, *OtherActor->GetName());
-        // 여기에 히트 처리 로직 추가
-        // 예: 데미지 처리, 이펙트 재생 등
+        DEBUG_LOG(TEXT("Weapon %s hit %s"), *WeaponName, *OtherActor->GetName());
+        //이펙트, 사운드 등 히트 로직 추가
     }
 }
 
-void AWeapon::HandleWeaponHit(AActor* HitActor, const FHitResult& HitResult, EAttackDamageType DamageType, float DamageMultiplier)
+void AWeapon::HandleWeaponHit(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData FinalAttackData)
 {
-    
+    //OnHit();
+}
+
+void AWeapon::OnStrengthChanged(const FOnAttributeChangeData& Data)
+{
+	CalculateCalculatedDamage();
+}
+
+void AWeapon::OnDexterityChanged(const FOnAttributeChangeData& Data)
+{
+	CalculateCalculatedDamage();
+}
+
+void AWeapon::BindDelegates()
+{
+	UnbindDelegates();
+	
+	// HitDetection 컴포넌트 Hit 델리게이트 바인딩
+	if (AttackTraceComponent)
+	{
+		AttackTraceHitHandle = AttackTraceComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
+	}
+
+	if (CCDComponent)
+	{
+		CCDHitHandle = CCDComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
+	}
+	
+	if (!OwnerCharacter)
+	{
+		DEBUG_LOG(TEXT("BindDelegates: No Owner Character"));
+		return;
+	}
+
+	UActionPracticeAttributeSet* AttributeSet = OwnerCharacter->GetAttributeSet();
+	if (!AttributeSet)
+	{
+		DEBUG_LOG(TEXT("BindDelegates: No AttributeSet"));
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		DEBUG_LOG(TEXT("BindDelegates: No ASC"));
+		return;
+	}
+
+	//어트리뷰트 델리게이트 등록
+	PlayerStrengthChangedHandle = ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetStrengthAttribute()).AddUObject(this, &AWeapon::OnStrengthChanged);
+	PlayerDexterityChangedHandle = ASC->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetDexterityAttribute()).AddUObject(this, &AWeapon::OnDexterityChanged);
+
+	DEBUG_LOG(TEXT("BindDelegates: Successfully bound all delegates"));
+}
+
+void AWeapon::UnbindDelegates()
+{
+	//Hit 컴포넌트 델리게이트 해제
+	if (AttackTraceHitHandle.IsValid() && AttackTraceComponent)
+	{
+		AttackTraceComponent->OnWeaponHit.Remove(AttackTraceHitHandle);
+		AttackTraceHitHandle.Reset();
+	}
+
+	if (CCDHitHandle.IsValid() && CCDComponent)
+	{
+		CCDComponent->OnWeaponHit.Remove(CCDHitHandle);
+		CCDHitHandle.Reset();
+	}
+	
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return;
+	}
+
+	UActionPracticeAttributeSet* AttributeSet = OwnerCharacter->GetAttributeSet();
+	if (!AttributeSet)
+	{
+		return;
+	}
+
+	//어트리뷰트 델리게이트 해제
+	if (PlayerStrengthChangedHandle.IsValid())
+	{
+		ASC->GetGameplayAttributeValueChangeDelegate(
+			AttributeSet->GetStrengthAttribute()).Remove(PlayerStrengthChangedHandle);
+		PlayerStrengthChangedHandle.Reset();
+	}
+
+	if (PlayerDexterityChangedHandle.IsValid())
+	{
+		ASC->GetGameplayAttributeValueChangeDelegate(
+			AttributeSet->GetDexterityAttribute()).Remove(PlayerDexterityChangedHandle);
+		PlayerDexterityChangedHandle.Reset();
+	}
+
+	DEBUG_LOG(TEXT("UnbindDelegates: Successfully unbound all delegates"));
+}
+
+void AWeapon::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindDelegates();
+	
+	Super::EndPlay(EndPlayReason);
 }

@@ -1,15 +1,16 @@
 ﻿#include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponDataAsset.h"
 
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-	#define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogWeaponAbilityStatics, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponAbilityStatics, Warning, Format, ##__VA_ARGS__)
 #else
-	#define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 AWeapon* FWeaponAbilityStatics::GetWeaponFromAbility(const UGameplayAbility* Ability, bool bIsLeft)
@@ -34,7 +35,7 @@ const FAttackActionData* FWeaponAbilityStatics::GetAttackDataFromAbility(const U
 		return nullptr;
 	}
 
-	// 몽타주 검증, 데이터 배열 크기 일치 검증
+	//몽타주 검증, 데이터 배열 크기 일치 검증
 	const FAttackActionData* WeaponAttackData = Weapon->GetWeaponAttackDataByTag(AssetTag);
 	if (!WeaponAttackData)
 	{

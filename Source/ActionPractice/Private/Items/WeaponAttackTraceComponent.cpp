@@ -1,6 +1,7 @@
 ﻿#include "Items/WeaponAttackTraceComponent.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponDataAsset.h"
+#include "Items/AttackData.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "DrawDebugHelpers.h"
@@ -8,15 +9,14 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponCollision, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogWeaponAttackTraceComponent, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogWeaponAttackTraceComponent, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
-
-DEFINE_LOG_CATEGORY_STATIC(LogWeaponCollision, Log, All);
 
 UWeaponAttackTraceComponent::UWeaponAttackTraceComponent()
 {
@@ -90,19 +90,19 @@ void UWeaponAttackTraceComponent::BindEventCallbacks()
     CachedASC = Character->GetAbilitySystemComponent();
     if (!CachedASC)
     {
-        DEBUG_LOG(TEXT("No ASC found on character"));
+        DEBUG_LOG(TEXT("No ASC found"));
         return;
     }
 
     if (HitDetectionStartHandle.IsValid() || HitDetectionEndHandle.IsValid())
     {
-        DEBUG_LOG(TEXT("BindEventCallbacks: Clearing previous (potentially orphaned) handles before binding new ones."));
+        DEBUG_LOG(TEXT("BindEventCallbacks: Clearing previous handles before binding new"));
         UnbindEventCallbacks();
     }
 
     DEBUG_LOG(TEXT("BindEventCallbacks: Subscribing events for %s"), *OwnerWeapon->GetClass()->GetName());
     
-    //HitDetectionStart 이벤트 구독
+    //HitDetectionStart 노티파이 스테이트
     HitDetectionStartHandle = CachedASC->GenericGameplayEventCallbacks
     .FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyHitDetectionStartTag())
     .AddLambda([this](const FGameplayEventData* EventData)
@@ -113,7 +113,7 @@ void UWeaponAttackTraceComponent::BindEventCallbacks()
         }
     });
     
-    //HitDetectionEnd 이벤트 구독
+    //HitDetectionEnd 노티파이 스테이트
     HitDetectionEndHandle = CachedASC->GenericGameplayEventCallbacks
     .FindOrAdd(UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTag())
     .AddLambda([this](const FGameplayEventData* EventData)
@@ -207,14 +207,16 @@ bool UWeaponAttackTraceComponent::LoadTraceConfigFromWeaponData(const FGameplayT
     //콤보 인덱스 유효성 검사
     ComboIndex = FMath::Clamp(ComboIndex, 0, AttackData->ComboAttackData.Num() - 1);
     const FIndividualAttackData& AttackInfo = AttackData->ComboAttackData[ComboIndex];
-    
-    CurrentConfig.DamageType = AttackInfo.DamageType;
-    CurrentConfig.DamageMultiplier = AttackInfo.DamageMultiplier;
-    CurrentConfig.StaminaDamage = AttackInfo.StaminaDamage;
-    CurrentConfig.SocketCount = WeaponData->SweepTraceSocketCount;
-    
-    // 고정 반경 사용
-    CurrentConfig.TraceRadius = DefaultTraceRadius;
+
+    //트레이스 설정
+    CurrentTraceConfig.AttackMotionType = AttackInfo.DamageType;
+    CurrentTraceConfig.SocketCount = WeaponData->SweepTraceSocketCount;
+    CurrentTraceConfig.TraceRadius = DefaultTraceRadius; // 고정 반경 사용
+
+    //공격 데이터 설정
+    CurrentAttackData.FinalDamage = OwnerWeapon->GetCalculatedDamage() * AttackInfo.DamageMultiplier;
+    CurrentAttackData.PoiseDamage = AttackInfo.PoiseDamage;
+    CurrentAttackData.DamageType = AttackInfo.DamageType;
     
     return true;
 }
@@ -225,7 +227,7 @@ void UWeaponAttackTraceComponent::GenerateSocketNames()
     const FString NamePrefix = SocketNamePrefix.ToString();
     
     //trace_socket_0부터 시작, 0이 칼 끝
-    for (int32 i = 0; i < CurrentConfig.SocketCount; ++i)
+    for (int32 i = 0; i < CurrentTraceConfig.SocketCount; ++i)
     {
         const FString FullName = FString::Printf(TEXT("%s%d"), *NamePrefix, i);
         
@@ -286,7 +288,7 @@ void UWeaponAttackTraceComponent::PerformTrace(float DeltaTime)
         return;
     }
     
-    switch (CurrentConfig.DamageType)
+    switch (CurrentTraceConfig.AttackMotionType)
     {
     case EAttackDamageType::Slash:
         PerformSlashTrace();
@@ -365,7 +367,7 @@ void UWeaponAttackTraceComponent::PerformSlashTrace()
         
         TArray<FHitResult> SubHits;
         
-        PerformInterpolationTrace(StartPrev, StartCurr, EndPrev, EndCurr, CurrentConfig.TraceRadius, SubHits);
+        PerformInterpolationTrace(StartPrev, StartCurr, EndPrev, EndCurr, CurrentTraceConfig.TraceRadius, SubHits);
         AllHits.Append(SubHits);
     }
     
@@ -422,9 +424,9 @@ bool UWeaponAttackTraceComponent::ValidateHit(AActor* HitActor, const FHitResult
 
 void UWeaponAttackTraceComponent::ProcessHit(AActor* HitActor, const FHitResult& HitResult)
 {
-    float FinalMultiplier = CurrentConfig.DamageMultiplier;
+    float IncomingDamage = CurrentAttackData.FinalDamage;
     
-    DEBUG_LOG(TEXT("Hit %s, DmgMult: %.2f"), *HitActor->GetName(), FinalMultiplier);
+    DEBUG_LOG(TEXT("Hit %s, IncomingDamage: %.2f"), *HitActor->GetName(), IncomingDamage);
 
     //화면에 디버그 메시지 표시
     if (GEngine)
@@ -440,11 +442,11 @@ void UWeaponAttackTraceComponent::ProcessHit(AActor* HitActor, const FHitResult&
             MessageColor,  //색상
             FString::Printf(TEXT("HIT %s, Damage x%.2f"), 
                 *HitActor->GetName(), 
-                FinalMultiplier)
+                IncomingDamage)
         );
     }
     
-    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentConfig.DamageType, FinalMultiplier);
+    OnWeaponHit.Broadcast(HitActor, HitResult, CurrentAttackData);
 }
 
 void UWeaponAttackTraceComponent::ResetHitActors()
@@ -460,7 +462,7 @@ float UWeaponAttackTraceComponent::CalculateSwingSpeed() const
 {
     if (!OwnerWeapon || !WeaponStaticMesh || !GetWorld()) return 0.0f;
 
-    //속도 = 거리 / 시간이므로 DeltaTime이 필요합니다.
+    //속도 = 거리 / 시간이므로 DeltaTime이 필요
     const float DeltaTime = GetWorld()->GetDeltaSeconds();
     if (DeltaTime <= KINDA_SMALL_NUMBER) //0으로 나누기 방지
     {

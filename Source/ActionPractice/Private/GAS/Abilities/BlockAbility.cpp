@@ -1,5 +1,5 @@
 #include "GAS/Abilities/BlockAbility.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
@@ -10,12 +10,13 @@
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "Items/WeaponDataAsset.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-	#define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogBlockAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogBlockAbility, Warning, Format, ##__VA_ARGS__)
 #else
-	#define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 UBlockAbility::UBlockAbility()
@@ -25,32 +26,27 @@ UBlockAbility::UBlockAbility()
 	StaminaDamageReduction = 0.5f;
 	BlockAngle = 120.0f;
 	ParryWindow = 0.3f;
-
-	// 인스턴싱 정책: 지속적인 어빌리티이므로 액터별 인스턴스
-	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
 void UBlockAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	
+	PlayAction();
+}
+
+void UBlockAbility::ActivateInitSettings()
+{
 	WeaponBlockData = FWeaponAbilityStatics::GetBlockDataFromAbility(this);
 	if (!WeaponBlockData)
 	{
 		DEBUG_LOG(TEXT("Cannot Load Block Data"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
 	
-	MontageToPlay = WeaponBlockData->BlockIdleMontage.Get();
 	bCreateTask = true;
-	PlayAction();
 }
-
 
 void UBlockAbility::PlayAction()
 {
@@ -58,8 +54,15 @@ void UBlockAbility::PlayAction()
 	ExecuteMontageTask();
 }
 
+UAnimMontage* UBlockAbility::SetMontageToPlayTask()
+{
+	return WeaponBlockData->BlockIdleMontage.Get();
+}
+
 void UBlockAbility::ExecuteMontageTask()
 {
+	UAnimMontage* MontageToPlay = SetMontageToPlayTask();
+	
 	if (!MontageToPlay)
 	{
 		DEBUG_LOG(TEXT("No Montage to Play"));

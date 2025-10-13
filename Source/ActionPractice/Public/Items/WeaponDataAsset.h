@@ -4,6 +4,7 @@
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
 #include "WeaponEnums.h"
+#include "AttackData.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
 #include "WeaponDataAsset.generated.h"
@@ -23,7 +24,7 @@ struct FIndividualAttackData
     float DamageMultiplier = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-    float StaminaDamage = 10.0f;
+    float PoiseDamage = 10.0f;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
     float StaminaCost = 10.0f;

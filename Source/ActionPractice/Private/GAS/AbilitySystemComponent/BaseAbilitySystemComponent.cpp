@@ -1,0 +1,144 @@
+#include "GAS/AbilitySystemComponent/BaseAbilitySystemComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "GameFramework/Actor.h"
+#include "Characters/BaseCharacter.h"
+#include "GAS/Effects/ActionPracticeGameplayEffectContext.h"
+#include "Items/AttackData.h"
+#include "GameplayEffect.h"
+#include "GAS/GameplayTagsSubsystem.h"
+
+#define ENABLE_DEBUG_LOG 0
+
+#if ENABLE_DEBUG_LOG
+	DEFINE_LOG_CATEGORY_STATIC(LogBaseAbilitySystemComponent, Log, All);
+	#define DEBUG_LOG(Format, ...) UE_LOG(LogBaseAbilitySystemComponent, Warning, Format, ##__VA_ARGS__)
+#else
+	#define DEBUG_LOG(Format, ...)
+#endif
+
+UBaseAbilitySystemComponent::UBaseAbilitySystemComponent()
+{
+	SetIsReplicated(true);
+	SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+}
+
+void UBaseAbilitySystemComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (AActor* Owner = GetOwner())
+	{
+		CachedCharacter = Cast<ABaseCharacter>(Owner);
+	}
+}
+
+void UBaseAbilitySystemComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+}
+
+void UBaseAbilitySystemComponent::InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor)
+{
+	Super::InitAbilityActorInfo(InOwnerActor, InAvatarActor);
+
+	CachedCharacter = Cast<ABaseCharacter>(InOwnerActor);
+
+	//외부 바인딩용 신호
+	OnASCInitialized.Broadcast(this);
+}
+
+FGameplayEffectSpecHandle UBaseAbilitySystemComponent::CreateGameplayEffectSpec(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level, UObject* SourceObject)
+{
+	if (!GameplayEffectClass)
+	{
+		DEBUG_LOG(TEXT("GameplayEffectClass is null"));
+		return FGameplayEffectSpecHandle();
+	}
+
+	//ActionPracticeAbilitySystemGlobals에 의해 자동으로 ActionPracticeGameplayEffectContext 생성
+	FGameplayEffectContextHandle EffectContext = MakeEffectContext();
+	if (SourceObject)
+	{
+		EffectContext.AddSourceObject(SourceObject);
+	}
+
+	//Spec 생성
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingSpec(GameplayEffectClass, Level, EffectContext);
+
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("Failed to create GameplayEffectSpec"));
+		return FGameplayEffectSpecHandle();
+	}
+
+	return SpecHandle;
+}
+
+FGameplayEffectSpecHandle UBaseAbilitySystemComponent::CreateAttackGameplayEffectSpec(
+	TSubclassOf<UGameplayEffect> GameplayEffectClass,
+	float Level,
+	UObject* SourceObject,
+	const FFinalAttackData& FinalAttackData)
+{
+	//기본 Spec 생성
+	FGameplayEffectSpecHandle SpecHandle = CreateGameplayEffectSpec(GameplayEffectClass, Level, SourceObject);
+
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("Failed to create Attack GameplayEffectSpec"));
+		return FGameplayEffectSpecHandle();
+	}
+
+	//Incoming Damage Attrbiute Magnitude 설정
+	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTag(), FinalAttackData.FinalDamage);
+	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTag(), FinalAttackData.PoiseDamage);
+	
+	//ActionPracticeGameplayEffectContext 추출하여 DamageType 설정
+	FGameplayEffectContext* Context = SpecHandle.Data.Get()->GetContext().Get();
+	FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context);
+
+	if (APContext)
+	{
+		APContext->SetAttackDamageType(FinalAttackData.DamageType);
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("Failed to cast to FActionPracticeGameplayEffectContext"));
+	}
+
+	return SpecHandle;
+}
+
+void UBaseAbilitySystemComponent::SetSpecSetByCallerMagnitude(FGameplayEffectSpecHandle& SpecHandle, const FGameplayTag& Tag, float Magnitude)
+{
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("Invalid SpecHandle"));
+		return;
+	}
+
+	if (!Tag.IsValid())
+	{
+		DEBUG_LOG(TEXT("Invalid Tag"));
+		return;
+	}
+
+	SpecHandle.Data.Get()->SetSetByCallerMagnitude(Tag, Magnitude);
+}
+
+void UBaseAbilitySystemComponent::SetSpecSetByCallerMagnitudes(FGameplayEffectSpecHandle& SpecHandle, const TMap<FGameplayTag, float>& Magnitudes)
+{
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("Invalid SpecHandle"));
+		return;
+	}
+
+	for (const TPair<FGameplayTag, float>& Pair : Magnitudes)
+	{
+		if (Pair.Key.IsValid())
+		{
+			SpecHandle.Data.Get()->SetSetByCallerMagnitude(Pair.Key, Pair.Value);
+		}
+	}
+}

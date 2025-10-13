@@ -2,14 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "MontageAbilityInterface.h"
-#include "GAS/Abilities/ActionPracticeGameplayAbility.h"
+#include "GAS/Abilities/ActionPracticeAbility.h"
 #include "BlockAbility.generated.h"
 
 struct FBlockActionData;
 class UAbilityTask_PlayMontageWithEvents;
 
 UCLASS()
-class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeGameplayAbility, public IMontageAbilityInterface
+class ACTIONPRACTICE_API UBlockAbility : public UActionPracticeAbility, public IMontageAbilityInterface
 {
 	GENERATED_BODY()
 	
@@ -18,6 +18,7 @@ public:
 	UBlockAbility();
 	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void ActivateInitSettings() override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
@@ -27,13 +28,10 @@ public:
 protected:
 #pragma region "Protected Variables"
 
-	const FBlockActionData* WeaponBlockData;
+	const FBlockActionData* WeaponBlockData = nullptr;
 	
 	UPROPERTY()
-	UAbilityTask_PlayMontageWithEvents* PlayMontageWithEventsTask;
-	
-	UPROPERTY()
-	UAnimMontage* MontageToPlay = nullptr;
+	TObjectPtr<UAbilityTask_PlayMontageWithEvents> PlayMontageWithEventsTask = nullptr;
 	
 	UPROPERTY()
 	float BlockAngle = 120.0f; // 정면 120도
@@ -62,6 +60,9 @@ protected:
 
 	UFUNCTION()
 	virtual void PlayAction() override;
+
+	UFUNCTION()
+	virtual UAnimMontage* SetMontageToPlayTask() override;
 	
 	UFUNCTION()
 	virtual void ExecuteMontageTask() override;

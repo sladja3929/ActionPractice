@@ -12,9 +12,9 @@ class ACTIONPRACTICE_API UNormalAttackAbility : public UBaseAttackAbility
 
 public:
 #pragma region "Public Functions" //==================================================
-	
+
 	UNormalAttackAbility();
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
@@ -27,21 +27,27 @@ protected:
 	//PlayAction, ExecuteMontageTask 파라미터
 	UPROPERTY()
 	bool bCreateTask = false;
+
+	//사용되는 태그들
+	FGameplayTag EventNotifyResetComboTag;
 	
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
-	
-	virtual void ExecuteMontageTask() override;
 
+	virtual void ActivateInitSettings() override;
+	virtual void ExecuteMontageTask() override;
+	virtual void BindEventsAndReadyMontageTask() override;
+	
 	UFUNCTION()
 	void PlayNextAttack();
-
-	// ===== Task Event Handler Functions =====
-	UFUNCTION()
-	void OnNotifyResetCombo();
 	
-	virtual void OnEventPlayBuffer(FGameplayEventData Payload) override;
+	virtual void OnTaskNotifyEventsReceived(FGameplayEventData Payload) override;
+	
+	UFUNCTION()
+	void OnNotifyResetCombo(FGameplayEventData Payload);
+	
+	virtual void OnEventInputByBuffer(FGameplayEventData Payload) override;
 	
 #pragma endregion
 

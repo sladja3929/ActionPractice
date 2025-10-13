@@ -1,48 +1,30 @@
 #include "GAS/Abilities/BaseAttackAbility.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+
+#include "AbilitySystemBlueprintLibrary.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
-#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "Animation/AnimMontage.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "Items/HitDetectionInterface.h"
 #include "GAS/Abilities/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
+#include "GAS/AbilitySystemComponent/BaseAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogBaseAttackAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogBaseAttackAbility, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 UBaseAttackAbility::UBaseAttackAbility()
 {
     StaminaCost = 15.0f;
 }
-
-void UBaseAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
-{
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-    {
-        DEBUG_LOG(TEXT("Cannot Commit Ability"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
-    if (!WeaponAttackData)
-    {
-        DEBUG_LOG(TEXT("Cannot Load Base Attack Data"));
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
-    }
-
-    ComboCounter = 0;
-    PlayAction();
-}
-
 
 void UBaseAttackAbility::SetHitDetectionConfig()
 {
@@ -55,74 +37,87 @@ void UBaseAttackAbility::SetHitDetectionConfig()
         return;
     }
 
-    if (TScriptInterface<IHitDetectionInterface> HitDetection = Character->GetHitDetectionInterface())
-    {
-        DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
-        FGameplayTagContainer AssetTag = GetAssetTags();
-        if (!AssetTag.IsEmpty()) 
-        {
-            HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
-        }
-    }
-    
-    else
+    HitDetection = Character->GetHitDetectionInterface();
+    if (!HitDetection)
     {
         DEBUG_LOG(TEXT("Character Not Has HitDetection System"));
         EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
         return; 
     }
+    
+    FGameplayTagContainer AssetTag = GetAssetTags();
+    if (AssetTag.IsEmpty()) 
+    {
+        DEBUG_LOG(TEXT("No AssetTags"));
+        return;
+    }
+    
+    HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
+    OnHitDelegateHandle = HitDetection->GetOnHitDetected().AddUObject(this, &UBaseAttackAbility::OnHitDetected);
+
+    DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
+}
+
+void UBaseAttackAbility::OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData)
+{
+    //Source ASC (공격자, AttackAbility 소유자)
+    UActionPracticeAbilitySystemComponent* SourceASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+    if (!HitActor || !SourceASC) return;
+    
+    //Target ASC (피격자)
+    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
+    if (!TargetASC) return;
+    
+    //Source ASC에서 GE Spec 생성
+    FGameplayEffectSpecHandle SpecHandle = SourceASC->CreateAttackGameplayEffectSpec(DamageInstantEffect, GetAbilityLevel(), this, AttackData);
+    
+    if (SpecHandle.IsValid())
+    {        
+        //Target에게 적용
+        FActiveGameplayEffectHandle ActiveGEHandle = SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+        
+        //적용에 성공했으면
+        if (ActiveGEHandle.WasSuccessfullyApplied())
+        {
+            //추후 필요시 구현
+        }
+    }
+}
+
+void UBaseAttackAbility::ActivateInitSettings()
+{
+    Super::ActivateInitSettings();
+    
+    WeaponAttackData = FWeaponAbilityStatics::GetAttackDataFromAbility(this);
+    if (!WeaponAttackData)
+    {
+        DEBUG_LOG(TEXT("Cannot Load Base Attack Data"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+
+    ComboCounter = 0;
+}
+
+bool UBaseAttackAbility::ConsumeStamina()
+{
+    SetStaminaCost(WeaponAttackData->ComboAttackData[ComboCounter].StaminaCost);
+    
+    return Super::ConsumeStamina();
 }
 
 void UBaseAttackAbility::PlayAction()
 {
-    ConsumeStaminaAndAddTag();
     SetHitDetectionConfig();
-    RotateCharacter();
 
-    WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
-    if (WaitDelayTask)
-    {
-        WaitDelayTask->OnFinish.AddDynamic(this, &UBaseAttackAbility::ExecuteMontageTask);
-        WaitDelayTask->ReadyForActivation();
-    }
+    Super::PlayAction();
 }
 
-void UBaseAttackAbility::ExecuteMontageTask()
+UAnimMontage* UBaseAttackAbility::SetMontageToPlayTask()
 {
-    UAnimMontage* MontageToPlay = WeaponAttackData->AttackMontages[ComboCounter].Get();
-    if (!MontageToPlay)
-    {
-        DEBUG_LOG(TEXT("No Montage to Play"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
-        return;
-    }
-    
-    // 커스텀 태스크 생성
-    PlayMontageWithEventsTask = UAbilityTask_PlayMontageWithEvents::CreatePlayMontageWithEventsProxy(
-        this,
-        NAME_None,
-        MontageToPlay,
-        1.0f,
-        NAME_None,
-        1.0f
-    );
-    
-    if (PlayMontageWithEventsTask)
-    {        
-        // 델리게이트 바인딩 - 부모 클래스의 함수 사용
-        PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageCompleted);
-        PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UBaseAttackAbility::OnTaskMontageInterrupted);
-
-        // 태스크 활성화
-        PlayMontageWithEventsTask->ReadyForActivation();
-    }
-    
-    else
-    {
-        DEBUG_LOG(TEXT("No Montage Task"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-    }
-}     
+    if (ComboCounter < 0) ComboCounter = 0;
+    return WeaponAttackData->AttackMontages[ComboCounter].Get();
+}
 
 void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
@@ -130,6 +125,12 @@ void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, con
     
     if (IsEndAbilityValid(Handle, ActorInfo))
     {
+        if (OnHitDelegateHandle.IsValid() && HitDetection)
+        {
+            HitDetection->GetOnHitDetected().Remove(OnHitDelegateHandle);
+            OnHitDelegateHandle.Reset();
+        }
+        
         if (PlayMontageWithEventsTask)
         {
             PlayMontageWithEventsTask->bStopMontageWhenAbilityCancelled = bWasCancelled;

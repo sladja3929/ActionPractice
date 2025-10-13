@@ -1,53 +1,52 @@
 #include "GAS/Abilities/SprintAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "GAS/GameplayTagsSubsystem.h"
+#include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
-	#define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogSprintAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogSprintAbility, Warning, Format, ##__VA_ARGS__)
 #else
-	#define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 USprintAbility::USprintAbility()
 {
-	StaminaCost = 0.0f;
+	StaminaCost = 0.1f;
 	SprintSpeedMultiplier = 1.5f;
-	StaminaDrainPerSecond = 12.0f;
-	MinStaminaToStart = 10.0f;
-	MinStaminaToContinue = 5.0f;
-
-	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
-bool USprintAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
+void USprintAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
-	{
-		return false;
-	}
+	Super::OnGiveAbility(ActorInfo, Spec);
 
-	if (const UActionPracticeAttributeSet* AttributeSet = Cast<UActionPracticeAttributeSet>(ActorInfo->AbilitySystemComponent->GetAttributeSet(UActionPracticeAttributeSet::StaticClass())))
+	EffectSprintSpeedMultiplierTag = UGameplayTagsSubsystem::GetEffectSprintSpeedMultiplierTag();
+	if (!EffectSprintSpeedMultiplierTag.IsValid())
 	{
-		return AttributeSet->GetStamina() >= MinStaminaToStart;
+		DEBUG_LOG(TEXT("EffectSprintSpeedMultiplierTag is Invalid"));
 	}
-
-	return false;
 }
 
 void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	DEBUG_LOG(TEXT("Sprint Ability Activated"));
+	StartSprinting();
+}
 
+
+void USprintAbility::ActivateInitSettings()
+{
+	Super::ActivateInitSettings();
+	
 	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
 	if (!Character)
 	{
@@ -55,42 +54,25 @@ void USprintAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, co
 	}
 
 	SprintSpeedMultiplier = Character->SprintSpeedMultiplier;
-	DEBUG_LOG(TEXT("Sprint Ability Activated"));
-	StartSprinting();
 }
 
 void USprintAbility::StartSprinting()
 {
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (!Character)
+	if (!StartStaminaDrainEffect())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
 
-	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
-	if (!MovementComp)
+	if (!StartSprintEffect())
 	{
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
-
-	OriginalMaxWalkSpeed = MovementComp->MaxWalkSpeed;
-
-	MovementComp->MaxWalkSpeed = OriginalMaxWalkSpeed * SprintSpeedMultiplier;
-
-	//스태미나 소모 타이머 시작
+	
+	//스프린트 조건 확인 타이머
 	if (GetWorld())
 	{
-		GetWorld()->GetTimerManager().SetTimer(
-			StaminaDrainTimer,
-			this,
-			&USprintAbility::DrainStamina,
-			1.0f / StaminaDrainPerSecond,
-			true
-		);
-
-		//스프린트 조건 확인 타이머 시작
 		GetWorld()->GetTimerManager().SetTimer(
 			SprintCheckTimer,
 			this,
@@ -100,26 +82,16 @@ void USprintAbility::StartSprinting()
 		);
 	}
 
-	DEBUG_LOG(TEXT("Sprint started - Speed: %f"), MovementComp->MaxWalkSpeed);
+	DEBUG_LOG(TEXT("Sprint started"));
 }
 
 void USprintAbility::StopSprinting()
 {
-	AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo();
-	if (Character)
-	{
-		UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
-		if (MovementComp && OriginalMaxWalkSpeed > 0.0f)
-		{
-			//원래 이동 속도 복구
-			MovementComp->MaxWalkSpeed = OriginalMaxWalkSpeed;
-		}
-	}
-
-	//타이머 정리
+	StopSprintEffect();
+	StopStaminaDrainEffect();
+	
 	if (GetWorld())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(StaminaDrainTimer);
 		GetWorld()->GetTimerManager().ClearTimer(SprintCheckTimer);
 	}
 
@@ -128,7 +100,7 @@ void USprintAbility::StopSprinting()
 
 void USprintAbility::HandleSprinting()
 {
-	// 스프린트 중 추가 처리가 필요하면 여기에 구현
+	// 스프린트 중 추가 처리가 필요할때
 }
 
 bool USprintAbility::CanContinueSprinting() const
@@ -141,22 +113,23 @@ bool USprintAbility::CanContinueSprinting() const
 		return false;
 	}
 
-	if (AttributeSet->GetStamina() < MinStaminaToContinue)
+	//스테미나 부족
+	if (AttributeSet->GetStamina() <= 0)
 	{
 		DEBUG_LOG(TEXT("CanContinueSprinting Stop - No Stamina"));
 		return false;
 	}
 
-	//실시간 이동 입력 확인
+	//이동 입력이 없으면
 	FVector2D MovementInput = Character->GetCurrentMovementInput();
 	DEBUG_LOG(TEXT("Real-time MovementInput: %f"), MovementInput.Size());
 	if (MovementInput.Size() < 0.1f)
 	{
 		DEBUG_LOG(TEXT("CanContinueSprinting Stop - No Movement Input"));
-		return false; //이동 입력이 없으면 스프린트 중단
+		return false;
 	}
 
-	//공중에 있으면 스프린트 불가
+	//공중에 있으면
 	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
 	if (MovementComp && MovementComp->IsFalling())
 	{
@@ -167,14 +140,107 @@ bool USprintAbility::CanContinueSprinting() const
 	return true;
 }
 
-void USprintAbility::DrainStamina()
+bool USprintAbility::StartSprintEffect()
 {
-	UActionPracticeAttributeSet* AttributeSet = GetActionPracticeAttributeSetFromActorInfo();
-	if (AttributeSet)
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
 	{
-		float CurrentStamina = AttributeSet->GetStamina();
-		float NewStamina = FMath::Max(0.0f, CurrentStamina - 1.0f);
-		const_cast<UActionPracticeAttributeSet*>(AttributeSet)->SetStamina(NewStamina);
+		DEBUG_LOG(TEXT("No APASC"));
+		return false;
+	}
+
+	// 기존 이펙트가 살아있으면 재설정(해제 후 재적용)
+	if (SprintHandle.IsValid())
+	{
+		APASC->RemoveActiveGameplayEffect(SprintHandle);
+		SprintHandle = FActiveGameplayEffectHandle();
+	}
+
+	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+	FGameplayEffectSpecHandle SpecHandle = APASC->CreateGameplayEffectSpec(SprintEffect, EffectiveLevel, this);
+
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("failed Sprint GameplayEffectSpec"));
+		return false;
+	}
+
+	APASC->SetSpecSetByCallerMagnitude(SpecHandle, EffectSprintSpeedMultiplierTag, SprintSpeedMultiplier);
+	SprintHandle = APASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	const bool bApplied = SprintHandle.IsValid();
+
+	DEBUG_LOG(TEXT("SprintEffect applied=%s, SpeedMultiplier=%.2f"), bApplied ? TEXT("true") : TEXT("false"), SprintSpeedMultiplier);
+
+	return bApplied;
+}
+
+void USprintAbility::StopSprintEffect()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		DEBUG_LOG(TEXT("No ASC"));
+		SprintHandle = FActiveGameplayEffectHandle();
+		return;
+	}
+
+	if (SprintHandle.IsValid())
+	{
+		const int32 Removed = ASC->RemoveActiveGameplayEffect(SprintHandle);
+		SprintHandle = FActiveGameplayEffectHandle();
+		DEBUG_LOG(TEXT("SprintEffect removed=%d"), Removed);
+	}
+}
+
+bool USprintAbility::StartStaminaDrainEffect()
+{
+	UActionPracticeAbilitySystemComponent* APASC = GetActionPracticeAbilitySystemComponentFromActorInfo();
+	if (!APASC)
+	{
+		DEBUG_LOG(TEXT("No APASC"));
+		return false;
+	}
+
+	// 기존 드레인이 살아있으면 재설정(해제 후 재적용)
+	if (StaminaDrainHandle.IsValid())
+	{
+		APASC->RemoveActiveGameplayEffect(StaminaDrainHandle);
+		StaminaDrainHandle = FActiveGameplayEffectHandle();
+	}
+
+	const float EffectiveLevel = static_cast<float>(GetAbilityLevel());
+	FGameplayEffectSpecHandle SpecHandle = APASC->CreateGameplayEffectSpec(StaminaDrainEffect, EffectiveLevel, this);
+
+	if (!SpecHandle.IsValid())
+	{
+		DEBUG_LOG(TEXT("failed StaminaDrain GameplayEffectSpec"));
+		return false;
+	}
+
+	APASC->SetSpecSetByCallerMagnitude(SpecHandle, EffectStaminaCostTag, -StaminaCost);
+	StaminaDrainHandle = APASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	const bool bApplied = StaminaDrainHandle.IsValid();
+
+	DEBUG_LOG(TEXT("StaminaDrainEffect applied=%s, DrainPerPeriod=%.2f"), bApplied ? TEXT("true") : TEXT("false"), StaminaCost);
+
+	return bApplied;
+}
+
+void USprintAbility::StopStaminaDrainEffect()
+{
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	if (!ASC)
+	{
+		DEBUG_LOG(TEXT("No ASC"));
+		StaminaDrainHandle = FActiveGameplayEffectHandle();
+		return;
+	}
+
+	if (StaminaDrainHandle.IsValid())
+	{
+		const int32 Removed = ASC->RemoveActiveGameplayEffect(StaminaDrainHandle);
+		StaminaDrainHandle = FActiveGameplayEffectHandle();
+		DEBUG_LOG(TEXT("StaminaDrainEffect removed=%d"), Removed);
 	}
 }
 

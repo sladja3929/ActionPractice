@@ -12,9 +12,9 @@ class ACTIONPRACTICE_API UChargeAttackAbility : public UBaseAttackAbility
 
 public:
 #pragma region "Public Functions" //==================================================
-	
+
 	UChargeAttackAbility();
-	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
@@ -40,28 +40,38 @@ protected:
 
 	UPROPERTY()
 	bool bIsAttackMontage = false;
-	
+
+	//사용되는 태그들
+	FGameplayTag EventNotifyResetComboTag;
+	FGameplayTag EventNotifyChargeStartTag;
+
 #pragma endregion
 
 #pragma region "Protected Functions" //================================================
 
+	virtual void ActivateInitSettings() override;
+	virtual void SetHitDetectionConfig() override;
+	virtual void SetStaminaCost(float InStaminaCost) override;
 	virtual void RotateCharacter() override;
+	virtual UAnimMontage* SetMontageToPlayTask() override;
 	virtual void ExecuteMontageTask() override;
-	virtual void PlayAction() override;
-
+	virtual void BindEventsAndReadyMontageTask() override;
+	
 	UFUNCTION()
 	void PlayNextCharge();
 	
-	// ===== Task Event Handler Functions =====
 	virtual void OnTaskMontageCompleted() override;
+	virtual void OnTaskNotifyEventsReceived(FGameplayEventData Payload) override;
+	
+	UFUNCTION()
+	void OnNotifyResetCombo(FGameplayEventData Payload);
 
 	UFUNCTION()
-	void OnNotifyResetCombo();
+	void OnNotifyChargeStart(FGameplayEventData Payload);
 
-	UFUNCTION()
-	void OnNotifyChargeStart();
+	virtual void OnEventInputByBuffer(FGameplayEventData Payload) override;
 
-	virtual void OnEventPlayBuffer(FGameplayEventData Payload) override;
+	virtual void OnHitDetected(AActor* HitActor, const FHitResult& HitResult, FFinalAttackData AttackData) override;
 	
 #pragma endregion
 

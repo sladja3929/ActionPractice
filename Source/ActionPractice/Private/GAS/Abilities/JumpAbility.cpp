@@ -1,14 +1,15 @@
 #define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
-    #define DEBUG_LOG(Format, ...) UE_LOG(LogTemp, Warning, Format, ##__VA_ARGS__)
+	DEFINE_LOG_CATEGORY_STATIC(LogJumpAbility, Log, All);
+#define DEBUG_LOG(Format, ...) UE_LOG(LogJumpAbility, Warning, Format, ##__VA_ARGS__)
 #else
-    #define DEBUG_LOG(Format, ...)
+#define DEBUG_LOG(Format, ...)
 #endif
 
 #include "GAS/Abilities/JumpAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "GAS/ActionPracticeAttributeSet.h"
+#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
@@ -17,8 +18,6 @@
 UJumpAbility::UJumpAbility()
 {
 	StaminaCost = 10.0f;
-	
-	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
 bool UJumpAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
@@ -46,14 +45,10 @@ bool UJumpAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 
 void UJumpAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	// 스태미나 소모
-	if (!ConsumeStamina())
+	if (!ApplyStaminaCost())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;

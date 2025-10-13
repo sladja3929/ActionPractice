@@ -1,0 +1,61 @@
+﻿#pragma once
+
+#include "CoreMinimal.h"
+#include "GAS/AbilitySystemComponent/BaseAbilitySystemComponent.h"
+#include "ActionPracticeAbilitySystemComponent.generated.h"
+
+class AActionPracticeCharacter;
+class UActionPracticeAttributeSet;
+
+UCLASS()
+class ACTIONPRACTICE_API UActionPracticeAbilitySystemComponent : public UBaseAbilitySystemComponent
+{
+	GENERATED_BODY()
+
+public:
+#pragma region "Public Variables"
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stamina")
+	TSubclassOf<UGameplayEffect> StaminaRegenBlockEffect;
+
+#pragma endregion
+
+#pragma region "Public Functions"
+
+	UActionPracticeAbilitySystemComponent();
+
+	virtual void InitAbilityActorInfo(AActor* InOwnerActor, AActor* InAvatarActor) override;
+
+	UFUNCTION(BlueprintPure, Category="Attributes")
+	const UActionPracticeAttributeSet* GetActionPracticeAttributeSet() const;
+
+	UFUNCTION(BlueprintCallable, Category="Stamina")
+	void ApplyStaminaRegenBlock(float Duration);
+
+#pragma endregion
+
+protected:
+#pragma region "Protected Variables"
+
+	TWeakObjectPtr<AActionPracticeCharacter> CachedAPCharacter;
+	FGameplayTag EffectStaminaRegenBlockDurationTag;
+
+#pragma endregion
+
+#pragma region "Protected Functions"
+
+	virtual void BeginPlay() override;
+
+#pragma endregion
+
+private:
+#pragma region "Private Variables"
+
+	FActiveGameplayEffectHandle StaminaRegenBlockHandle;
+	
+#pragma endregion
+
+#pragma region "Private Functions"
+	
+#pragma endregion
+};
