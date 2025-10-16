@@ -12,6 +12,8 @@ public class ActionPractice : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
+			"GameplayStateTreeModule",
+			"StateTreeModule",
 			"Core",
 			"CoreUObject",
 			"Engine",

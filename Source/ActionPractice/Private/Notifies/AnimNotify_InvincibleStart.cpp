@@ -21,19 +21,19 @@ void UAnimNotify_InvincibleStart::Notify(USkeletalMeshComponent* MeshComp, UAnim
 	if (!MeshComp || !MeshComp->GetOwner())
 		return;
 
-	// AbilitySystemComponent가 있는 액터에서만 이벤트 전송 (애니메이션 에디터 프리뷰 액터 제외)
-	if (!UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(MeshComp->GetOwner())) return;
-
 	AActor* Owner = MeshComp->GetOwner();
+	if (!IsValid(Owner))
+		return;
+
+	UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+	if (!ASC || !IsValid(ASC))
+		return;
 
 	FGameplayEventData EventData;
 	EventData.Instigator = Owner;
 	EventData.Target = Owner;
 	EventData.EventTag = UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag();
 
-	if (UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
-	{
-		ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag(), &EventData);
-		DEBUG_LOG(TEXT("InvincibleStart AN"));
-	}
+	ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyInvincibleStartTag(), &EventData);
+	DEBUG_LOG(TEXT("InvincibleStart AN"));
 }

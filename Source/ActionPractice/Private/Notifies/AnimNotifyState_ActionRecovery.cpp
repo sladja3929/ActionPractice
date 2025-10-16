@@ -27,6 +27,12 @@ void UAnimNotifyState_ActionRecovery::NotifyBegin(USkeletalMeshComponent* MeshCo
         return;
 
     AActor* Owner = MeshComp->GetOwner();
+    if (!IsValid(Owner))
+        return;
+
+    UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+    if (!ASC || !IsValid(ASC))
+        return;
 
     FGameplayEventData EventData;
     EventData.Instigator = Owner;
@@ -36,11 +42,8 @@ void UAnimNotifyState_ActionRecovery::NotifyBegin(USkeletalMeshComponent* MeshCo
     // Duration을 EventMagnitude에 저장
     EventData.EventMagnitude = TotalDuration;
 
-    if (UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
-    {
-        ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag(), &EventData);
-        DEBUG_LOG(TEXT("ActionRecovery ANS: Start"));
-    }
+    ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryStartTag(), &EventData);
+    DEBUG_LOG(TEXT("ActionRecovery ANS: Start"));
 }
 
 void UAnimNotifyState_ActionRecovery::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -49,15 +52,18 @@ void UAnimNotifyState_ActionRecovery::NotifyEnd(USkeletalMeshComponent* MeshComp
         return;
 
     AActor* Owner = MeshComp->GetOwner();
+    if (!IsValid(Owner))
+        return;
+
+    UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+    if (!ASC || !IsValid(ASC))
+        return;
 
     FGameplayEventData EventData;
     EventData.Instigator = Owner;
     EventData.Target = Owner;
     EventData.EventTag = UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag();
 
-    if (UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
-    {
-        ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag(), &EventData);
-        DEBUG_LOG(TEXT("ActionRecovery ANS: End"));
-    }
+    ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyActionRecoveryEndTag(), &EventData);
+    DEBUG_LOG(TEXT("ActionRecovery ANS: End"));
 }
