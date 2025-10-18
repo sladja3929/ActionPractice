@@ -58,10 +58,5 @@ TConstArrayView<FStateTreeExternalDataDesc> UGASStateTreeAIComponentSchema::GetC
 	ASCDesc.Name = TEXT("AbilitySystemComponent");
 	CachedDescs.Add(ASCDesc);
 	
-	//AttributeSet
-	FStateTreeExternalDataDesc AttributeSetDesc(UBossAttributeSet::StaticClass(), EStateTreeExternalDataRequirement::Optional);
-	AttributeSetDesc.Name = TEXT("AttributeSet");
-	CachedDescs.Add(AttributeSetDesc);
-	
 	return CachedDescs;
 }

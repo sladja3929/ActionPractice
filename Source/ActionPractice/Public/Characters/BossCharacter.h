@@ -7,6 +7,7 @@
 #include "BossCharacter.generated.h"
 
 class UBossHealthWidget;
+class AActionPracticeCharacter;
 
 UCLASS()
 class ACTIONPRACTICE_API ABossCharacter : public ABaseCharacter
@@ -41,6 +42,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UBossHealthWidget> BossHealthWidgetClass;
 
+	UPROPERTY()
+	TObjectPtr<UBossHealthWidget> BossHealthWidget;
+
+	bool bHealthWidgetActive = false;
+	
 #pragma endregion
 
 #pragma region "Protected Functions"
@@ -61,11 +67,7 @@ protected:
 private:
 #pragma region "Private Variables"
 
-	UPROPERTY()
-	TObjectPtr<UBossHealthWidget> BossHealthWidget;
-
-	TWeakObjectPtr<class AActionPracticeCharacter> DetectedPlayer;
-	bool bHealthWidgetActive = false;
+	TWeakObjectPtr<AActionPracticeCharacter> DetectedPlayer;
 
 #pragma endregion
 

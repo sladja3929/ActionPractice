@@ -10,7 +10,7 @@
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISense_Sight.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogBossCharacter, Log, All);
@@ -87,19 +87,16 @@ void ABossCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ABossCharacter::OnPlayerDetected(AActor* Actor, FAIStimulus Stimulus)
 {
-	if (!Actor)
-		return;
+	if (!Actor) return;
 
-	//시각 감각인지 확인
+	//시각 감지 케이스
 	if (Stimulus.Type == UAISense::GetSenseID<UAISense_Sight>())
 	{
 		AActionPracticeCharacter* Player = Cast<AActionPracticeCharacter>(Actor);
-		if (!Player)
-			return;
+		if (!Player) return;
 
 		if (Stimulus.WasSuccessfullySensed())
 		{
-			//플레이어 감지
 			DEBUG_LOG(TEXT("Player detected by Boss: %s"), *Actor->GetName());
 
 			if (!bHealthWidgetActive)
@@ -110,7 +107,6 @@ void ABossCharacter::OnPlayerDetected(AActor* Actor, FAIStimulus Stimulus)
 		}
 		else
 		{
-			//플레이어 놓침
 			DEBUG_LOG(TEXT("Player lost by Boss: %s"), *Actor->GetName());
 
 			if (Actor == DetectedPlayer.Get())
@@ -142,10 +138,10 @@ void ABossCharacter::CreateAndAttachHealthWidget()
 		return;
 	}
 
-	UBossAttributeSet* BossAttrSet = GetAttributeSet();
-	if (BossAttrSet)
+	UBossAttributeSet* BossAttributeSet = GetAttributeSet();
+	if (BossAttributeSet)
 	{
-		BossHealthWidget->SetBossAttributeSet(BossAttrSet);
+		BossHealthWidget->SetBossAttributeSet(BossAttributeSet);
 	}
 	
 	BossHealthWidget->AddToViewport();

@@ -1,5 +1,6 @@
 ﻿#include "AI/EnemyAIController.h"
 #include "AI/StateTree/GASStateTreeAIComponent.h"
+#include "Characters/ActionPracticeCharacter.h"
 #include "Characters/BossCharacter.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
@@ -19,6 +20,8 @@ AEnemyAIController::AEnemyAIController()
 	GASStateTreeAIComponent = CreateDefaultSubobject<UGASStateTreeAIComponent>(TEXT("GASStateTreeAIComponent"));
 	check(GASStateTreeAIComponent);
 
+	BrainComponent = GASStateTreeAIComponent;
+	
 	//AI Perception Component 생성, 부모 클래스에 멤버변수는 있지만 생성은 자식에서 직접 해야 함
 	SetPerceptionComponent(*CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AIPerceptionComponent")));
 
@@ -56,6 +59,14 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
 		DEBUG_LOG(TEXT("Failed to cast Pawn to BossCharacter"));
 		return;
 	}
+
+	if (!GASStateTreeAIComponent)
+	{
+		DEBUG_LOG(TEXT("StateTreeComponent is nullptr"));
+		return;
+	}
+
+	GASStateTreeAIComponent->RestartLogic();
 }
 
 void AEnemyAIController::OnUnPossess()
@@ -66,27 +77,34 @@ void AEnemyAIController::OnUnPossess()
 	}
 
 	BossCharacter.Reset();
-
+	
 	Super::OnUnPossess();
 }
 
 void AEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
-	if (!Actor)
-		return;
+	if (!Actor) return;
 
-	//시각 감각인지 확인
+	//시각 감지 케이스
 	if (Stimulus.Type == UAISense::GetSenseID<UAISense_Sight>())
 	{
+		AActionPracticeCharacter* Player = Cast<AActionPracticeCharacter>(Actor);
+		
 		if (Stimulus.WasSuccessfullySensed())
 		{
-			//타겟 감지됨
-			DEBUG_LOG(TEXT("Target Detected: %s"), *Actor->GetName());
+			if (Player)
+			{
+				DetectedPlayer = Player;
+				DEBUG_LOG(TEXT("Target Detected: %s"), *Actor->GetName());
+			}
 		}
 		else
 		{
-			//타겟 놓침
-			DEBUG_LOG(TEXT("Target Lost: %s"), *Actor->GetName());
+			if (Player)
+			{
+				DetectedPlayer = nullptr;
+				DEBUG_LOG(TEXT("Target Lost: %s"), *Actor->GetName());
+			}
 		}
 	}
 }

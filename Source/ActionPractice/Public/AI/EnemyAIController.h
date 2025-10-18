@@ -4,6 +4,7 @@
 #include "AIController.h"
 #include "EnemyAIController.generated.h"
 
+class AActionPracticeCharacter;
 class UStateTreeAIComponent;
 class UGASStateTreeAIComponent;
 class ABossCharacter;
@@ -18,6 +19,8 @@ class ACTIONPRACTICE_API AEnemyAIController : public AAIController
 public:
 #pragma region "Public Variables"
 
+	TWeakObjectPtr<AActionPracticeCharacter> DetectedPlayer = nullptr;
+	
 #pragma endregion
 
 #pragma region "Public Functions"
@@ -26,7 +29,7 @@ public:
 
 	FORCEINLINE UGASStateTreeAIComponent* GetStateTreeComponent() const { return GASStateTreeAIComponent; }
 	FORCEINLINE ABossCharacter* GetBossCharacter() const { return BossCharacter.Get(); }
-
+	
 #pragma endregion
 
 protected:
