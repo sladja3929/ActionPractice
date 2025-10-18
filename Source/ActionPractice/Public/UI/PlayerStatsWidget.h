@@ -4,7 +4,6 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerStatsWidget.generated.h"
 
-class UBossAttributeSet;
 struct FOnAttributeChangeData;
 class UVerticalBox;
 class UProgressBar;
@@ -35,12 +34,6 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaDamageBar;
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UProgressBar> BossHealthBar;
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UProgressBar> BossHealthDamageBar;
 	
 #pragma endregion
 
@@ -58,12 +51,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void UpdateStamina(float CurrentStamina, float MaxStamina);
-
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void SetBossAttributeSet();
-
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void UpdateBossHealth(float CurrentHealth, float MaxHealth);
 	
 #pragma endregion
 
@@ -88,12 +75,6 @@ protected:
 	//Attribute Change Delegate
 	FDelegateHandle MaxHealthChangedHandle;
 	FDelegateHandle MaxStaminaChangedHandle;
-
-	UPROPERTY()
-	TObjectPtr<UBossAttributeSet> BossAttributeSet;
-	float CurrentBossHealthPercent = 1.0f;
-	float TargetBossHealthDamagePercent = 1.0f;
-	float CurrentBossHealthDelayTimer = 0.0f;
 #pragma endregion
 
 #pragma region "Protected Functions"
