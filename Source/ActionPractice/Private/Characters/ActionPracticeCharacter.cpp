@@ -429,19 +429,16 @@ void AActionPracticeCharacter::ToggleLockOn()
 	{
 		bIsLockOn = false;
 		LockedOnTarget = nullptr;
-        
-		//Spring Arm 설정 복원
+		
 		if (CameraBoom)
 		{
-			CameraBoom->TargetArmLength = 400.0f;
-			CameraBoom->SocketOffset = FVector::ZeroVector;
-			CameraBoom->bUsePawnControlRotation = true;
+			//필요하면 카메라 설정 복원
 		}
         
 		DEBUG_LOG(TEXT("Lock-On Released"));
 	}
 	else
-	{
+	{		
 		AActor* NearestTarget = FindNearestTarget();
 		if (NearestTarget)
 		{
@@ -483,53 +480,18 @@ void AActionPracticeCharacter::UpdateLockOnCamera()
     {
         const FVector TargetLocation = LockedOnTarget->GetActorLocation();
         const FVector CharacterLocation = GetActorLocation();
-        
-        FVector DirectionToTarget = (TargetLocation - CharacterLocation).GetSafeNormal();
-        
-        //카메라 오프셋 설정
-        const float CameraHorizontalOffset = 0.0f; //우측 오프셋
-        const float CameraVerticalOffset = 100.0f; //추가 높이
-        const float CameraBackOffset = 150.0f; //뒤로 물러나는 거리
-        
-        FVector RightVector = FVector::CrossProduct(FVector::UpVector, DirectionToTarget);
-        RightVector.Normalize();
-        
-        //카메라 기본 위치 계산
-        FVector MidPoint = CharacterLocation + (DirectionToTarget * FVector::Dist(CharacterLocation, TargetLocation) * 0.3f);
-    	
-        FVector CameraOffset = (-DirectionToTarget * CameraBackOffset) + 
-                              (RightVector * CameraHorizontalOffset) + 
-                              (FVector::UpVector * CameraVerticalOffset);
-    	
-        CameraBoom->TargetArmLength = 450.0f;
-        CameraBoom->SocketOffset = FVector(0.0f, CameraHorizontalOffset, CameraVerticalOffset);
-        
 
-        FVector AdjustedTargetLocation = TargetLocation;
-        AdjustedTargetLocation.Z += 50.0f;
-  
-        FVector LookAtPoint = (CharacterLocation + AdjustedTargetLocation) * 0.5f;
-        LookAtPoint.Z = FMath::Max(CharacterLocation.Z, TargetLocation.Z) + 30.0f;
-    	
+    	//중간점을 바라보게 하여 격렬하게 움직일 때 플레이어와 타겟 모두가 잡히게
+        FVector LookAtPoint = (CharacterLocation + TargetLocation) * 0.5f;
         FRotator LookAtRotation = (LookAtPoint - CharacterLocation).Rotation();
-    	
+
+    	//카메라 위아래 회전 각도 제한
         LookAtRotation.Pitch = FMath::Clamp(LookAtRotation.Pitch, -25.0f, 15.0f);
-        
-        //부드러운 카메라
+    	
         FRotator CurrentRotation = Controller->GetControlRotation();
-        FRotator SmoothedRotation = FMath::RInterpTo(CurrentRotation, LookAtRotation, 
-                                                     GetWorld()->GetDeltaSeconds(), 5.0f);
+        FRotator SmoothedRotation = FMath::RInterpTo(CurrentRotation, LookAtRotation, GetWorld()->GetDeltaSeconds(), 5.0f);
     	
         Controller->SetControlRotation(SmoothedRotation);
-
-        CameraBoom->bUsePawnControlRotation = true;
-        CameraBoom->bInheritPitch = true;
-        CameraBoom->bInheritYaw = true;
-        CameraBoom->bInheritRoll = false;
-
-        CameraBoom->bDoCollisionTest = true;
-        CameraBoom->ProbeSize = 12.0f;
-        CameraBoom->ProbeChannel = ECollisionChannel::ECC_Camera;
     }
 }
 #pragma endregion

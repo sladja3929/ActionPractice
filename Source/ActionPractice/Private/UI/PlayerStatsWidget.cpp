@@ -1,12 +1,9 @@
 ﻿#include "UI/PlayerStatsWidget.h"
 
-#include "Characters/BossCharacter.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/ProgressBar.h"
 #include "Components/VerticalBox.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
-#include "GAS/AttributeSet/BossAttributeSet.h"
-#include "Kismet/GameplayStatics.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -41,16 +38,6 @@ void UPlayerStatsWidget::NativeConstruct()
 		StaminaDamageBar->SetPercent(1.0f);
 	}
 
-	if (BossHealthBar)
-	{
-		BossHealthBar->SetPercent(1.0f);
-	}
-
-	if (BossHealthDamageBar)
-	{
-		BossHealthDamageBar->SetPercent(1.0f);
-	}
-
 	DEBUG_LOG(TEXT("PlayerStatsWidget Constructed"));
 }
 
@@ -64,11 +51,6 @@ void UPlayerStatsWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 		UpdateStamina(AttributeSet->GetStamina(), AttributeSet->GetMaxStamina());
 	}
 
-	if (BossAttributeSet)
-	{
-		UpdateBossHealth(BossAttributeSet->GetHealth(), BossAttributeSet->GetMaxHealth());
-	}
-	
 	UpdateDamageBars(InDeltaTime);
 }
 
@@ -81,7 +63,6 @@ void UPlayerStatsWidget::SetAttributeSet(UActionPracticeAttributeSet* InAttribut
 	}
 	
 	AttributeSet = InAttributeSet;
-	SetBossAttributeSet();
 	UnbindAttributeDelegates();
 	BindAttributeDelegates();
 	
@@ -289,93 +270,11 @@ void UPlayerStatsWidget::UpdateDamageBars(float DeltaTime)
 			DEBUG_LOG(TEXT("ST Lerp Applied: NewPercent=%f"), NewPercent);
 		}
 	}
-
-	if (BossHealthDamageBar && BossHealthDamageBar->GetPercent() > TargetBossHealthDamagePercent)
-	{
-		CurrentBossHealthDelayTimer += DeltaTime;
-
-		if (CurrentBossHealthDelayTimer >= DamageBarDelayTime)
-		{
-			float CurrentPercent = BossHealthDamageBar->GetPercent();
-			float NewPercent = FMath::FInterpTo(CurrentPercent, TargetBossHealthDamagePercent, DeltaTime, DamageBarLerpSpeed);
-			BossHealthDamageBar->SetPercent(NewPercent);
-			DEBUG_LOG(TEXT("Boss HP Lerp Applied: NewPercent=%f"), NewPercent);
-		}
-	}
 }
 
 void UPlayerStatsWidget::NativeDestruct()
 {
 	UnbindAttributeDelegates();
-	
+
 	Super::NativeDestruct();
-}
-
-void UPlayerStatsWidget::SetBossAttributeSet()
-{
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		DEBUG_LOG(TEXT("World is null"));
-		return;
-	}
-
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(World, ABossCharacter::StaticClass(), FoundActors);
-
-	for (AActor* Actor : FoundActors)
-	{
-		if (Actor->GetName().Contains(TEXT("BP_WoodGiant")))
-		{
-			ABossCharacter* BossCharacter = Cast<ABossCharacter>(Actor);
-			if (BossCharacter)
-			{
-				BossAttributeSet = Cast<UBossAttributeSet>(BossCharacter->GetAttributeSet());
-				if (BossAttributeSet)
-				{
-					DEBUG_LOG(TEXT("BossAttributeSet found and set from BP_WoodGiant"));
-				}
-				else
-				{
-					DEBUG_LOG(TEXT("Failed to cast to BossAttributeSet"));
-				}
-				return;
-			}
-		}
-	}
-
-	DEBUG_LOG(TEXT("BP_WoodGiant not found in world"));
-}
-
-void UPlayerStatsWidget::UpdateBossHealth(float CurrentHealth, float MaxHealth)
-{
-	if (!BossHealthBar || MaxHealth <= 0.0f)
-	{
-		return;
-	}
-	
-	float NewHealthPercent = CurrentHealth / MaxHealth;
-
-	//Boss HP 감소
-	if (NewHealthPercent < CurrentBossHealthPercent)
-	{
-		BossHealthBar->SetPercent(NewHealthPercent);
-		TargetBossHealthDamagePercent = NewHealthPercent;
-		CurrentBossHealthDelayTimer = 0.0f;
-	}
-	
-	//Boss HP 증가
-	else if (NewHealthPercent > CurrentBossHealthPercent)
-	{
-		BossHealthBar->SetPercent(NewHealthPercent);
-		
-		if (BossHealthDamageBar)
-		{
-			BossHealthDamageBar->SetPercent(NewHealthPercent);
-		}
-
-		TargetBossHealthDamagePercent = NewHealthPercent;
-	}
-
-	CurrentBossHealthPercent = NewHealthPercent;
 }

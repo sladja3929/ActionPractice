@@ -21,19 +21,19 @@ void UAnimNotify_EnableBufferInput::Notify(USkeletalMeshComponent* MeshComp, UAn
 	if (!MeshComp || !MeshComp->GetOwner())
 		return;
 
-	// AbilitySystemComponent가 있는 액터에서만 이벤트 전송 (애니메이션 에디터 프리뷰 액터 제외)
-	if (!UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(MeshComp->GetOwner())) return;
-
 	AActor* Owner = MeshComp->GetOwner();
+	if (!IsValid(Owner))
+		return;
+
+	UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>();
+	if (!ASC || !IsValid(ASC))
+		return;
 
 	FGameplayEventData EventData;
 	EventData.Instigator = Owner;
 	EventData.Target = Owner;
 	EventData.EventTag = UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag();
 
-	if (UAbilitySystemComponent* ASC = Owner->FindComponentByClass<UAbilitySystemComponent>())
-	{
-		ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag(), &EventData);
-		DEBUG_LOG(TEXT("EnableBufferInput AN"));
-	}
+	ASC->HandleGameplayEvent(UGameplayTagsSubsystem::GetEventNotifyEnableBufferInputTag(), &EventData);
+	DEBUG_LOG(TEXT("EnableBufferInput AN"));
 }
