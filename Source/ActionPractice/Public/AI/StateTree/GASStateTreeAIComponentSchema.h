@@ -13,12 +13,13 @@ class ACTIONPRACTICE_API UGASStateTreeAIComponentSchema : public UStateTreeAICom
 	GENERATED_BODY()
 
 public:
-#pragma region "Public Functions"
 	
 	virtual bool IsStructAllowed(const UScriptStruct* InScriptStruct) const override;
 	virtual bool IsClassAllowed(const UClass* InClass) const override;
 	virtual bool IsExternalItemAllowed(const UStruct& InStruct) const override;
 	virtual TConstArrayView<FStateTreeExternalDataDesc> GetContextDataDescs() const override;
-	
-#pragma endregion
+
+
+protected:
+	virtual void SetContextData(FContextDataSetter& ContextDataSetter, bool bLogErrors) const override;	
 };

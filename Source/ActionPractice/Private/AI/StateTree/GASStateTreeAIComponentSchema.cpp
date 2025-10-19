@@ -1,15 +1,18 @@
 ﻿#include "AI/StateTree/GASStateTreeAIComponentSchema.h"
+
+#include "BrainComponent.h"
 #include "StateTreeTypes.h"
 #include "StateTreeConditionBase.h"
 #include "StateTreeEvaluatorBase.h"
+#include "StateTreeExecutionContext.h"
 #include "StateTreeTaskBase.h"
 #include "AI/EnemyAIController.h"
 #include "Characters/BossCharacter.h"
 #include "GAS/AbilitySystemComponent/BossAbilitySystemComponent.h"
-#include "GAS/AttributeSet/BossAttributeSet.h"
+#include "AbilitySystemComponent.h"
 
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogBossStateTreeSchema, Log, All);
 #define DEBUG_LOG(Format, ...) UE_LOG(LogBossStateTreeSchema, Warning, Format, ##__VA_ARGS__)
@@ -54,9 +57,53 @@ TConstArrayView<FStateTreeExternalDataDesc> UGASStateTreeAIComponentSchema::GetC
 	//커스텀 Context 데이터 추가
 	
 	//ASC
-	FStateTreeExternalDataDesc ASCDesc(UBossAbilitySystemComponent::StaticClass(), EStateTreeExternalDataRequirement::Optional);
+	FStateTreeExternalDataDesc ASCDesc(UAbilitySystemComponent::StaticClass(), EStateTreeExternalDataRequirement::Required);
 	ASCDesc.Name = TEXT("AbilitySystemComponent");
 	CachedDescs.Add(ASCDesc);
 	
 	return CachedDescs;
+}
+
+void UGASStateTreeAIComponentSchema::SetContextData(FContextDataSetter& ContextDataSetter, bool bLogErrors) const
+{
+	//기본 Actor, AIController 설정
+	Super::SetContextData(ContextDataSetter, bLogErrors);
+
+	//Actor 가져오기
+	AAIController* AIOwner = ContextDataSetter.GetComponent()->GetAIOwner();
+	AActor* OwnerActor = (AIOwner != nullptr) ? AIOwner->GetPawn() : ContextDataSetter.GetComponent()->GetOwner();
+	
+	UAbilitySystemComponent* ASC = nullptr;
+	
+	if (OwnerActor)
+	{
+		//IAbilitySystemInterface를 통해 ASC 가져오기
+		if (IAbilitySystemInterface* ASInterface = Cast<IAbilitySystemInterface>(OwnerActor))
+		{
+			ASC = ASInterface->GetAbilitySystemComponent();
+		}
+			
+		//인터페이스가 없으면 컴포넌트로 직접 찾기
+		if (!ASC)
+		{
+			ASC = OwnerActor->FindComponentByClass<UAbilitySystemComponent>();
+		}
+			
+		DEBUG_LOG(TEXT("Actor: %s, ASC Found: %s"), 
+			*GetNameSafe(OwnerActor), 
+			ASC ? TEXT("Yes") : TEXT("No"));
+	}
+	
+	//ASC를 Context에 설정
+	if (!ContextDataSetter.SetContextDataByName(TEXT("AbilitySystemComponent"), FStateTreeDataView(ASC)))
+	{
+		if (bLogErrors && !ASC)
+		{
+			DEBUG_LOG(TEXT("Failed to set ASC in Context - ASC not found"));
+		}
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("Successfully set ASC in Context"));
+	}
 }

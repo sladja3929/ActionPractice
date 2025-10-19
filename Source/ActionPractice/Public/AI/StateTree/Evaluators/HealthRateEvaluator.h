@@ -16,9 +16,6 @@ USTRUCT()
 struct ACTIONPRACTICE_API FHealthRateEvaluatorInstanceData
 {
 	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, Category = "Context")
-	TObjectPtr<AActor> SourceActor = nullptr;
 	
 	UPROPERTY(EditAnywhere, Category = "Context")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent = nullptr;

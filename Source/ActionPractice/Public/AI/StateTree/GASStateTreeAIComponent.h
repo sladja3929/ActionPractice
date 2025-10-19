@@ -15,5 +15,5 @@ class ACTIONPRACTICE_API UGASStateTreeAIComponent : public UStateTreeAIComponent
 	GENERATED_BODY()
 
 public:
-	virtual TSubclassOf<UStateTreeSchema> GetSchema() const override; 
+	virtual TSubclassOf<UStateTreeSchema> GetSchema() const override;
 };

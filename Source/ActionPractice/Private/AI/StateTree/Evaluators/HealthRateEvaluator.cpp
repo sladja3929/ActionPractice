@@ -5,7 +5,7 @@
 #include "GAS/AttributeSet/BaseAttributeSet.h"
 #include "StateTreeExecutionContext.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogHealthRateEvaluator, Log, All);
@@ -21,7 +21,10 @@ void FHealthRateEvaluator::TreeStart(FStateTreeExecutionContext& Context) const
 	if (!InstanceData.AbilitySystemComponent)
 	{
 		DEBUG_LOG(TEXT("AbilitySystemComponent is not valid in HealthRateEvaluator"));
-		InstanceData.AbilitySystemComponent = InstanceData.SourceActor->FindComponentByClass<UAbilitySystemComponent>();
+	}
+	else
+	{
+		DEBUG_LOG(TEXT("AbilitySystemComponent Bind Successfully"));
 	}
 
 	DEBUG_LOG(TEXT("HealthRateEvaluator TreeStart"));
@@ -60,5 +63,4 @@ void FHealthRateEvaluator::UpdateHealthRate(FStateTreeExecutionContext& Context)
 	}
 	
 	InstanceData.HealthRate = AttributeSet->GetHealthPercent();
-	DEBUG_LOG(TEXT("asdasdsd"));
 }
