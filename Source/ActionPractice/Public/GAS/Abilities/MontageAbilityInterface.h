@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "UObject/Interface.h"
 #include "MontageAbilityInterface.generated.h"
 
 UINTERFACE()

@@ -1,4 +1,4 @@
-﻿#include "Items/WeaponAttackTraceComponent.h"
+﻿#include "Characters/HitDetection/WeaponAttackTraceComponent.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponDataAsset.h"
 #include "Items/AttackData.h"
@@ -8,6 +8,8 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Components/InputComponent.h"
+#include "Components/StaticMeshComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 

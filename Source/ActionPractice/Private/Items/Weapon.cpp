@@ -7,8 +7,8 @@
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Items/WeaponAttackTraceComponent.h"
-#include "Items/WeaponCCDComponent.h"
+#include "Characters/HitDetection/WeaponAttackTraceComponent.h"
+#include "Characters/HitDetection/WeaponCCDComponent.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 
 #define ENABLE_DEBUG_LOG 0

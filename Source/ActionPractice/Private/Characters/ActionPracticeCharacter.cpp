@@ -21,7 +21,6 @@
 #include "UI/PlayerStatsWidget.h"
 #include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
-#include "Items/WeaponAttackTraceComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Items/HitDetectionInterface.h"
+#include "Characters/HitDetection/HitDetectionInterface.h"
 #include "Items/AttackData.h"
 #include "GameplayTagContainer.h"
 #include "HitDetectionSetter.generated.h"

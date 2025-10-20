@@ -1,4 +1,4 @@
-﻿#include "Items/WeaponCCDComponent.h"
+﻿#include "Characters/HitDetection/WeaponCCDComponent.h"
 #include "Items/Weapon.h"
 #include "Items/WeaponDataAsset.h"
 #include "Characters/ActionPracticeCharacter.h"
@@ -6,6 +6,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "DrawDebugHelpers.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 

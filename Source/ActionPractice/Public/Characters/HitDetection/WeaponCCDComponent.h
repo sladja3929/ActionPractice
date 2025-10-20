@@ -3,9 +3,8 @@
 #include "CoreMinimal.h"
 #include "Components/CapsuleComponent.h"
 #include "GameplayTagContainer.h"
-#include "WeaponEnums.h"
-#include "AttackData.h"
-#include "Items/HitDetectionInterface.h"
+#include "Items/AttackData.h"
+#include "Characters/HitDetection/HitDetectionInterface.h"
 #include "GameplayAbilities/Public/GameplayEffectTypes.h"
 #include "WeaponCCDComponent.generated.h"
 
