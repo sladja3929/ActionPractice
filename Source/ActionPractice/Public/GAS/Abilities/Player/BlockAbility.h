@@ -64,6 +64,8 @@ protected:
 	UFUNCTION()
 	virtual UAnimMontage* SetMontageToPlayTask() override;
 	
+	virtual void BindEventsAndReadyMontageTask() override;
+
 	UFUNCTION()
 	virtual void ExecuteMontageTask() override;
 

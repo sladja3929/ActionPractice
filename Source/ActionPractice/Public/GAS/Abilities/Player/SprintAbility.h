@@ -45,22 +45,14 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Sprint")
 	virtual void StopSprinting();
 
-	UFUNCTION(BlueprintCallable, Category = "Sprint")
 	virtual void HandleSprinting();
 
-	UFUNCTION(BlueprintCallable, Category = "Sprint")
 	bool StartSprintEffect();
-
-	UFUNCTION(BlueprintCallable, Category = "Sprint")
 	void StopSprintEffect();
 	
-	UFUNCTION(BlueprintPure, Category = "Sprint")
 	virtual bool CanContinueSprinting() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Cost")
 	virtual bool StartStaminaDrainEffect();
-
-	UFUNCTION(BlueprintCallable, Category = "Cost")
 	virtual void StopStaminaDrainEffect();
 
 private:
@@ -68,6 +60,5 @@ private:
 
 	float OriginalMaxWalkSpeed = 0.0f;
 
-	UFUNCTION()
 	void CheckSprintConditions();
 };

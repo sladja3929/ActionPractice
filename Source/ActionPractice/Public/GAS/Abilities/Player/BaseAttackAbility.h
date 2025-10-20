@@ -28,11 +28,8 @@ protected:
 #pragma region "Protected Vriables" //================================================
 
 	const FAttackActionData* WeaponAttackData = nullptr;
-
-	UPROPERTY()
+	
 	int32 ComboCounter = 0;
-
-	UPROPERTY()
 	int32 MaxComboCount = 0;
 
 	//HitDetection 관련

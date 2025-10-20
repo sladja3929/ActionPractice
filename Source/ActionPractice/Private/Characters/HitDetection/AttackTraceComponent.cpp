@@ -9,7 +9,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Components/InputComponent.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogAttackTraceComponent, Log, All);
@@ -28,6 +28,7 @@ void UAttackTraceComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	CachedASC = GetOwnerASC();
 	SetOwnerMesh();
 }
 
@@ -56,7 +57,6 @@ void UAttackTraceComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 #pragma region "Event Functions"
 void UAttackTraceComponent::BindEventCallbacks()
 {
-	CachedASC = GetOwnerASC();
 	if (!CachedASC)
 	{
 		DEBUG_LOG(TEXT("No ASC found"));

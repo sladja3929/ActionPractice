@@ -59,6 +59,11 @@ UAnimMontage* UBlockAbility::SetMontageToPlayTask()
 	return WeaponBlockData->BlockIdleMontage.Get();
 }
 
+void UBlockAbility::BindEventsAndReadyMontageTask()
+{
+	
+}
+
 void UBlockAbility::ExecuteMontageTask()
 {
 	UAnimMontage* MontageToPlay = SetMontageToPlayTask();

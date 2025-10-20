@@ -75,12 +75,11 @@ protected:
 
 	UFUNCTION()
 	virtual UAnimMontage* SetMontageToPlayTask() override PURE_VIRTUAL(UMontageAbility::SetMontageToPlayTask, return nullptr; );
-	
-	UFUNCTION()
-	virtual void ExecuteMontageTask() override;
 
 	UFUNCTION()
-	virtual void BindEventsAndReadyMontageTask();
+	virtual void ExecuteMontageTask() override;
+	
+	virtual void BindEventsAndReadyMontageTask() override;
 
 	UFUNCTION()
 	virtual void ReadyInputByBufferTask();

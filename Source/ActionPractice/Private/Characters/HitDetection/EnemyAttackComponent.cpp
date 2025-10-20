@@ -7,7 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "Components/InputComponent.h"
 
-#define ENABLE_DEBUG_LOG 0
+#define ENABLE_DEBUG_LOG 1
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogEnemyAttackComponent, Log, All);
@@ -72,7 +72,7 @@ bool UEnemyAttackComponent::LoadTraceConfig(const FGameplayTagContainer& AttackT
 	// 임시 하드코딩 - EnemyDataAsset 구현 후 삭제
 	CurrentTraceConfig.AttackMotionType = EAttackDamageType::Slash;
 	CurrentTraceConfig.SocketCount = 2;
-	CurrentTraceConfig.TraceRadius = 10.0f;
+	CurrentTraceConfig.TraceRadius = 30.0f;
 
 	CurrentAttackData.FinalDamage = 50.0f;
 	CurrentAttackData.PoiseDamage = 30.0f;
@@ -87,7 +87,7 @@ void UEnemyAttackComponent::SetOwnerMesh()
 {
 	if (!OwnerEnemy) return;
 
-	//Enemy의 SkeletalMeshComponent 가져오기
+	//SkeletalMeshComponent 가져오기
 	OwnerMesh = OwnerEnemy->GetMesh();
 
 	if (!OwnerMesh || !OwnerMesh->DoesSocketExist(FName(*FString::Printf(TEXT("trace_socket_0")))))
