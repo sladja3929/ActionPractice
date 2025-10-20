@@ -7,7 +7,7 @@
 #include "Animation/AnimMontage.h"
 #include "GameplayTagContainer.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Characters/HitDetection/WeaponAttackTraceComponent.h"
+#include "Characters/HitDetection/WeaponAttackComponent.h"
 #include "Characters/HitDetection/WeaponCCDComponent.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 
@@ -29,7 +29,7 @@ AWeapon::AWeapon()
     RootComponent = WeaponMesh;
     
     // 콜리전 컴포넌트 추가
-    AttackTraceComponent = CreateDefaultSubobject<UWeaponAttackTraceComponent>(TEXT("TraceComponent"));
+    AttackTraceComponent = CreateDefaultSubobject<UWeaponAttackComponent>(TEXT("TraceComponent"));
     CCDComponent = CreateDefaultSubobject<UWeaponCCDComponent>(TEXT("CCDComponent"));
     
     // 기본 콜리전 설정
@@ -188,7 +188,7 @@ void AWeapon::BindDelegates()
 	// HitDetection 컴포넌트 Hit 델리게이트 바인딩
 	if (AttackTraceComponent)
 	{
-		AttackTraceHitHandle = AttackTraceComponent->OnWeaponHit.AddUObject(this, &AWeapon::HandleWeaponHit);
+		AttackTraceHitHandle = AttackTraceComponent->OnHit.AddUObject(this, &AWeapon::HandleWeaponHit);
 	}
 
 	if (CCDComponent)
@@ -228,7 +228,7 @@ void AWeapon::UnbindDelegates()
 	//Hit 컴포넌트 델리게이트 해제
 	if (AttackTraceHitHandle.IsValid() && AttackTraceComponent)
 	{
-		AttackTraceComponent->OnWeaponHit.Remove(AttackTraceHitHandle);
+		AttackTraceComponent->OnHit.Remove(AttackTraceHitHandle);
 		AttackTraceHitHandle.Reset();
 	}
 

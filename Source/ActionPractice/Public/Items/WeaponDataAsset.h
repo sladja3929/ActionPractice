@@ -94,6 +94,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Info")
     int32 SweepTraceSocketCount = 2;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Info")
+    float SweepTraceRadius = 10.0f;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
     float BaseDamage = 100.0f;

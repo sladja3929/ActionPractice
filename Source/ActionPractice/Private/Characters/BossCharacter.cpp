@@ -9,6 +9,7 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "Characters/HitDetection/EnemyAttackComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -43,11 +44,14 @@ ABossCharacter::ABossCharacter()
 
 	CreateAbilitySystemComponent();
 	CreateAttributeSet();
+
+	//EnemyAttackComponent 생성
+	EnemyAttackComponent = CreateDefaultSubobject<UEnemyAttackComponent>(TEXT("EnemyAttackComponent"));
 }
 
 TScriptInterface<IHitDetectionInterface> ABossCharacter::GetHitDetectionInterface() const
 {
-	return nullptr;
+	return EnemyAttackComponent;
 }
 
 void ABossCharacter::CreateAbilitySystemComponent()

@@ -8,6 +8,7 @@
 
 class UBossHealthWidget;
 class AActionPracticeCharacter;
+class UEnemyAttackComponent;
 
 UCLASS()
 class ACTIONPRACTICE_API ABossCharacter : public ABaseCharacter
@@ -46,7 +47,10 @@ protected:
 	TObjectPtr<UBossHealthWidget> BossHealthWidget;
 
 	bool bHealthWidgetActive = false;
-	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UEnemyAttackComponent> EnemyAttackComponent;
+
 #pragma endregion
 
 #pragma region "Protected Functions"
