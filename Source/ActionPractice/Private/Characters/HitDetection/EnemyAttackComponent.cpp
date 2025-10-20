@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Characters/HitDetection/EnemyAttackComponent.h"
-#include "Characters/Enemy/EnemyCharacterBase.h"
+#include "Characters/BossCharacter.h"
 #include "Items/AttackData.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "AbilitySystemComponent.h"
@@ -22,7 +22,7 @@ UEnemyAttackComponent::UEnemyAttackComponent()
 
 void UEnemyAttackComponent::BeginPlay()
 {
-	OwnerEnemy = Cast<AEnemyCharacterBase>(GetOwner());
+	OwnerEnemy = Cast<ABossCharacter>(GetOwner());
 	if (!OwnerEnemy)
 	{
 		DEBUG_LOG(TEXT("EnemyAttackComponent: Owner is not an Enemy!"));
@@ -72,7 +72,7 @@ bool UEnemyAttackComponent::LoadTraceConfig(const FGameplayTagContainer& AttackT
 	// 임시 하드코딩 - EnemyDataAsset 구현 후 삭제
 	CurrentTraceConfig.AttackMotionType = EAttackDamageType::Slash;
 	CurrentTraceConfig.SocketCount = 2;
-	CurrentTraceConfig.TraceRadius = DefaultTraceRadius;
+	CurrentTraceConfig.TraceRadius = 10.0f;
 
 	CurrentAttackData.FinalDamage = 50.0f;
 	CurrentAttackData.PoiseDamage = 30.0f;
@@ -87,7 +87,7 @@ void UEnemyAttackComponent::SetOwnerMesh()
 {
 	if (!OwnerEnemy) return;
 
-	// Enemy의 SkeletalMeshComponent 가져오기
+	//Enemy의 SkeletalMeshComponent 가져오기
 	OwnerMesh = OwnerEnemy->GetMesh();
 
 	if (!OwnerMesh || !OwnerMesh->DoesSocketExist(FName(*FString::Printf(TEXT("trace_socket_0")))))
