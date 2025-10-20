@@ -74,7 +74,7 @@ bool UEnemyAttackComponent::LoadTraceConfig(const FGameplayTagContainer& AttackT
 	CurrentTraceConfig.SocketCount = 2;
 	CurrentTraceConfig.TraceRadius = 50.0f;
 
-	CurrentAttackData.FinalDamage = 50.0f;
+	CurrentAttackData.FinalDamage = 100.0f;
 	CurrentAttackData.PoiseDamage = 30.0f;
 	CurrentAttackData.DamageType = EAttackDamageType::Slash;
 

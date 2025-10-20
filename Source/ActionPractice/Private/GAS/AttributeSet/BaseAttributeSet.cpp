@@ -196,28 +196,28 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			SourceActor = Source->AbilityActorInfo->AvatarActor.Get();
 			SourceController = Source->AbilityActorInfo->PlayerController.Get();
 		}
-
-		// Store a local copy of the amount of damage done and clear the damage attribute
+		
 		const float LocalIncomingDamage = GetIncomingDamage();
 		SetIncomingDamage(0.f);
 
 		if (LocalIncomingDamage > 0)
 		{
-			// Apply defense calculation (엘든링 스타일 방어력 계산)
+			//방어력 계산
 			const float DefenseReduction = GetDefense() / (GetDefense() + 100.0f);
 			const float FinalDamage = LocalIncomingDamage * (1.0f - DefenseReduction);
 
-			// Apply the health change
+			//HP 적용
 			const float OldHealth = GetHealth();
 			SetHealth(FMath::Clamp(OldHealth - FinalDamage, 0.0f, GetMaxHealth()));
 
-			// Handle death
+			//TODO: 죽음 델리게이트 송신
 			if (GetHealth() <= 0.0f)
 			{
-				// TODO: Implement death logic
+				
 			}
 		}
 	}
+	
 	//체력회복 처리
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
 	{
@@ -230,6 +230,7 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
 		}
 	}
+	
 	//포이즈 대미지 처리
 	else if (Data.EvaluatedData.Attribute == GetIncomingPoiseDamageAttribute())
 	{

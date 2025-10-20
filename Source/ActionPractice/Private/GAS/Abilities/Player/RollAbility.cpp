@@ -60,7 +60,7 @@ void URollAbility::BindEventsAndReadyMontageTask()
 	}
 
 	//Invincibility 노티파이 이벤트 바인딩
-	PlayMontageWithEventsTask->BindNotifyEventCallbackWithTag(ActionRecoveryStartTag);
+	PlayMontageWithEventsTask->BindNotifyEventCallbackWithTag(EventNotifyInvincibleStartTag);
 	
 	Super::BindEventsAndReadyMontageTask();
 }
