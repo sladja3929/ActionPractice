@@ -72,7 +72,7 @@ bool UEnemyAttackComponent::LoadTraceConfig(const FGameplayTagContainer& AttackT
 	// 임시 하드코딩 - EnemyDataAsset 구현 후 삭제
 	CurrentTraceConfig.AttackMotionType = EAttackDamageType::Slash;
 	CurrentTraceConfig.SocketCount = 2;
-	CurrentTraceConfig.TraceRadius = 30.0f;
+	CurrentTraceConfig.TraceRadius = 50.0f;
 
 	CurrentAttackData.FinalDamage = 50.0f;
 	CurrentAttackData.PoiseDamage = 30.0f;
