@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/BaseAttackAbility.h"
+#include "GAS/Abilities/Player/BaseAttackAbility.h"
 #include "Engine/Engine.h"
 #include "NormalAttackAbility.generated.h"
 

@@ -1,16 +1,13 @@
-#include "GAS/Abilities/BaseAttackAbility.h"
+#include "GAS/Abilities/Player/BaseAttackAbility.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
-#include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Characters/ActionPracticeCharacter.h"
-#include "Items/HitDetectionInterface.h"
-#include "GAS/Abilities/WeaponAbilityStatics.h"
+#include "GAS/Abilities/Player/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "GAS/AbilitySystemComponent/ActionPracticeAbilitySystemComponent.h"
-#include "GAS/AbilitySystemComponent/BaseAbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -37,23 +34,36 @@ void UBaseAttackAbility::SetHitDetectionConfig()
         return;
     }
 
-    HitDetection = Character->GetHitDetectionInterface();
-    if (!HitDetection)
-    {
-        DEBUG_LOG(TEXT("Character Not Has HitDetection System"));
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-        return; 
-    }
-    
     FGameplayTagContainer AssetTag = GetAssetTags();
-    if (AssetTag.IsEmpty()) 
+    if (AssetTag.IsEmpty())
     {
         DEBUG_LOG(TEXT("No AssetTags"));
         return;
     }
-    
-    HitDetection->PrepareHitDetection(AssetTag, ComboCounter);
-    OnHitDelegateHandle = HitDetection->GetOnHitDetected().AddUObject(this, &UBaseAttackAbility::OnHitDetected);
+
+    //HitDetectionSetter 초기화
+    if (!HitDetectionSetter.Init(Character->GetHitDetectionInterface()))
+    {
+        DEBUG_LOG(TEXT("Failed to init HitDetectionSetter"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+
+    //HitDetectionSetter 바인딩
+    if (!HitDetectionSetter.Bind(this))
+    {
+        DEBUG_LOG(TEXT("Failed to bind HitDetectionSetter"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
+
+    //PrepareHitDetection 호출
+    if (!HitDetectionSetter.PrepareHitDetection(AssetTag, ComboCounter))
+    {
+        DEBUG_LOG(TEXT("Failed to prepare HitDetection"));
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+        return;
+    }
 
     DEBUG_LOG(TEXT("Attack Ability: Call Hit Detection Prepare"));
 }
@@ -122,15 +132,12 @@ UAnimMontage* UBaseAttackAbility::SetMontageToPlayTask()
 void UBaseAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
     DEBUG_LOG(TEXT("EndAbility %d"), bWasCancelled);
-    
+
     if (IsEndAbilityValid(Handle, ActorInfo))
     {
-        if (OnHitDelegateHandle.IsValid() && HitDetection)
-        {
-            HitDetection->GetOnHitDetected().Remove(OnHitDelegateHandle);
-            OnHitDelegateHandle.Reset();
-        }
-        
+        //HitDetectionSetter 언바인딩
+        HitDetectionSetter.UnBind();
+
         if (PlayMontageWithEventsTask)
         {
             PlayMontageWithEventsTask->bStopMontageWhenAbilityCancelled = bWasCancelled;

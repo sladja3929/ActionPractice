@@ -1,11 +1,11 @@
-#include "GAS/Abilities/NormalAttackAbility.h"
+#include "GAS/Abilities/Player/NormalAttackAbility.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "Items/WeaponDataAsset.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GAS/GameplayTagsSubsystem.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "GAS/Abilities/WeaponAbilityStatics.h"
+#include "GAS/Abilities/Player/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 
 #define ENABLE_DEBUG_LOG 0

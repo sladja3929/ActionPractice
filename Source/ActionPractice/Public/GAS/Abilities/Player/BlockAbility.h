@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MontageAbilityInterface.h"
-#include "GAS/Abilities/ActionPracticeAbility.h"
+#include "GAS/Abilities/MontageAbilityInterface.h"
+#include "GAS/Abilities/Player/ActionPracticeAbility.h"
 #include "BlockAbility.generated.h"
 
 struct FBlockActionData;

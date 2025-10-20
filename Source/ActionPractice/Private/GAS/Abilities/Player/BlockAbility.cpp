@@ -1,4 +1,4 @@
-#include "GAS/Abilities/BlockAbility.h"
+#include "GAS/Abilities/Player/BlockAbility.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
@@ -6,7 +6,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "GAS/Abilities/WeaponAbilityStatics.h"
+#include "GAS/Abilities/Player/WeaponAbilityStatics.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
 #include "Items/WeaponDataAsset.h"
 

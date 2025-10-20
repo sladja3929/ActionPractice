@@ -1,4 +1,4 @@
-#include "GAS/Abilities/ActionRecoveryAbility.h"
+#include "GAS/Abilities/Player/ActionRecoveryAbility.h"
 #include "Input/InputBufferComponent.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "AbilitySystemComponent.h"

@@ -1,4 +1,4 @@
-#include "GAS/Abilities/SprintAbility.h"
+#include "GAS/Abilities/Player/SprintAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/ActionRecoveryAbility.h"
+#include "GAS/Abilities/Player/ActionRecoveryAbility.h"
 #include "RollAbility.generated.h"
 
 class UAbilityTask_WaitGameplayEvent;

@@ -7,7 +7,7 @@
 #define DEBUG_LOG(Format, ...)
 #endif
 
-#include "GAS/Abilities/JumpAbility.h"
+#include "GAS/Abilities/Player/JumpAbility.h"
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "AbilitySystemComponent.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GAS/Abilities/ActionPracticeAbility.h"
+#include "GAS/Abilities/Player/ActionPracticeAbility.h"
 #include "JumpAbility.generated.h"
 
 UCLASS()
