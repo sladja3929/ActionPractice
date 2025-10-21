@@ -76,7 +76,7 @@ public:
 	void RotateCharacterToInputDirection(float RotationTime);
 
 	TArray<FGameplayAbilitySpec*> FindAbilitySpecsWithInputAction(const UInputAction* InputAction);
-	
+
 #pragma endregion
 
 protected:
@@ -214,14 +214,14 @@ protected:
 
 private:
 #pragma region "Private Variables"
-	
+
 	//회전 관련 변수
 	FRotator TargetActionRotation;
 	FRotator StartActionRotation;
 	float CurrentRotationTime = 0;
 	float TotalRotationTime = 0;
 	bool bIsRotatingForAction = false;
-	
+
 #pragma endregion
 	
 #pragma region "Private Functions"

@@ -1,6 +1,8 @@
 #include "Characters/BaseCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilities/Public/Abilities/GameplayAbility.h"
+#include "GAS/AttributeSet/BaseAttributeSet.h"
+#include "Items/AttackData.h"
 
 #define ENABLE_DEBUG_LOG 1
 

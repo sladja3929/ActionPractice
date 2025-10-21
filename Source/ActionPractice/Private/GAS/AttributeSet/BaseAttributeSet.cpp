@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GAS/Effects/ActionPracticeGameplayEffectContext.h"
+#include "Items/AttackData.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -191,49 +192,31 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	{
 		//소스 액터
 		AActor* SourceActor = nullptr;
-		AController* SourceController = nullptr;
 		if (Source && Source->AbilityActorInfo.IsValid() && Source->AbilityActorInfo->AvatarActor.IsValid())
 		{
 			SourceActor = Source->AbilityActorInfo->AvatarActor.Get();
-			SourceController = Source->AbilityActorInfo->PlayerController.Get();
 		}
 
 		const float LocalIncomingDamage = GetIncomingDamage();
 		SetIncomingDamage(0.f);
 
-		if (LocalIncomingDamage > 0)
+		if (LocalIncomingDamage > 0.0f)
 		{
-			//방어력 계산
-			const float DefenseReduction = GetDefense() / (GetDefense() + 100.0f);
-			const float FinalDamage = LocalIncomingDamage * (1.0f - DefenseReduction);
+			//Context에서 공격 데이터 추출
+			FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context.Get());
 
-			//HP 적용
-			const float OldHealth = GetHealth();
-			SetHealth(FMath::Clamp(OldHealth - FinalDamage, 0.0f, GetMaxHealth()));
+			//FFinalAttackData 구성
+			FFinalAttackData FinalAttackData;
+			FinalAttackData.FinalDamage = LocalIncomingDamage;
 
-			//TODO: 죽음 델리게이트 송신
-			if (GetHealth() <= 0.0f)
+			if (APContext)
 			{
-
+				FinalAttackData.DamageType = APContext->GetAttackDamageType();
+				FinalAttackData.PoiseDamage = APContext->GetPoiseDamage();
 			}
-		}
 
-		//포이즈 대미지 처리 - Context에서 PoiseDamage 가져오기
-		FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context.Get());
-		if (APContext)
-		{
-			const float PoiseDamageFromContext = APContext->GetPoiseDamage();
-			if (PoiseDamageFromContext > 0.0f)
-			{
-				const float OldPoise = GetPoise();
-				SetPoise(FMath::Clamp(OldPoise - PoiseDamageFromContext, 0.0f, GetMaxPoise()));
-
-				// Handle poise break
-				if (GetPoise() <= 0.0f)
-				{
-					// TODO: Implement poise break logic (stun, stagger)
-				}
-			}
+			//델리게이트 송신 - IDefensePolicy에서 처리
+			OnDamagedPreResolve.Broadcast(SourceActor, FinalAttackData);
 		}
 	}
 

@@ -4,6 +4,9 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "GAS/AttributeSet/ActionPracticeAttributeSet.h"
 #include "GAS/GameplayTagsSubsystem.h"
+#include "Items/Weapon.h"
+#include "Items/WeaponDataAsset.h"
+#include "Items/AttackData.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -46,100 +49,85 @@ const UActionPracticeAttributeSet* UActionPracticeAbilitySystemComponent::GetAct
 	return this->GetSet<UActionPracticeAttributeSet>();
 }
 
-void UActionPracticeAbilitySystemComponent::ApplyStaminaRegenBlock(float Duration)
+void UActionPracticeAbilitySystemComponent::CalculateAndSetAttributes(AActor* SourceActor, const FFinalAttackData& FinalAttackData)
 {
-	DEBUG_LOG(TEXT("========= ApplyStaminaRegenBlock START ========="));
-	DEBUG_LOG(TEXT("Requested Duration: %.3f seconds"), Duration);
-	if (!StaminaRegenBlockEffect)
+	bBlockedLastAttack = false;
+
+	if (!CachedAPCharacter.IsValid())
 	{
-		DEBUG_LOG(TEXT("StaminaRegenBlockEffect is not set"));
+		Super::CalculateAndSetAttributes(SourceActor, FinalAttackData);
 		return;
 	}
 
-	//기존 활성 GE가 있으면 남은 시간과 비교
-	/*if (StaminaRegenBlockHandle.IsValid())
+	UActionPracticeAttributeSet* APAttributeSet = const_cast<UActionPracticeAttributeSet*>(GetActionPracticeAttributeSet());
+	if (!APAttributeSet)
 	{
-		//현재 활성화된 해당 GE 가져옴
-		const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-		const FActiveGameplayEffect* ActiveGE = GetActiveGameplayEffect(StaminaRegenBlockHandle);
-		//const FActiveGameplayEffect* ActiveGE = ActiveGameplayEffects.GetActiveGameplayEffect(StaminaRegenBlockHandle);
-		
-		if (!ActiveGE)
-		{
-			DEBUG_LOG(TEXT("No Active GE_StaminaRegenBlock"));
-			StaminaRegenBlockHandle = FActiveGameplayEffectHandle();
-		}
-		
-		if (ActiveGE)
-		{
-			const float Remaining = ActiveGE->GetTimeRemaining(Now);
-			//필요하면 전체 지속시간도 확인 가능
-			//const float Total = ActiveGE->GetDuration();
-
-			if (Duration <= Remaining)
-			{
-				DEBUG_LOG(TEXT("Skip reapply: New(%.2fs) <= Remaining(%.2fs)"), Duration, Remaining);
-				return;
-			}
-		}
-	}*/
-
-	//Spec 생성
-	const float Level = 1.0f;
-	FGameplayEffectSpecHandle Spec = CreateGameplayEffectSpec(StaminaRegenBlockEffect, Level, this);
-	if (!Spec.IsValid())
-	{
-		DEBUG_LOG(TEXT("Failed to create GE_StaminaRegenBlock spec"));
+		Super::CalculateAndSetAttributes(SourceActor, FinalAttackData);
 		return;
 	}
 
-	if (EffectStaminaRegenBlockDurationTag.IsValid())
-	{
-		SetSpecSetByCallerMagnitude(Spec, EffectStaminaRegenBlockDurationTag, Duration);
-		Spec.Data.Get()->SetDuration(Duration, true);
-	}
+	//방어 태그 확인
+	const FGameplayTag StateAbilityBlockingTag = UGameplayTagsSubsystem::GetStateAbilityBlockingTag();
+	const bool bIsBlocking = HasMatchingGameplayTag(StateAbilityBlockingTag);
 
-	//더 길게 갱신해야 하는 경우에만 제거 후 재적용
-	if (StaminaRegenBlockHandle.IsValid())
+	if (bIsBlocking && SourceActor && CachedAPCharacter->GetLeftWeapon())
 	{
-		RemoveActiveGameplayEffect(StaminaRegenBlockHandle);
-		StaminaRegenBlockHandle = FActiveGameplayEffectHandle();
-	}
+		AWeapon* LeftWeapon = CachedAPCharacter->GetLeftWeapon();
 
-	StaminaRegenBlockHandle = ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		//공격자 방향 계산
+		const FVector ToSource = SourceActor->GetActorLocation() - CachedAPCharacter->GetActorLocation();
+		const FVector ToSourceNormalized = ToSource.GetSafeNormal2D();
+		const FVector Forward = CachedAPCharacter->GetActorForwardVector();
 
-	//적용 후 검증
-	if (StaminaRegenBlockHandle.IsValid())
-	{
-		const FActiveGameplayEffect* AppliedGE = GetActiveGameplayEffect(StaminaRegenBlockHandle);
-		if (AppliedGE)
+		//캐릭터 정면과 공격 방향 사이의 각도 계산
+		const float DotProduct = FVector::DotProduct(Forward, ToSourceNormalized);
+		const float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(DotProduct));
+
+		//블로킹 각도 범위
+		const float BlockingAngle = 90.0f;
+
+		if (AngleDegrees <= BlockingAngle)
 		{
-			const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
-			float AppliedDuration = AppliedGE->GetDuration();
-			float TimeRemaining = AppliedGE->GetTimeRemaining(Now);
-			float EndTime = AppliedGE->GetEndTime();
-			
-			DEBUG_LOG(TEXT("Applied GE Info:"));
-			DEBUG_LOG(TEXT("  - Duration: %.3f"), AppliedDuration);
-			DEBUG_LOG(TEXT("  - Time Remaining: %.3f"), TimeRemaining);
-			DEBUG_LOG(TEXT("  - End Time: %.3f"), EndTime);
-			DEBUG_LOG(TEXT("  - Current Time: %.3f"), Now);
-			
-			//Period 확인
-			if (AppliedGE->Spec.GetPeriod() > 0)
+			//블로킹 성공
+			bBlockedLastAttack = true;
+
+			//무기의 DamageReduction 적용
+			const FBlockActionData* BlockData = LeftWeapon->GetWeaponBlockData();
+			const float DamageReduction = BlockData ? BlockData->DamageReduction : 0.0f;
+			const float FinalDamage = FinalAttackData.FinalDamage * (1.0f - DamageReduction / 100.0f);
+
+			//HP 적용
+			const float OldHealth = APAttributeSet->GetHealth();
+			APAttributeSet->SetHealth(FMath::Clamp(OldHealth - FinalDamage, 0.0f, APAttributeSet->GetMaxHealth()));
+
+			//포이즈 대미지는 블로킹 시 감소
+			if (FinalAttackData.PoiseDamage > 0.0f)
 			{
-				DEBUG_LOG(TEXT("  - WARNING: Period is set to %.3f"), AppliedGE->Spec.GetPeriod());
+				const float ReducedPoiseDamage = FinalAttackData.PoiseDamage * (1.0f - DamageReduction / 100.0f);
+				const float OldPoise = APAttributeSet->GetPoise();
+				APAttributeSet->SetPoise(FMath::Clamp(OldPoise - ReducedPoiseDamage, 0.0f, APAttributeSet->GetMaxPoise()));
 			}
+
+			DEBUG_LOG(TEXT("Blocked: Damage=%.1f, FinalDamage=%.1f, DamageReduction=%.1f%%, Health=%.1f/%.1f"),
+				FinalAttackData.FinalDamage, FinalDamage, DamageReduction,
+				APAttributeSet->GetHealth(), APAttributeSet->GetMaxHealth());
+			return;
 		}
 	}
-	else
+
+	//기본 or 방어실패: 기본 피격 계산식 사용
+	Super::CalculateAndSetAttributes(SourceActor, FinalAttackData);
+}
+
+void UActionPracticeAbilitySystemComponent::HandleOnDamagedResolved(AActor* SourceActor, const FFinalAttackData& FinalAttackData)
+{
+	if (bBlockedLastAttack)
 	{
-		DEBUG_LOG(TEXT("ERROR: Failed to apply GE"));
+		DEBUG_LOG(TEXT("Block success - TODO: Trigger BlockAbility event"));
+		//TODO: BlockAbility에 이벤트 트리거
+		return;
 	}
-	
-	DEBUG_LOG(TEXT("========= ApplyStaminaRegenBlock END ========="));
-	
-	/*DEBUG_LOG(TEXT("Apply/Reapply StaminaRegenBlock: New=%.2fs, HandleValid=%s"),
-		Duration,
-		StaminaRegenBlockHandle.IsValid() ? TEXT("true") : TEXT("false"));*/
+
+	//기본 or 방어실패: 기본 피격 로직
+	Super::HandleOnDamagedResolved(SourceActor, FinalAttackData);
 }
