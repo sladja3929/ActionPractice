@@ -1,11 +1,11 @@
-# Unreal ActionPractice
+<img width="1920" height="1052" alt="image" src="https://github.com/user-attachments/assets/ec84b3e2-e48b-405d-a9c7-d31634596b1b" /><img width="1920" height="1052" alt="image" src="https://github.com/user-attachments/assets/d7b2dde7-6fd4-4732-a553-952faa8de195" /># Unreal ActionPractice
 
 언리얼 공부를 위한 1인 개발 토이 프로젝트입니다.
 
 엘든 링과 몬스터 헌터를 레퍼런스로 한 3D 액션 게임입니다. 
 
 ## 시연 영상
-[![Video Label](http://img.youtube.com/vi/_0NgrBMGnCY/0.jpg)](https://www.youtube.com/watch?v=_0NgrBMGnCY)
+[![Video Label](http://img.youtube.com/vi/ldf_MIIXqkk/0.jpg)](https://www.youtube.com/watch?v=ldf_MIIXqkk)
 
 ## 환경
 + 플랫폼: Windows PC
@@ -13,7 +13,7 @@
 + 언어: C++
 
 ## 구현 기능
-+ Enhanced Input, GAS 기반 액션
++ Enhanced Input, GAS 기반 플레이어 액션
   + Sprint
   + Roll
   + Jump
@@ -25,3 +25,4 @@
 + Input Buffer System
 + Trace Sweep Hit Detection
 + Data Driven Design
++ State Tree, GAS 기반 Enemy AI
