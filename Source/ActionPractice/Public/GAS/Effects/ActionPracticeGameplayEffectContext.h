@@ -10,7 +10,7 @@ struct ACTIONPRACTICE_API FActionPracticeGameplayEffectContext : public FGamepla
 {
 	GENERATED_BODY()
 
-	FActionPracticeGameplayEffectContext(): Super(), AttackDamageType(EAttackDamageType::None) {}
+	FActionPracticeGameplayEffectContext(): Super(), AttackDamageType(EAttackDamageType::None), PoiseDamage(0.0f) {}
 	virtual ~FActionPracticeGameplayEffectContext()	{}
 
 	//오버라이드 필수 Functions
@@ -20,18 +20,23 @@ struct ACTIONPRACTICE_API FActionPracticeGameplayEffectContext : public FGamepla
 
 	//Getter
 	EAttackDamageType GetAttackDamageType() const {	return AttackDamageType; }
+	float GetPoiseDamage() const { return PoiseDamage; }
 
 	//Setter
 	void SetAttackDamageType(EAttackDamageType InAttackDamageType) { AttackDamageType = InAttackDamageType;	}
+	void SetPoiseDamage(float InPoiseDamage) { PoiseDamage = InPoiseDamage; }
 
 	//다운캐스팅 헬퍼 함수
 	static FActionPracticeGameplayEffectContext* GetActionPracticeEffectContext(FGameplayEffectContextHandle& Handle);
 	static const FActionPracticeGameplayEffectContext* GetActionPracticeEffectContext(const FGameplayEffectContextHandle& Handle);
 
 protected:
-	
+
 	UPROPERTY()
 	EAttackDamageType AttackDamageType;
+
+	UPROPERTY()
+	float PoiseDamage;
 
 };
 

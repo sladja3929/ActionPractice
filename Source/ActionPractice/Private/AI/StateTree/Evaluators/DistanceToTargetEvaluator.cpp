@@ -61,7 +61,7 @@ void FDistanceToTargetEvaluator::UpdateDistanceToTarget(FStateTreeExecutionConte
 		return;
 	}
 
-	InstanceData.DetectedTarget = InstanceData.AIController->DetectedPlayer.Get();
+	InstanceData.DetectedTarget = InstanceData.AIController->GetDetectedPlayer();
 
 	const FVector SourceLocation = InstanceData.SourceActor->GetActorLocation();
 	const FVector TargetLocation = InstanceData.DetectedTarget->GetActorLocation();

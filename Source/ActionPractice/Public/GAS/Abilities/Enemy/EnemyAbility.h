@@ -8,6 +8,7 @@
 class UBossAbilitySystemComponent;
 class UBossAttributeSet;
 class ABossCharacter;
+class AEnemyAIController;
 
 UCLASS()
 class ACTIONPRACTICE_API UEnemyAbility : public UBaseAbility
@@ -52,6 +53,12 @@ protected:
 
 	//멤버변수 Actor Info 활성화 전 사용 (CanActivateAbility 등)
 	UBossAttributeSet* GetBossAttributeSetFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const;
+
+	UFUNCTION(BlueprintPure, Category = "Ability")
+	AEnemyAIController* GetEnemyAIControllerFromActorInfo() const;
+
+	//멤버변수 Actor Info 활성화 전 사용 (CanActivateAbility 등)
+	AEnemyAIController* GetEnemyAIControllerFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const;
 
 #pragma endregion
 };

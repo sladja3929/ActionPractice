@@ -50,6 +50,7 @@ public:
 	static const FGameplayTag& GetEventNotifyInvincibleStartTag();
 	static const FGameplayTag& GetEventNotifyHitDetectionStartTag();
 	static const FGameplayTag& GetEventNotifyHitDetectionEndTag();
+	static const FGameplayTag& GetEventNotifyRotateToTargetTag();
 	static const FGameplayTag& GetEventActionInputByBufferTag();
 	static const FGameplayTag& GetEventActionPlayBufferTag();
 #pragma endregion
@@ -61,7 +62,6 @@ public:
 	static const FGameplayTag& GetEffectStaminaRegenBlockDurationTag();
 	static const FGameplayTag& GetEffectSprintSpeedMultiplierTag();
 	static const FGameplayTag& GetEffectDamageIncomingDamageTag();
-	static const FGameplayTag& GetEffectDamageIncomingPoiseDamageTag();
 #pragma endregion
 
 private:
@@ -103,6 +103,7 @@ private:
 	const FGameplayTag& GetEventNotifyInvincibleStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyHitDetectionStartTagInternal() const;
 	const FGameplayTag& GetEventNotifyHitDetectionEndTagInternal() const;
+	const FGameplayTag& GetEventNotifyRotateToTargetTagInternal() const;
 	const FGameplayTag& GetEventActionInputByBufferTagInternal() const;
 	const FGameplayTag& GetEventActionPlayBufferTagInternal() const;
 #pragma endregion
@@ -114,7 +115,6 @@ private:
 	const FGameplayTag& GetEffectStaminaRegenBlockDurationTagInternal() const;
 	const FGameplayTag& GetEffectSprintSpeedMultiplierTagInternal() const;
 	const FGameplayTag& GetEffectDamageIncomingDamageTagInternal() const;
-	const FGameplayTag& GetEffectDamageIncomingPoiseDamageTagInternal() const;
 #pragma endregion
 	
 protected:

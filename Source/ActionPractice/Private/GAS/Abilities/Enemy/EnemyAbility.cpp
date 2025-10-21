@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 #include "GAS/AbilitySystemComponent/BossAbilitySystemComponent.h"
+#include "AI/EnemyAIController.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -75,6 +76,26 @@ UBossAttributeSet* UEnemyAbility::GetBossAttributeSetFromActorInfo(const FGamepl
 	if (Character)
 	{
 		return Character->GetAttributeSet();
+	}
+	return nullptr;
+}
+
+AEnemyAIController* UEnemyAbility::GetEnemyAIControllerFromActorInfo() const
+{
+	ABossCharacter* Character = GetBossCharacterFromActorInfo();
+	if (Character)
+	{
+		return Character->GetEnemyAIController();
+	}
+	return nullptr;
+}
+
+AEnemyAIController* UEnemyAbility::GetEnemyAIControllerFromActorInfo(const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	ABossCharacter* Character = GetBossCharacterFromActorInfo(ActorInfo);
+	if (Character)
+	{
+		return Character->GetEnemyAIController();
 	}
 	return nullptr;
 }

@@ -4,6 +4,7 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GAS/Effects/ActionPracticeGameplayEffectContext.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -196,7 +197,7 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			SourceActor = Source->AbilityActorInfo->AvatarActor.Get();
 			SourceController = Source->AbilityActorInfo->PlayerController.Get();
 		}
-		
+
 		const float LocalIncomingDamage = GetIncomingDamage();
 		SetIncomingDamage(0.f);
 
@@ -213,11 +214,29 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			//TODO: 죽음 델리게이트 송신
 			if (GetHealth() <= 0.0f)
 			{
-				
+
+			}
+		}
+
+		//포이즈 대미지 처리 - Context에서 PoiseDamage 가져오기
+		FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context.Get());
+		if (APContext)
+		{
+			const float PoiseDamageFromContext = APContext->GetPoiseDamage();
+			if (PoiseDamageFromContext > 0.0f)
+			{
+				const float OldPoise = GetPoise();
+				SetPoise(FMath::Clamp(OldPoise - PoiseDamageFromContext, 0.0f, GetMaxPoise()));
+
+				// Handle poise break
+				if (GetPoise() <= 0.0f)
+				{
+					// TODO: Implement poise break logic (stun, stagger)
+				}
 			}
 		}
 	}
-	
+
 	//체력회복 처리
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
 	{
@@ -228,25 +247,6 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		{
 			const float OldHealth = GetHealth();
 			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
-		}
-	}
-	
-	//포이즈 대미지 처리
-	else if (Data.EvaluatedData.Attribute == GetIncomingPoiseDamageAttribute())
-	{
-		const float LocalIncomingPoiseDamage = GetIncomingPoiseDamage();
-		SetIncomingPoiseDamage(0.f);
-
-		if (LocalIncomingPoiseDamage > 0)
-		{
-			const float OldPoise = GetPoise();
-			SetPoise(FMath::Clamp(OldPoise - LocalIncomingPoiseDamage, 0.0f, GetMaxPoise()));
-
-			// Handle poise break
-			if (GetPoise() <= 0.0f)
-			{
-				// TODO: Implement poise break logic (stun, stagger)
-			}
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())

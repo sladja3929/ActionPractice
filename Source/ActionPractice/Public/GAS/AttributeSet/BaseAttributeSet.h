@@ -66,19 +66,15 @@ public:
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MovementSpeed)
 
 	// ===== Meta Attributes =====
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingDamage)
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingHealing;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingHealing)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Meta")
-	FGameplayAttributeData IncomingPoiseDamage;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingPoiseDamage)
-	
 #pragma endregion
 
 #pragma region "Public Functions"

@@ -5,7 +5,10 @@
 #include "Characters/BossCharacter.h"
 #include "GAS/AbilitySystemComponent/BossAbilitySystemComponent.h"
 #include "GAS/Abilities/Tasks/AbilityTask_PlayMontageWithEvents.h"
+#include "GAS/GameplayTagsSubsystem.h"
 #include "Items/AttackData.h"
+#include "AI/EnemyAIController.h"
+#include "Characters/ActionPracticeCharacter.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -15,6 +18,18 @@
 #else
 #define DEBUG_LOG(Format, ...)
 #endif
+
+void UEnemyAttackAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnGiveAbility(ActorInfo, Spec);
+
+	EventNotifyRotateToTargetTag = UGameplayTagsSubsystem::GetEventNotifyRotateToTargetTag();
+
+	if (!EventNotifyRotateToTargetTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("EventNotifyRotateToTargetTag is not valid"));
+	}
+}
 
 void UEnemyAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -142,6 +157,10 @@ void UEnemyAttackAbility::BindEventsAndReadyMontageTask()
 	//커스텀 몽타주 태스크 델리게이트 바인딩
 	PlayMontageWithEventsTask->OnMontageCompleted.AddDynamic(this, &UEnemyAttackAbility::OnTaskMontageCompleted);
 	PlayMontageWithEventsTask->OnMontageInterrupted.AddDynamic(this, &UEnemyAttackAbility::OnTaskMontageInterrupted);
+	PlayMontageWithEventsTask->OnNotifyEventsReceived.AddDynamic(this, &UEnemyAttackAbility::OnTaskNotifyEventsReceived);
+
+	//노티파이 이벤트 바인딩
+	PlayMontageWithEventsTask->BindNotifyEventCallbackWithTag(EventNotifyRotateToTargetTag);
 
 	//태스크 활성화
 	PlayMontageWithEventsTask->ReadyForActivation();
@@ -157,6 +176,44 @@ void UEnemyAttackAbility::OnTaskMontageInterrupted()
 {
 	DEBUG_LOG(TEXT("Montage Task Interrupted"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+}
+
+void UEnemyAttackAbility::OnTaskNotifyEventsReceived(FGameplayEventData Payload)
+{
+	if (Payload.EventTag == EventNotifyRotateToTargetTag)
+	{
+		OnEventRotateToTarget(Payload);
+	}
+}
+
+void UEnemyAttackAbility::OnEventRotateToTarget(FGameplayEventData Payload)
+{
+	ABossCharacter* BossCharacter = GetBossCharacterFromActorInfo();
+	if (!BossCharacter)
+	{
+		DEBUG_LOG(TEXT("OnEventRotateToTarget: No BossCharacter"));
+		return;
+	}
+
+	//AI Controller에서 타겟 가져오기
+	AEnemyAIController* AIController = GetEnemyAIControllerFromActorInfo();
+	if (!AIController)
+	{
+		DEBUG_LOG(TEXT("OnEventRotateToTarget: No AIController"));
+		return;
+	}
+
+	//DetectedPlayer 가져오기
+	AActionPracticeCharacter* TargetPlayer = AIController->GetDetectedPlayer();
+	if (!TargetPlayer)
+	{
+		DEBUG_LOG(TEXT("OnEventRotateToTarget: No DetectedPlayer"));
+		return;
+	}
+
+	//타겟을 향해 회전
+	BossCharacter->RotateToTarget(TargetPlayer, RotateTime);
+	DEBUG_LOG(TEXT("OnEventRotateToTarget: Rotating to %s"), *TargetPlayer->GetName());
 }
 
 void UEnemyAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)

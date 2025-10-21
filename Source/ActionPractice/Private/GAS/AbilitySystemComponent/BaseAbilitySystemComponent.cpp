@@ -88,17 +88,17 @@ FGameplayEffectSpecHandle UBaseAbilitySystemComponent::CreateAttackGameplayEffec
 		return FGameplayEffectSpecHandle();
 	}
 
-	//Incoming Damage Attrbiute Magnitude 설정
+	//Incoming Damage Attribute Magnitude 설정
 	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTag(), FinalAttackData.FinalDamage);
-	SetSpecSetByCallerMagnitude(SpecHandle, UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTag(), FinalAttackData.PoiseDamage);
-	
-	//ActionPracticeGameplayEffectContext 추출하여 DamageType 설정
+
+	//ActionPracticeGameplayEffectContext 추출하여 DamageType, PoiseDamage 설정
 	FGameplayEffectContext* Context = SpecHandle.Data.Get()->GetContext().Get();
 	FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context);
 
 	if (APContext)
 	{
 		APContext->SetAttackDamageType(FinalAttackData.DamageType);
+		APContext->SetPoiseDamage(FinalAttackData.PoiseDamage);
 	}
 	else
 	{

@@ -13,6 +13,9 @@ bool FActionPracticeGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMa
 		AttackDamageType = static_cast<EAttackDamageType>(DamageTypeValue);
 	}
 
+	//PoiseDamage 직렬화
+	Ar << PoiseDamage;
+
 	bOutSuccess = true;
 	return true;
 }

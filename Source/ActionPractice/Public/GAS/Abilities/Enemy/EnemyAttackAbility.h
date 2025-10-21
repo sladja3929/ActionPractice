@@ -19,11 +19,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Montage;
-	
+
 #pragma endregion
 
 #pragma region "Public Functions"
 
+	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
@@ -42,6 +43,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	TSubclassOf<UGameplayEffect> DamageInstantEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rotation")
+	float RotateTime = 0.1f;
+
+	//사용되는 태그들
+	FGameplayTag EventNotifyRotateToTargetTag;
 
 #pragma endregion
 
@@ -68,6 +75,14 @@ protected:
 
 	UFUNCTION()
 	virtual void OnTaskMontageInterrupted() override;
+
+	//노티파이 이벤트를 전부 수신하는 콜백 함수
+	UFUNCTION()
+	virtual void OnTaskNotifyEventsReceived(FGameplayEventData Payload);
+
+	//RotateToTarget 노티파이 콜백 함수
+	UFUNCTION()
+	virtual void OnEventRotateToTarget(FGameplayEventData Payload);
 
 #pragma endregion
 
