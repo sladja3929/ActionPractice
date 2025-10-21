@@ -13,7 +13,7 @@ class AActionPracticeCharacter;
 class UWeaponDataAsset;
 class UStaticMeshComponent;
 class UPrimitiveComponent;
-class UWeaponAttackTraceComponent;  
+class UWeaponAttackComponent;  
 struct FGameplayTag;
 struct FBlockActionData;
 struct FAttackActionData;
@@ -74,7 +74,7 @@ protected:
 	TObjectPtr<UStaticMeshComponent> WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<UWeaponAttackTraceComponent> AttackTraceComponent;
+	TObjectPtr<UWeaponAttackComponent> AttackTraceComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UWeaponCCDComponent> CCDComponent;

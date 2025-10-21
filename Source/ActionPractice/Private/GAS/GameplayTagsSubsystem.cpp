@@ -294,6 +294,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTag()
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyRotateToTargetTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetEventNotifyRotateToTargetTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetEventActionInputByBufferTag()
 {
 	if (UGameplayTagsSubsystem* Subsystem = Get())
@@ -364,15 +373,6 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTag()
 	if (UGameplayTagsSubsystem* Subsystem = Get())
 	{
 		return Subsystem->GetEffectDamageIncomingDamageTagInternal();
-	}
-	return FGameplayTag::EmptyTag;
-}
-
-const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTag()
-{
-	if (UGameplayTagsSubsystem* Subsystem = Get())
-	{
-		return Subsystem->GetEffectDamageIncomingPoiseDamageTagInternal();
 	}
 	return FGameplayTag::EmptyTag;
 }
@@ -635,6 +635,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyHitDetectionEndTagInte
 	return FGameplayTag::EmptyTag;
 }
 
+const FGameplayTag& UGameplayTagsSubsystem::GetEventNotifyRotateToTargetTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Event_Notify_RotateToTarget;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
 const FGameplayTag& UGameplayTagsSubsystem::GetEventActionInputByBufferTagInternal() const
 {
 	if (GameplayTagsDataAsset)
@@ -708,14 +717,4 @@ const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingDamageTagInte
 	}
 	return FGameplayTag::EmptyTag;
 }
-
-const FGameplayTag& UGameplayTagsSubsystem::GetEffectDamageIncomingPoiseDamageTagInternal() const
-{
-	if (GameplayTagsDataAsset)
-	{
-		return GameplayTagsDataAsset->Effect_Damage_IncomingPoiseDamage;
-	}
-	return FGameplayTag::EmptyTag;
-}
-
 #pragma endregion

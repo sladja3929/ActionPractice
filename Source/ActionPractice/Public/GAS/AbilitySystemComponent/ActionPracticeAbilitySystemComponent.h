@@ -15,9 +15,6 @@ class ACTIONPRACTICE_API UActionPracticeAbilitySystemComponent : public UBaseAbi
 public:
 #pragma region "Public Variables"
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stamina")
-	TSubclassOf<UGameplayEffect> StaminaRegenBlockEffect;
-
 #pragma endregion
 
 #pragma region "Public Functions"
@@ -29,8 +26,9 @@ public:
 	UFUNCTION(BlueprintPure, Category="Attributes")
 	const UActionPracticeAttributeSet* GetActionPracticeAttributeSet() const;
 
-	UFUNCTION(BlueprintCallable, Category="Stamina")
-	void ApplyStaminaRegenBlock(float Duration);
+	//===== Defense Policy Override =====
+	virtual void CalculateAndSetAttributes(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
+	virtual void HandleOnDamagedResolved(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
 
 #pragma endregion
 
@@ -52,7 +50,10 @@ private:
 #pragma region "Private Variables"
 
 	FActiveGameplayEffectHandle StaminaRegenBlockHandle;
-	
+
+	//블로킹 관련 변수
+	bool bBlockedLastAttack = false;
+
 #pragma endregion
 
 #pragma region "Private Functions"

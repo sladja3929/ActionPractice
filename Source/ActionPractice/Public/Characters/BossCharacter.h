@@ -8,6 +8,7 @@
 
 class UBossHealthWidget;
 class AActionPracticeCharacter;
+class UEnemyAttackComponent;
 
 UCLASS()
 class ACTIONPRACTICE_API ABossCharacter : public ABaseCharacter
@@ -24,6 +25,7 @@ public:
 
 	ABossCharacter();
 
+	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -32,8 +34,10 @@ public:
 
 	FORCEINLINE UBossAttributeSet* GetAttributeSet() const { return Cast<UBossAttributeSet>(AttributeSet); }
 	FORCEINLINE UBossHealthWidget* GetBossHealthWidget() const { return BossHealthWidget; }
-	FORCEINLINE class AEnemyAIController* GetBossAIController() const { return Cast<AEnemyAIController>(GetController()); }
+	FORCEINLINE class AEnemyAIController* GetEnemyAIController() const { return Cast<AEnemyAIController>(GetController()); }
 	
+	void RotateToTarget(const AActor* TargetActor, float RotateTime);
+
 #pragma endregion
 
 protected:
@@ -46,7 +50,10 @@ protected:
 	TObjectPtr<UBossHealthWidget> BossHealthWidget;
 
 	bool bHealthWidgetActive = false;
-	
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat")
+	TObjectPtr<UEnemyAttackComponent> EnemyAttackComponent;
+
 #pragma endregion
 
 #pragma region "Protected Functions"
@@ -69,10 +76,18 @@ private:
 
 	TWeakObjectPtr<AActionPracticeCharacter> DetectedPlayer;
 
+	// ===== Rotation =====
+	FRotator TargetActionRotation;
+	FRotator StartActionRotation;
+	float CurrentRotationTime = 0;
+	float TotalRotationTime = 0;
+	bool bIsRotatingForAction = false;
+
 #pragma endregion
 
 #pragma region "Private Functions"
 
+	void UpdateActionRotation(float DeltaTime);
 
 #pragma endregion
 };

@@ -108,6 +108,9 @@ public:
 	FGameplayTag Event_Notify_HitDetectionEnd;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
+	FGameplayTag Event_Notify_RotateToTarget;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
 	FGameplayTag Event_Action_InputByBuffer;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Event Tags")
@@ -134,8 +137,5 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
 	FGameplayTag Effect_Damage_IncomingDamage;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effect Tags")
-	FGameplayTag Effect_Damage_IncomingPoiseDamage;
 #pragma endregion
 };

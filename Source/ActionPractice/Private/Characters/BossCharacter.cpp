@@ -9,6 +9,7 @@
 #include "Characters/ActionPracticeCharacter.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "Characters/HitDetection/EnemyAttackComponent.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -21,6 +22,8 @@
 
 ABossCharacter::ABossCharacter()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
 	//Controller Settings
@@ -43,11 +46,14 @@ ABossCharacter::ABossCharacter()
 
 	CreateAbilitySystemComponent();
 	CreateAttributeSet();
+
+	//EnemyAttackComponent 생성
+	EnemyAttackComponent = CreateDefaultSubobject<UEnemyAttackComponent>(TEXT("EnemyAttackComponent"));
 }
 
 TScriptInterface<IHitDetectionInterface> ABossCharacter::GetHitDetectionInterface() const
 {
-	return nullptr;
+	return EnemyAttackComponent;
 }
 
 void ABossCharacter::CreateAbilitySystemComponent()
@@ -65,7 +71,7 @@ void ABossCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	//AIController의 Perception 델리게이트 바인딩
-	AEnemyAIController* BossController = GetBossAIController();
+	AEnemyAIController* BossController = GetEnemyAIController();
 	if (BossController)
 	{
 		UAIPerceptionComponent* PerceptionComponent = BossController->GetPerceptionComponent();
@@ -166,4 +172,87 @@ void ABossCharacter::RemoveHealthWidget()
 
 	DetectedPlayer.Reset();
 	bHealthWidgetActive = false;
+}
+
+void ABossCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	UpdateActionRotation(DeltaTime);
+}
+
+void ABossCharacter::RotateToTarget(const AActor* TargetActor, float RotateTime)
+{
+	if (!TargetActor)
+	{
+		DEBUG_LOG(TEXT("RotateToTarget: TargetActor is null"));
+		return;
+	}
+
+	//타겟 방향 계산
+	FVector Direction = TargetActor->GetActorLocation() - GetActorLocation();
+	Direction.Z = 0.0f; //수평 회전만 수행
+	Direction.Normalize();
+
+	//목표 회전 설정
+	TargetActionRotation = FRotator(0.0f, Direction.Rotation().Yaw, 0.0f);
+
+	//회전 시간이 0 이하면 즉시 회전
+	if (RotateTime <= 0.0f)
+	{
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		DEBUG_LOG(TEXT("RotateToTarget: Instant rotation to %s"), *TargetActor->GetName());
+		return;
+	}
+
+	//회전 각도 차이 계산
+	float YawDifference = FMath::Abs(FMath::FindDeltaAngleDegrees(
+		GetActorRotation().Yaw,
+		TargetActionRotation.Yaw
+	));
+
+	//회전 차이가 매우 작으면 즉시 완료
+	if (YawDifference < 1.0f)
+	{
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		DEBUG_LOG(TEXT("RotateToTarget: Minor rotation to %s"), *TargetActor->GetName());
+		return;
+	}
+
+	//스무스 회전 시작
+	StartActionRotation = GetActorRotation();
+	CurrentRotationTime = 0.0f;
+	TotalRotationTime = RotateTime;
+	bIsRotatingForAction = true;
+	DEBUG_LOG(TEXT("RotateToTarget: Starting smooth rotation to %s over %.2f seconds"), *TargetActor->GetName(), RotateTime);
+}
+
+void ABossCharacter::UpdateActionRotation(float DeltaTime)
+{
+	if (!bIsRotatingForAction)
+	{
+		return;
+	}
+	
+	CurrentRotationTime += DeltaTime;
+	
+	float Alpha = FMath::Clamp(CurrentRotationTime / TotalRotationTime, 0.0f, 1.0f);
+
+	//부드러운 커브 적용
+	Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, 2.0f);
+
+	//회전 보간
+	FRotator NewRotation = FMath::Lerp(StartActionRotation, TargetActionRotation, Alpha);
+	SetActorRotation(NewRotation);
+	
+	if (CurrentRotationTime >= TotalRotationTime)
+	{
+		//정확한 목표 회전으로 설정
+		SetActorRotation(TargetActionRotation);
+		bIsRotatingForAction = false;
+		CurrentRotationTime = 0.0f;
+		DEBUG_LOG(TEXT("UpdateActionRotation: Rotation completed"));
+	}
 }

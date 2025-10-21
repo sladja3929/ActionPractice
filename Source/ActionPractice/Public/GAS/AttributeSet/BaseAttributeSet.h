@@ -5,6 +5,11 @@
 #include "AbilitySystemComponent.h"
 #include "BaseAttributeSet.generated.h"
 
+struct FFinalAttackData;
+
+//Source Actor(공격 행위자)와 FFinalAttackData를 인자로 받는 델리게이트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnDamagedPreResolve, AActor* /*SourceActor*/, const FFinalAttackData& /*FinalAttackData*/);
+
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
 	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
@@ -66,19 +71,15 @@ public:
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MovementSpeed)
 
 	// ===== Meta Attributes =====
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingDamage)
-	
+
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingHealing;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingHealing)
 
-	UPROPERTY(BlueprintReadOnly, Category = "Meta")
-	FGameplayAttributeData IncomingPoiseDamage;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, IncomingPoiseDamage)
-	
 #pragma endregion
 
 #pragma region "Public Functions"
@@ -101,7 +102,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Attributes")
 	float GetStaminaPercent() const;
-	
+
+	//대미지 처리 전 델리게이트
+	FOnDamagedPreResolve OnDamagedPreResolve;
+
 #pragma endregion
 
 protected:

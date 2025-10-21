@@ -29,7 +29,8 @@ public:
 
 	FORCEINLINE UGASStateTreeAIComponent* GetStateTreeComponent() const { return GASStateTreeAIComponent; }
 	FORCEINLINE ABossCharacter* GetBossCharacter() const { return BossCharacter.Get(); }
-	
+	FORCEINLINE AActionPracticeCharacter* GetDetectedPlayer() const { return DetectedPlayer.Get(); }
+
 #pragma endregion
 
 protected:

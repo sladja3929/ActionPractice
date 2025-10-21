@@ -2,9 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
+#include "DefensePolicy.h"
 #include "BaseAbilitySystemComponent.generated.h"
 
 class ABaseCharacter;
+class UAttributeSet;
 struct FFinalAttackData;
 struct FActionPracticeGameplayEffectContext;
 
@@ -13,7 +15,7 @@ struct FActionPracticeGameplayEffectContext;
  * ActionPracticeAbilitySystemComponent와 BossAbilitySystemComponent의 공통 기능
  */
 UCLASS()
-class ACTIONPRACTICE_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
+class ACTIONPRACTICE_API UBaseAbilitySystemComponent : public UAbilitySystemComponent, public IDefensePolicy
 {
 	GENERATED_BODY()
 
@@ -48,6 +50,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Ability|GameplayEffect")
 	void SetSpecSetByCallerMagnitudes(FGameplayEffectSpecHandle& SpecHandle, const TMap<FGameplayTag, float>& Magnitudes);
+
+	//===== Defense Policy Interface =====
+	UFUNCTION()
+	virtual void OnDamaged(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
+
+	UFUNCTION()
+	virtual void CalculateAndSetAttributes(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
+
+	UFUNCTION()
+	virtual void HandleOnDamagedResolved(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
 
 #pragma endregion
 

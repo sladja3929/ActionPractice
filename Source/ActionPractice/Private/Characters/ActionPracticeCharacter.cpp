@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "Public/Characters/ActionPracticeCharacter.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
@@ -21,7 +19,7 @@
 #include "UI/PlayerStatsWidget.h"
 #include "Input/InputActionDataAsset.h"
 #include "Items/Weapon.h"
-#include "Items/WeaponAttackTraceComponent.h"
+#include "Items/WeaponDataAsset.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -104,8 +102,8 @@ void AActionPracticeCharacter::BeginPlay()
 
 	InitializeAbilitySystem();
 
-	EquipWeapon(LoadWeaponClassByName("BP_GreatSword"), false, false);
-	EquipWeapon(LoadWeaponClassByName("BP_Shield"), true, false);
+	EquipWeapon(RightWeaponClass, false, false);
+	EquipWeapon(LeftWeaponClass, true, false);
 
 	if (PlayerStatsWidgetClass)
 	{
@@ -300,30 +298,29 @@ FVector2D AActionPracticeCharacter::GetCurrentMovementInput() const
 
 void AActionPracticeCharacter::RotateCharacterToInputDirection(float RotateTime)
 {
-	// 현재 입력 값 가져오기
+	//현재 입력 값 가져오기
 	FVector2D MovementInput = GetCurrentMovementInput();
-    
-	// 입력이 없으면 회전하지 않음
+	
 	if (MovementInput.IsZero())
 	{
 		return;
 	}
     
-	// 카메라의 Yaw 회전만 가져오기
+	//카메라의 Yaw 회전만 가져오기
 	FRotator CameraRotation = FollowCamera->GetComponentRotation();
 	FRotator CameraYaw = FRotator(0.0f, CameraRotation.Yaw, 0.0f);
     
-	// 입력 벡터를 3D로 변환
+	//입력 벡터를 3D로 변환
 	FVector InputDirection = FVector(MovementInput.Y, MovementInput.X, 0.0f);
     
-	// 카메라 기준으로 입력 방향 변환
+	//카메라 기준으로 입력 방향 변환
 	FVector WorldDirection = CameraYaw.RotateVector(InputDirection);
 	WorldDirection.Normalize();
     
-	// 목표 회전 설정
+	//목표 회전 설정
 	TargetActionRotation = FRotator(0.0f, WorldDirection.Rotation().Yaw, 0.0f);
     
-	// 회전 시간이 0 이하면 즉시 회전
+	//회전 시간이 0 이하면 즉시 회전
 	if (RotateTime <= 0.0f)
 	{
 		SetActorRotation(TargetActionRotation);
@@ -331,21 +328,20 @@ void AActionPracticeCharacter::RotateCharacterToInputDirection(float RotateTime)
 		return;
 	}
     
-	// 회전 각도 차이 계산
+	//회전 각도 차이 계산
 	float YawDifference = FMath::Abs(FMath::FindDeltaAngleDegrees(
 		GetActorRotation().Yaw, 
 		TargetActionRotation.Yaw
 	));
     
-	// 회전 차이가 매우 작으면 즉시 완료
+	//회전 차이가 매우 작으면 즉시 완료
 	if (YawDifference < 1.0f)
 	{
 		SetActorRotation(TargetActionRotation);
 		bIsRotatingForAction = false;
 		return;
 	}
-    
-	// 스무스 회전 시작
+	
 	StartActionRotation = GetActorRotation();
 	CurrentRotationTime = 0.0f;
 	TotalRotationTime = RotateTime;
@@ -358,24 +354,21 @@ void AActionPracticeCharacter::UpdateActionRotation(float DeltaTime)
 	{
 		return;
 	}
-    
-	// 경과 시간 업데이트
+	
 	CurrentRotationTime += DeltaTime;
-    
-	// 회전 진행도 계산 (0~1)
+	
 	float Alpha = FMath::Clamp(CurrentRotationTime / TotalRotationTime, 0.0f, 1.0f);
     
-	// 부드러운 커브 적용 (EaseInOut)
+	//부드러운 커브 적용
 	Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, 2.0f);
     
-	// 회전 보간
+	//회전 보간
 	FRotator NewRotation = FMath::Lerp(StartActionRotation, TargetActionRotation, Alpha);
 	SetActorRotation(NewRotation);
-    
-	// 회전 완료 체크
+	
 	if (CurrentRotationTime >= TotalRotationTime)
 	{
-		// 정확한 목표 회전으로 설정
+		//정확한 목표 회전으로 설정
 		SetActorRotation(TargetActionRotation);
 		bIsRotatingForAction = false;
 		CurrentRotationTime = 0.0f;
@@ -389,15 +382,15 @@ void AActionPracticeCharacter::CancelActionForMove()
 		return;
 	}
     
-	// Attack 어빌리티가 활성화되어 있는지 확인
+	//Attack 어빌리티가 활성화되어 있는지 확인
 	bool bHasActiveAttackAbility = AbilitySystemComponent->HasMatchingGameplayTag(StateAbilityAttackingTag);
 
 	if (bHasActiveAttackAbility)
 	{
-		// State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
+		//State.Recovering 태그가 없으면 어빌리티 캔슬 가능 (ActionRecoveryEnd 이후)
 		if (!AbilitySystemComponent->HasMatchingGameplayTag(StateRecoveringTag))
 		{
-			// Ability.Attack 태그를 가진 어빌리티 취소
+			//Ability.Attack 태그를 가진 어빌리티 취소
 			FGameplayTagContainer CancelTags;
 			CancelTags.AddTag(AbilityAttackTag);
 			AbilitySystemComponent->CancelAbilities(&CancelTags);
@@ -759,4 +752,3 @@ TArray<FGameplayAbilitySpec*> AActionPracticeCharacter::FindAbilitySpecsWithInpu
 	return SameAssetSpecs;
 }
 #pragma endregion
-

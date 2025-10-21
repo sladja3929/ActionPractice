@@ -19,23 +19,24 @@ class ACTIONPRACTICE_API UInputBufferComponent : public UActorComponent
 public:
 #pragma region "Public Variables"
 
-	UPROPERTY()
 	bool bCanBufferInput = false;
-
-	UPROPERTY()
 	bool bBufferActionReleased = false;
+	
 #pragma endregion
 	
 #pragma region "Public Functions"
 
 	UInputBufferComponent();
 
+	//다음 액션 저장
 	UFUNCTION()
 	void BufferNextAction(const UInputAction* InputedAction);
 
+	//저장된 홀드액션 키가 떨어지면 버퍼에서 제거
 	UFUNCTION()
 	void UnBufferHoldAction(const UInputAction* InputedAction);
 
+	//버퍼 대기중인지
 	UFUNCTION()
 	bool IsBufferWaiting();
 
@@ -47,7 +48,6 @@ protected:
 	UPROPERTY()
 	const UInputAction* BufferedAction = nullptr;
 
-	UPROPERTY()
 	int32 CurrentBufferPriority = -1;
 
 	UPROPERTY()
@@ -91,12 +91,11 @@ private:
 #pragma endregion
 	
 #pragma region "Private Functions"
+	
 	// 인풋액션으로 해당 어빌리티의 버퍼 가능 여부와 우선순위 확인
-	UFUNCTION()
 	bool CanBufferAction(const UInputAction* InputAction, int32& OutPriority, bool& bIsHoldAction) const;
-
-	UFUNCTION()
 	void ActivateAbility(const UInputAction* InputAction);
+	
 #pragma endregion
 
 };

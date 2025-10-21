@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "UObject/Interface.h"
 #include "MontageAbilityInterface.generated.h"
 
 UINTERFACE()
@@ -17,6 +18,8 @@ public:
 	virtual void PlayAction() = 0;
 
 	virtual UAnimMontage* SetMontageToPlayTask() = 0;
+
+	virtual void BindEventsAndReadyMontageTask() = 0;
 	
 	virtual void ExecuteMontageTask() = 0;
 

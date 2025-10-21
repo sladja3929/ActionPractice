@@ -4,6 +4,8 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GAS/Effects/ActionPracticeGameplayEffectContext.h"
+#include "Items/AttackData.h"
 
 #define ENABLE_DEBUG_LOG 0
 
@@ -190,34 +192,34 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	{
 		//소스 액터
 		AActor* SourceActor = nullptr;
-		AController* SourceController = nullptr;
 		if (Source && Source->AbilityActorInfo.IsValid() && Source->AbilityActorInfo->AvatarActor.IsValid())
 		{
 			SourceActor = Source->AbilityActorInfo->AvatarActor.Get();
-			SourceController = Source->AbilityActorInfo->PlayerController.Get();
 		}
 
-		// Store a local copy of the amount of damage done and clear the damage attribute
 		const float LocalIncomingDamage = GetIncomingDamage();
 		SetIncomingDamage(0.f);
 
-		if (LocalIncomingDamage > 0)
+		if (LocalIncomingDamage > 0.0f)
 		{
-			// Apply defense calculation (엘든링 스타일 방어력 계산)
-			const float DefenseReduction = GetDefense() / (GetDefense() + 100.0f);
-			const float FinalDamage = LocalIncomingDamage * (1.0f - DefenseReduction);
+			//Context에서 공격 데이터 추출
+			FActionPracticeGameplayEffectContext* APContext = static_cast<FActionPracticeGameplayEffectContext*>(Context.Get());
 
-			// Apply the health change
-			const float OldHealth = GetHealth();
-			SetHealth(FMath::Clamp(OldHealth - FinalDamage, 0.0f, GetMaxHealth()));
+			//FFinalAttackData 구성
+			FFinalAttackData FinalAttackData;
+			FinalAttackData.FinalDamage = LocalIncomingDamage;
 
-			// Handle death
-			if (GetHealth() <= 0.0f)
+			if (APContext)
 			{
-				// TODO: Implement death logic
+				FinalAttackData.DamageType = APContext->GetAttackDamageType();
+				FinalAttackData.PoiseDamage = APContext->GetPoiseDamage();
 			}
+
+			//델리게이트 송신 - IDefensePolicy에서 처리
+			OnDamagedPreResolve.Broadcast(SourceActor, FinalAttackData);
 		}
 	}
+
 	//체력회복 처리
 	else if (Data.EvaluatedData.Attribute == GetIncomingHealingAttribute())
 	{
@@ -228,24 +230,6 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		{
 			const float OldHealth = GetHealth();
 			SetHealth(FMath::Clamp(OldHealth + LocalIncomingHealing, 0.0f, GetMaxHealth()));
-		}
-	}
-	//포이즈 대미지 처리
-	else if (Data.EvaluatedData.Attribute == GetIncomingPoiseDamageAttribute())
-	{
-		const float LocalIncomingPoiseDamage = GetIncomingPoiseDamage();
-		SetIncomingPoiseDamage(0.f);
-
-		if (LocalIncomingPoiseDamage > 0)
-		{
-			const float OldPoise = GetPoise();
-			SetPoise(FMath::Clamp(OldPoise - LocalIncomingPoiseDamage, 0.0f, GetMaxPoise()));
-
-			// Handle poise break
-			if (GetPoise() <= 0.0f)
-			{
-				// TODO: Implement poise break logic (stun, stagger)
-			}
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetMovementSpeedAttribute())
