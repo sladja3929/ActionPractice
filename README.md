@@ -1,4 +1,4 @@
-<img width="1920" height="1052" alt="image" src="https://github.com/user-attachments/assets/ec84b3e2-e48b-405d-a9c7-d31634596b1b" /><img width="1920" height="1052" alt="image" src="https://github.com/user-attachments/assets/d7b2dde7-6fd4-4732-a553-952faa8de195" /># Unreal ActionPractice
+# Unreal ActionPractice
 
 언리얼 공부를 위한 1인 개발 토이 프로젝트입니다.
 
