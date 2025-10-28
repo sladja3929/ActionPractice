@@ -44,6 +44,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
 	FGameplayTag Ability_Block;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability Tags")
+	FGameplayTag Ability_HitReaction;
 #pragma endregion
 
 #pragma region "State Tags"

@@ -95,7 +95,11 @@ void UChargeAttackAbility::SetStaminaCost(float InStaminaCost)
 
 void UChargeAttackAbility::RotateCharacter()
 {
-    if (!bIsAttackMontage) return;
+    if (!bIsAttackMontage)
+    {
+        bRotateBeforeAction = false;
+        return;
+    }
 
     Super::RotateCharacter();
 }

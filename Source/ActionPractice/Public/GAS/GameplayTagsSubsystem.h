@@ -26,6 +26,7 @@ public:
 	static const FGameplayTag& GetAbilitySprintTag();
 	static const FGameplayTag& GetAbilityJumpTag();
 	static const FGameplayTag& GetAbilityBlockTag();
+	static const FGameplayTag& GetAbilityHitReactionTag();
 #pragma endregion
 
 #pragma region "Static State Tags"
@@ -79,6 +80,7 @@ private:
 	const FGameplayTag& GetAbilitySprintTagInternal() const;
 	const FGameplayTag& GetAbilityJumpTagInternal() const;
 	const FGameplayTag& GetAbilityBlockTagInternal() const;
+	const FGameplayTag& GetAbilityHitReactionTagInternal() const;
 #pragma endregion
 
 #pragma region "Internal State Tags"

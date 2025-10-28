@@ -127,6 +127,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTag()
 	}
 	return FGameplayTag::EmptyTag;
 }
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityHitReactionTag()
+{
+	if (UGameplayTagsSubsystem* Subsystem = Get())
+	{
+		return Subsystem->GetAbilityHitReactionTagInternal();
+	}
+	return FGameplayTag::EmptyTag;
+}
 #pragma endregion
 
 #pragma region "Static State Tags"
@@ -465,6 +474,15 @@ const FGameplayTag& UGameplayTagsSubsystem::GetAbilityBlockTagInternal() const
 	if (GameplayTagsDataAsset)
 	{
 		return GameplayTagsDataAsset->Ability_Block;
+	}
+	return FGameplayTag::EmptyTag;
+}
+
+const FGameplayTag& UGameplayTagsSubsystem::GetAbilityHitReactionTagInternal() const
+{
+	if (GameplayTagsDataAsset)
+	{
+		return GameplayTagsDataAsset->Ability_HitReaction;
 	}
 	return FGameplayTag::EmptyTag;
 }

@@ -68,6 +68,8 @@ protected:
 
 	TWeakObjectPtr<ABaseCharacter> CachedCharacter;
 
+	FGameplayTag AbilityHitReactionTag;
+
 #pragma endregion
 
 #pragma region "Protected Functions"

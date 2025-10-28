@@ -76,18 +76,10 @@ private:
 
 	TWeakObjectPtr<AActionPracticeCharacter> DetectedPlayer;
 
-	// ===== Rotation =====
-	FRotator TargetActionRotation;
-	FRotator StartActionRotation;
-	float CurrentRotationTime = 0;
-	float TotalRotationTime = 0;
-	bool bIsRotatingForAction = false;
-
 #pragma endregion
 
 #pragma region "Private Functions"
 
-	void UpdateActionRotation(float DeltaTime);
 
 #pragma endregion
 };

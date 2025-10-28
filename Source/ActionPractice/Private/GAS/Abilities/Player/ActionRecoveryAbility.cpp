@@ -108,10 +108,14 @@ bool UActionRecoveryAbility::ConsumeStamina()
 
 void UActionRecoveryAbility::RotateCharacter()
 {
-	// 캐릭터 회전
+	if (!bRotateBeforeAction)
+	{
+		return;
+	}
+
 	if (AActionPracticeCharacter* Character = GetActionPracticeCharacterFromActorInfo())
 	{
-		Character->RotateCharacterToInputDirection(RotateTime);
+		Character->RotateCharacterToInputDirection(RotateTime, bIgnoreLockOn);
 	}
 }
 
@@ -122,7 +126,9 @@ void UActionRecoveryAbility::PlayAction()
 	RotateCharacter();
 
 	//캐릭터가 회전을 마칠 때까지 기다린 후에 몽타주 태스크 실행
-	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, RotateTime);
+	//bRotateBeforeAction이 false면 즉시 실행
+	float DelayTime = bRotateBeforeAction ? RotateTime : 0.0f;
+	WaitDelayTask = UAbilityTask_WaitDelay::WaitDelay(this, DelayTime);
 	if (WaitDelayTask)
 	{
 		WaitDelayTask->OnFinish.AddDynamic(this, &UActionRecoveryAbility::ExecuteMontageTask);
