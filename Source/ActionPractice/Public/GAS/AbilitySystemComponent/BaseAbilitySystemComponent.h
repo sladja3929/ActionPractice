@@ -61,6 +61,8 @@ public:
 	UFUNCTION()
 	virtual void HandleOnDamagedResolved(AActor* SourceActor, const FFinalAttackData& FinalAttackData) override;
 
+	virtual void PrepareHitReactionEventData(FGameplayEventData& OutEventData, const FFinalAttackData& FinalAttackData) override;
+
 #pragma endregion
 
 protected:

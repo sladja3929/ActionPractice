@@ -73,7 +73,13 @@ struct FBlockActionData
     TSoftObjectPtr<UAnimMontage> BlockIdleMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
-    TSoftObjectPtr<UAnimMontage> BlockReactionMontage;
+    TSoftObjectPtr<UAnimMontage> BlockReactionLightMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+    TSoftObjectPtr<UAnimMontage> BlockReactionMiddleMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+    TSoftObjectPtr<UAnimMontage> BlockReactionHeavyMontage;
 
     //방어 데미지 감소량
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Block", meta = (ClampMin = "0.0", ClampMax = "100.0"))
@@ -144,10 +150,20 @@ public:
         {
             AssetsToLoad.Add(BlockData.BlockIdleMontage.ToSoftObjectPath());
         }
-        
-        if (!BlockData.BlockReactionMontage.IsNull())
+
+        if (!BlockData.BlockReactionLightMontage.IsNull())
         {
-            AssetsToLoad.Add(BlockData.BlockReactionMontage.ToSoftObjectPath());
+            AssetsToLoad.Add(BlockData.BlockReactionLightMontage.ToSoftObjectPath());
+        }
+
+        if (!BlockData.BlockReactionMiddleMontage.IsNull())
+        {
+            AssetsToLoad.Add(BlockData.BlockReactionMiddleMontage.ToSoftObjectPath());
+        }
+
+        if (!BlockData.BlockReactionHeavyMontage.IsNull())
+        {
+            AssetsToLoad.Add(BlockData.BlockReactionHeavyMontage.ToSoftObjectPath());
         }
         
         //Asset Manager를 통한 로딩

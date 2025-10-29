@@ -7,7 +7,7 @@
 #include "GAS/GameplayTagsSubsystem.h"
 #include "GAS/AttributeSet/BaseAttributeSet.h"
 
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 
 #if ENABLE_DEBUG_LOG
 	DEFINE_LOG_CATEGORY_STATIC(LogBaseAbilitySystemComponent, Log, All);
@@ -217,6 +217,7 @@ void UBaseAbilitySystemComponent::HandleOnDamagedResolved(AActor* SourceActor, c
 	{
 		DEBUG_LOG(TEXT("HandleOnDamagedResolved: Character died"));
 		//TODO: 죽음 처리
+		return;
 	}
 
 	//포이즈 브레이크 체크
@@ -234,10 +235,9 @@ void UBaseAbilitySystemComponent::HandleOnDamagedResolved(AActor* SourceActor, c
 			{
 				FGameplayAbilitySpec* HitReactionSpec = HitReactionSpecs[0];
 
-				//GameplayEvent로 Poise 값 전달
+				//EventData 준비
 				FGameplayEventData EventData;
-				EventData.EventMagnitude = BaseAttributeSet->GetPoise(); // 음수값
-				EventData.EventTag = AbilityHitReactionTag;
+				PrepareHitReactionEventData(EventData, FinalAttackData);
 
 				FGameplayAbilityActorInfo* ActorInfo = const_cast<FGameplayAbilityActorInfo*>(AbilityActorInfo.Get());
 				if (ActorInfo && HitReactionSpec)
@@ -257,5 +257,16 @@ void UBaseAbilitySystemComponent::HandleOnDamagedResolved(AActor* SourceActor, c
 				DEBUG_LOG(TEXT("HitReaction Ability not found"));
 			}
 		}
+	}
+}
+
+void UBaseAbilitySystemComponent::PrepareHitReactionEventData(FGameplayEventData& OutEventData, const FFinalAttackData& FinalAttackData)
+{
+	UAttributeSet* AttributeSet = const_cast<UAttributeSet*>(GetAttributeSet(UBaseAttributeSet::StaticClass()));
+	UBaseAttributeSet* BaseAttributeSet = Cast<UBaseAttributeSet>(AttributeSet);
+	if (BaseAttributeSet)
+	{
+		OutEventData.EventMagnitude = BaseAttributeSet->GetPoise(); // 음수값
+		OutEventData.EventTag = AbilityHitReactionTag;
 	}
 }

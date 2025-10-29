@@ -1,5 +1,10 @@
 #include "GAS/Abilities/Player/HitReactionAbility.h"
 #include "Animation/AnimMontage.h"
+#include "GAS/GameplayTagsSubsystem.h"
+#include "GAS/Abilities/Player/WeaponAbilityStatics.h"
+#include "GAS/Abilities/Player/BlockAbility.h"
+#include "Items/WeaponDataAsset.h"
+#include "AbilitySystemComponent.h"
 
 #define ENABLE_DEBUG_LOG 1
 
@@ -16,29 +21,47 @@ UHitReactionAbility::UHitReactionAbility()
 	StaminaCost = -1.0f; // 스태미나 체크 안함
 }
 
+void UHitReactionAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnGiveAbility(ActorInfo, Spec);
+
+	StateAbilityBlockingTag = UGameplayTagsSubsystem::GetStateAbilityBlockingTag();
+	if (!StateAbilityBlockingTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("StateAbilityBlockingTag is Invalid"));
+	}
+
+	AbilityBlockTag = UGameplayTagsSubsystem::GetAbilityBlockTag();
+	if (!AbilityBlockTag.IsValid())
+	{
+		DEBUG_LOG(TEXT("AbilityBlockTag is Invalid"));
+	}
+}
+
 void UHitReactionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	bIsBlockReaction = false;
+
 	if (TriggerEventData)
 	{
 		const float PoiseValue = TriggerEventData->EventMagnitude;
 		DEBUG_LOG(TEXT("HitReaction activated with Poise=%.1f"), PoiseValue);
 
-		//Poise 값에 따라 다른 몽타주 선택 (일단 기본 몽타주만 사용)
-		if (PoiseValue < -50.0f)
+		//블로킹 상태 확인
+		if (TriggerEventData->TargetTags.HasTag(StateAbilityBlockingTag))
 		{
-			DEBUG_LOG(TEXT("Heavy hit reaction (Poise < -50)"));
-			//TODO: HeavyHitReactionMontage 사용
+			bIsBlockReaction = true;
+			DEBUG_LOG(TEXT("Block Reaction detected"));
+
+			//BlockReaction 동안 State.Blocking 태그 수동 추가
+			if (StateAbilityBlockingTag.IsValid())
+			{
+				ActorInfo->AbilitySystemComponent->AddLooseGameplayTag(StateAbilityBlockingTag);
+				DEBUG_LOG(TEXT("State.Blocking tag added for BlockReaction"));
+			}
 		}
-		else if (PoiseValue < -20.0f)
-		{
-			DEBUG_LOG(TEXT("Medium hit reaction (-50 <= Poise < -20)"));
-			//TODO: MediumHitReactionMontage 사용
-		}
-		else
-		{
-			DEBUG_LOG(TEXT("Light hit reaction (Poise >= -20)"));
-			//TODO: LightHitReactionMontage 사용
-		}
+
+		ReactionProcessor.SelectReactionLevel(PoiseValue);
 	}
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
@@ -46,5 +69,77 @@ void UHitReactionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 UAnimMontage* UHitReactionAbility::SetMontageToPlayTask()
 {
-	return HitReactionMontage;
+	const EReactionLevel Level = ReactionProcessor.GetReactionLevel();
+
+	if (bIsBlockReaction)
+	{
+		const FBlockActionData* BlockData = FWeaponAbilityStatics::GetBlockDataFromAbility(this);
+		if (BlockData)
+		{
+			switch (Level)
+			{
+				case EReactionLevel::Heavy:
+					DEBUG_LOG(TEXT("Playing BlockReactionHeavy"));
+					return BlockData->BlockReactionHeavyMontage.LoadSynchronous();
+				case EReactionLevel::Middle:
+					DEBUG_LOG(TEXT("Playing BlockReactionMiddle"));
+					return BlockData->BlockReactionMiddleMontage.LoadSynchronous();
+				case EReactionLevel::Light:
+					DEBUG_LOG(TEXT("Playing BlockReactionLight"));
+					return BlockData->BlockReactionLightMontage.LoadSynchronous();
+				default:
+					return nullptr;
+			}
+		}
+	}
+
+	switch (Level)
+	{
+		case EReactionLevel::Heavy: return HitReactionHeavyMontage;
+		case EReactionLevel::Middle: return HitReactionMiddleMontage;
+		case EReactionLevel::Light: return HitReactionLightMontage;
+		default: return nullptr;
+	}
+}
+
+void UHitReactionAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	//BlockReaction 후처리, 누르고 있으면 계속 방어
+	if (bIsBlockReaction)
+	{
+		//State.Blocking 태그 제거
+		if (StateAbilityBlockingTag.IsValid())
+		{
+			ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(StateAbilityBlockingTag);
+			DEBUG_LOG(TEXT("State.Blocking tag removed after BlockReaction"));
+		}
+
+		DEBUG_LOG(TEXT("bWasCancelled=%d"), bWasCancelled);
+
+		//BlockAbility Spec 찾기
+		FGameplayAbilitySpec* BlockAbilitySpec = nullptr;
+		for (FGameplayAbilitySpec& Spec : GetAbilitySystemComponentFromActorInfo()->GetActivatableAbilities())
+		{
+			if (Spec.Ability && Spec.Ability->GetAssetTags().HasTag(AbilityBlockTag))
+			{
+				BlockAbilitySpec = &Spec;
+				break;
+			}
+		}
+
+		if (BlockAbilitySpec)
+		{
+			//InputPressed로 입력이 눌려있는지 확인
+			const bool bIsBlockInputPressed = BlockAbilitySpec->InputPressed > 0;
+			DEBUG_LOG(TEXT("bIsBlockInputPressed=%d"), bIsBlockInputPressed);
+
+			if (bIsBlockInputPressed)
+			{
+				DEBUG_LOG(TEXT("Block input still pressed, reactivating BlockAbility"));
+				ActorInfo->AbilitySystemComponent->TryActivateAbility(BlockAbilitySpec->Handle);
+			}
+		}
+	}
+
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
